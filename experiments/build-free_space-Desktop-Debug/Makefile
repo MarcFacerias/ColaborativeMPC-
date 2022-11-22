@@ -50,8 +50,10 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../free_space/main.cpp 
-OBJECTS       = main.o
+SOURCES       = ../free_space/main.cpp \
+		../free_space/it1.cpp 
+OBJECTS       = main.o \
+		it1.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/linux.conf \
@@ -141,7 +143,8 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
-		../free_space/free_space.pro  ../free_space/main.cpp
+		../free_space/free_space.pro  ../free_space/main.cpp \
+		../free_space/it1.cpp
 QMAKE_TARGET  = free_space
 DESTDIR       = 
 TARGET        = free_space
@@ -351,7 +354,7 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../free_space/main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../free_space/main.cpp ../free_space/it1.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -397,8 +400,11 @@ compiler_clean: compiler_moc_predefs_clean
 
 ####### Compile
 
-main.o: ../free_space/main.cpp 
+main.o: ../free_space/main.cpp ../free_space/it2.cpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../free_space/main.cpp
+
+it1.o: ../free_space/it1.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o it1.o ../free_space/it1.cpp
 
 ####### Install
 
