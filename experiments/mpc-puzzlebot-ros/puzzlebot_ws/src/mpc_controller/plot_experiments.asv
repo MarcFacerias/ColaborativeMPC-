@@ -1,0 +1,26 @@
+
+
+
+figure()
+plot(sample(:,1),"r")
+hold on 
+plot(trajectorys(:,1),"b")
+hold off 
+
+figure()
+plot(sample(:,2),"r")
+hold on 
+plot(trajectorys(:,2),"b")
+hold off
+
+figure()
+plot(sample(:,3),"r")
+hold on 
+plot(trajectorys(:,3),"b")
+hold off 
+
+figure()
+plot(sample(:,1),sample(:,2),"r")
+hold on 
+plot(trajectorys(:,1),trajectorys(:,2),"b")
+hold off 
