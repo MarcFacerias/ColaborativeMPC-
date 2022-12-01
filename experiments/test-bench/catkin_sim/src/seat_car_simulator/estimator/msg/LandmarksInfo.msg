@@ -1,3 +1,0 @@
-LandmarkInfo[] lnd_list
-
-
