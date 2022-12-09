@@ -1,0 +1,26 @@
+<launch>
+
+    <!-- SYSTEM MODEL -->
+    <param name="lf"            type="double"   value="0.12" />
+    <param name="lr"            type="double"   value="0.14" />
+    <param name="m"             type="double"   value="2.250" />
+    <param name="Iz"            type="double"   value="0.06" />
+    <param name="Cf"            type="double"   value="60.0" />
+    <param name="Cr"            type="double"   value="60.0" />
+    <param name="mu"            type="double"   value="0.1"/>
+
+
+    <param name="max_vel"       type="double" value="5.0" />
+    <param name="min_vel"       type="double" value="0.1" />
+    <!-- should be > 1.0 -->
+    <param name="init_vx"     type="double" value="0.1"/>
+    <param name="trackShape"  type="str"    value="SLAM_shape1"/>
+
+    <node pkg="lpv_mpc" type="plotCarTrajectory.py" name="visualization" output="screen">
+        <param name="plotGPS"     type="bool" value="true" />
+    </node>
+
+  <include file="$(find lpv_mpc)/launch/control_spawner.launch" >
+    <arg name="agents" value="3"/>
+  </include>
+</launch>
