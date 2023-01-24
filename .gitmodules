@@ -1,0 +1,4 @@
+[submodule "Colab_MPC_notes"]
+	path = Colab_MPC_notes
+	url = git@github.com:MarcFacerias/Colab_MPC_notes.git
+	branch = main
