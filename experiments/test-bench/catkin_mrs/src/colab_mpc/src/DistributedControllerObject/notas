@@ -1,0 +1,113 @@
+    def LPVPrediction(self, x, u, vel_ref):
+
+        lf  = self.lf
+        lr  = self.lr
+        m   = self.m
+        I   = self.I
+        Cf  = self.Cf
+        Cr  = self.Cr
+        mu  = self.mu
+        STATES_vec = np.zeros((self.N, 9))
+
+        Atv = []
+        Btv = []
+        # print("---------------------------")
+        for i in range(0, self.N):
+
+            if i==0:
+                states  = np.reshape(x, (9,1))
+
+            vy      = float(states[1])
+            epsi    = float(states[4])
+            s       = float(states[8])
+            ey      = float(states[3])
+            theta   = float(states[7])
+
+            PointAndTangent = self.map.PointAndTangent[:,:,self.map.lane]
+            cur     = Curvature(s, PointAndTangent)
+
+            # print("s" + str(s))
+            # print("Curvature" + str(cur))
+            # TODO: Add error handling
+            vx      = float(vel_ref[i,0])
+            delta   = float(u[i,0])            # EA: steering angle at K-1
+
+            if vx < 1.1:
+
+                #low vel model: straight line .
+                A12 = 0
+                A13 = 0
+                A22 = 0
+                A23 = 0
+                A32 = 0
+                A33 = 0
+                B11 = 0
+                B12 = 1
+                B22 = 0
+
+
+            else:
+
+                #standard model
+                A12 = (np.sin(delta) * Cf) / (m*vx)
+                A13 = (np.sin(delta) * Cf * lf) / (m*vx) + vy
+                A22 = -(Cr + Cf * np.cos(delta)) / (m*vx)
+                A23 = -(lf * Cf * np.cos(delta) - lr * Cr) / (m*vx) - vx
+                A32 = -(lf * Cf * np.cos(delta) - lr * Cr) / (I*vx)
+                A33 = -(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I*vx)
+                B11     = -(np.sin(delta)*Cf)/m
+                B12     = 1
+                B22     = np.sin(delta)
+
+
+            A11 = -mu
+            A41 = np.sin(epsi)
+            A42 = np.cos(epsi)
+            A51 = (1/(1-ey*cur)) * ( -np.cos(epsi) * cur )
+            A52 = (1/(1-ey*cur)) * ( +np.sin(epsi)* cur )
+            A61 = np.cos(theta)
+            A62 = -np.sin(theta)
+            A71 = np.sin(theta)
+            A72 = np.cos(theta)
+            A91 = np.cos(epsi) / (1-ey*cur)
+            A92 = -np.sin(epsi) / (1-ey*cur)
+
+            B21     = (np.cos(delta)*Cf)/ m
+            B31     = (lf*Cf*np.cos(delta)) / I
+
+            Ai = np.array([ [A11    ,  A12 ,  A13 ,  0., 0., 0.,  0., 0., 0.],  # [vx]
+                            [0.     ,  A22 ,  A23 ,  0., 0., 0.,  0., 0., 0.],  # [vy]
+                            [0.     ,  A32 ,  A33 ,  0., 0., 0.,  0., 0., 0.],  # [wz]
+                            [A41    ,  A42 ,  0   ,  0., 0., 0.,  0., 0., 0.],  # [ey]
+                            [A51    ,  A52 ,  1.  ,  0., 0., 0.,  0., 0., 0.],  # [epsi]
+                            [A61    ,  A62 ,  0.  ,  0., 0., 0.,  0., 0., 0.],  # [x]
+                            [A71    ,  A72 ,  0.  ,  0., 0., 0.,  0., 0., 0.],  # [y]
+                            [0      ,  0   ,  1.  ,  0., 0., 0.,  0., 0., 0.],  # [theta]
+                            [A91    ,  A92 ,  0.  ,  0., 0., 0.,  0., 0., 0.]])  # [s]
+
+
+
+            Bi  = np.array([[ B11, B12 ], #[delta, a]
+                            [ B21, B22 ],
+                            [ B31, 0 ],
+                            [ 0,   0 ],
+                            [ 0,   0 ],
+                            [ 0,   0 ],
+                            [ 0,   0 ],
+                            [ 0,   0 ],
+                            [ 0,   0 ]])
+
+
+            Ai = np.eye(len(Ai)) + self.dt * Ai
+            Bi = self.dt * Bi
+
+            states_new = np.dot(Ai, states) + np.dot(Bi, np.transpose(np.reshape(u[i,:],(1,2))))
+
+            STATES_vec[i] = np.reshape(states_new, (6,))
+
+            states = states_new
+
+            Atv.append(Ai)
+            Btv.append(Bi)
+
+        return STATES_vec, Atv, Btv
