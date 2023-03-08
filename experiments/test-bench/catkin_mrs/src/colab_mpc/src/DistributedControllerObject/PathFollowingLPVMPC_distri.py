@@ -1,13 +1,5 @@
 #!/usr/bin/env python
-"""
-    File name: stateEstimator.py
-    Author: Shuqi Xu and Ugo Rosolia
-    Email: shuqixu@berkeley.edu (xushuqi8787@gmail.com)
-    Modified: Eugenio Alcala
-    Email: eugenio.alcala@upc.edu
-    Date: 09/30/2018
-    Python Version: 2.7.12
-"""
+
 from scipy import linalg, sparse
 import numpy as np
 from cvxopt.solvers import qp
@@ -35,21 +27,20 @@ class PathFollowingLPV_MPC:
 
         self.n_s = 9
         self.n_agents = 2
-        self.n_exp = self.n_s + 3 * (self.n_agents)
+        self.n_exp = self.n_s + 2 * (self.n_agents) + 1 # slack variable
         # Vehicle parameters:
-        self.lf = 1
-        self.lr = 1
-        self.m  = 10
+        self.lf = 0.12
+        self.lr = 0.14
+        self.m  = 2.250
         self.I  = 0.05
-        self.Cf = 0.5
-        self.Cr = 0.5
-        self.mu = 0.5
-        self.radius = 1.5
+        self.Cf = 60.0
+        self.Cr = 60.0
+        self.mu = 0.1
         self.g  = 9.81
-        self.lambdas = 5*np.ones(self.n_agents)
 
         self.max_vel = 10
-        # self.max_vel = self.max_vel - 0.2*self.max_vel     
+        self.min_vel = 0.2
+        # self.max_vel = self.max_vel - 0.2*self.max_vel
 
         self.A    = []
         self.B    = []
@@ -87,26 +78,26 @@ class PathFollowingLPV_MPC:
 
         for t in range(0,self.N):
             Q_states = np.zeros((self.n_s-2,self.n_exp))
-
+            # Q_states[3, 3] = 1
             Q_x1 = np.zeros((1,self.n_exp))
-            Q_x1[0,self.n_s-2] = np.sum(self.lambdas[:,t])
+            Q_x1[0,self.n_s-2] = -np.sum(self.lambdas[:,t])
 
             j = 0
-            for i in range(self.n_s,self.n_exp-self.d,2):
+            for i in range(self.n_s,self.n_exp,2):
 
-                Q_x1[0,i] = -self.lambdas[j,t]
+                Q_x1[0,i] = self.lambdas[j,t]
                 j += 1
 
                 if j >= self.n_agents:
                     j = 0
 
             Q_y1 = np.zeros((1,self.n_exp))
-            Q_y1[0,self.n_s-1] = np.sum(self.lambdas[:,t])
+            Q_y1[0,self.n_s-1] = -np.sum(self.lambdas[:,t])
 
             j = 0
-            for i in range(self.n_s+1,self.n_exp-self.d,2):
+            for i in range(self.n_s+1,self.n_exp,2):
 
-                Q_y1[0,i] = -self.lambdas[j,t]
+                Q_y1[0,i] = self.lambdas[j,t]
                 j += 1
 
                 if j >= self.n_agents:
@@ -116,23 +107,27 @@ class PathFollowingLPV_MPC:
             j = 0
             for i in range(0,self.n_agents*2,2):
 
-                Q_n[i,7]       = -self.lambdas[j,t]
-                Q_n[i+1,8]     = -self.lambdas[j,t]
-                Q_n[i,9+i]     = self.lambdas[j,t]
-                Q_n[i+1,9+i+1] = self.lambdas[j,t]
+                Q_n[i,7]       = self.lambdas[j,t]
+                Q_n[i+1,8]     = self.lambdas[j,t]
+                Q_n[i,9+i]     = -self.lambdas[j,t]
+                Q_n[i+1,9+i+1] = -self.lambdas[j,t]
 
                 j += 1
+            Q_slack = np.zeros((1, self.n_exp))
 
-            Q = np.vstack((Q_states,Q_x1,Q_y1,Q_n,np.zeros((self.d,self.n_exp))))
+            if t > 0:
+                Q_slack[-1,-1] = 1000000 # minimise the slack variable
+
+            Q = np.vstack((Q_states,Q_x1,Q_y1,Q_n,Q_slack))
             Q_list.append(Q)
 
         # terminal cost
-        Q_states = np.zeros((self.n_s - 2, self.n_exp))
-        Q_x1 = np.zeros((1, self.n_exp))
-        Q_y1 = np.zeros((1, self.n_exp))
-        Q_n = np.zeros((self.n_agents * 2, self.n_exp))
-        Q = np.vstack((Q_states, Q_x1, Q_y1, Q_n,np.zeros((self.d,self.n_exp))))
-        Q_list.append(Q)
+        # Q_states = np.zeros((self.n_s - 2, self.n_exp))
+        # Q_x1 = np.zeros((1, self.n_exp))
+        # Q_y1 = np.zeros((1, self.n_exp))
+        # Q_n = np.zeros((self.n_agents * 2, self.n_exp))
+        # Q = np.vstack((Q_states, Q_x1, Q_y1, Q_n))
+        # Q_list.append(Q)
         return Q_list
 
     def solve(self, x0, Last_xPredicted, uPred, NN_LPV_MPC, A_L, B_L ,C_L, first_it, lambdas, x_agents):
@@ -145,7 +140,7 @@ class PathFollowingLPV_MPC:
         """
         startTimer              = datetime.datetime.now()
 
-        self.lambdas = lambdas
+        self.lambdas = lambdas # TODO fix lambdas into n neighbours x H time
 
         if (NN_LPV_MPC == False) and (first_it < 5):
             self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
@@ -154,7 +149,7 @@ class PathFollowingLPV_MPC:
             self.B = B_L
             self.C = C_L
 
-
+        # TODO fix agents into (H,2,n)
         self.G, self.E, self.L, self.Eu, self.Eoa  = _buildMatEqConst(self,x_agents) # It's been introduced the C matrix (L in the output)
 
         self.M, self.q          = _buildMatCost(self)
@@ -193,8 +188,6 @@ class PathFollowingLPV_MPC:
             self.uPred = np.squeeze(np.transpose(np.reshape((np.squeeze(sol['x'])[n * (N + 1) + np.arange(d * N)]), (N, d))))
         else:
             startTimer = datetime.datetime.now()
-            np.all(np.linalg.eigvals(M) >= 0)
-            vstack([F, G])
             res_cons, feasible = osqp_solve_qp(sparse.csr_matrix(M), q, sparse.csr_matrix(F),
              b, sparse.csr_matrix(G), np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) ) + np.squeeze(self.Eoa) ) # TODO fix G and np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) )
             
@@ -206,147 +199,18 @@ class PathFollowingLPV_MPC:
             endTimer = datetime.datetime.now(); deltaTimer = endTimer - startTimer
             self.solverTime = deltaTimer
 
+            # np.reshape((Solution[:-20]), (N, 14))
             idx = np.arange(0,9)
-            for i in range(1,N+1):
+            for i in range(1,N):
                 aux = np.arange(0,9) + i*self.n_exp
                 idx = np.hstack((idx,aux))
 
-            self.xPred = np.reshape((Solution[idx]), (N + 1, self.n_s))
-            self.uPred = np.reshape((Solution[self.n_exp * (N + 1) + np.arange(d * N)]), (N, d))
+            self.xPred = np.reshape((Solution[idx]), (N, self.n_s))
+            self.uPred = np.reshape((Solution[self.n_exp * (N) + np.arange(d * N)]), (N, d))
 
         self.LinPoints = np.concatenate( (self.xPred.T[1:,:], np.array([self.xPred.T[-1,:]])), axis=0 )
 
         return feasible, Solution
-
-
-
-    def LPVPrediction(self, x, u, vel_ref):
-
-        lf  = self.lf
-        lr  = self.lr
-        m   = self.m
-        I   = self.I
-        Cf  = self.Cf
-        Cr  = self.Cr   
-        mu  = self.mu
-
-        STATES_vec = np.zeros((self.N, 6))
-
-        Atv = []
-        Btv = []
-        Ctv = []
-        # print("---------------------------")
-        for i in range(0, self.N):
-
-            if i==0:
-                states  = np.reshape(x, (6,1))
-
-            vy      = float(states[1])
-            epsi    = float(states[3])
-            s       = float(states[4])
-            ey      = float(states[5])
-            theta   = float(states[7])
-
-            PointAndTangent = self.map.PointAndTangent[:,:,self.map.lane]
-            cur     = Curvature(s, PointAndTangent)
-
-            # print("s" + str(s))
-            # print("Curvature" + str(cur))
-            # TODO: Add error handling
-            vx      = float(vel_ref[i,0])
-            delta   = float(u[i,0])            # EA: steering angle at K-1
-    
-            if vx < 1.1:
-
-                #low vel model: straight line .
-                A12 = 0
-                A13 = 0
-                A22 = 0
-                A23 = 0
-                A32 = 0
-                A33 = 0
-                B11 = 0
-                B12 = 1
-                B22 = 0
-
-
-            else:
-
-                #standard model
-                A12 = (np.sin(delta) * Cf) / (m*vx)
-                A13 = (np.sin(delta) * Cf * lf) / (m*vx) + vy
-                A22 = -(Cr + Cf * np.cos(delta)) / (m*vx)
-                A23 = -(lf * Cf * np.cos(delta) - lr * Cr) / (m*vx) - vx
-                A32 = -(lf * Cf * np.cos(delta) - lr * Cr) / (I*vx)
-                A33 = -(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I*vx)
-                B11     = -(np.sin(delta)*Cf)/m
-                B12     = 1
-                B22     = np.sin(delta)
-
-            A11 = -mu
-            A41 = np.sin(epsi)
-            A42 = np.cos(epsi)
-            A51 = (1 / (1 - ey * cur)) * (-np.cos(epsi) * cur)
-            A52 = (1 / (1 - ey * cur)) * (+np.sin(epsi) * cur)
-            A61 = np.cos(theta)
-            A62 = -np.sin(theta)
-            A71 = np.sin(theta)
-            A72 = np.cos(theta)
-            A91 = np.cos(epsi) / (1 - ey * cur)
-            A92 = -np.sin(epsi) / (1 - ey * cur)
-
-            B21 = (np.cos(delta) * Cf) / m
-            B31 = (lf * Cf * np.cos(delta)) / I
-
-            Ai = np.array([[A11, A12, A13, 0., 0., 0., 0., 0., 0.], # [vx]
-                           [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
-                           [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
-                           [A41, A42, 0, 0., 0., 0., 0., 0., 0.],   # [ey]
-                           [A51, A52, 1., 0., 0., 0., 0., 0., 0.],  # [epsi]
-                           [0, 0, 1., 0., 0., 0., 0., 0., 0.],      # [theta]
-                           [A91, A92, 0., 0., 0., 0., 0., 0., 0.],  # [s]
-                           [A61, A62, 0., 0., 0., 0., 0., 0., 0.],  # [x]
-                           [A71, A72, 0., 0., 0., 0., 0., 0., 0.],  # [y]
-                           ])
-
-            Bi = np.array([[B11, B12],  # [delta, a]
-                           [B21, B22],
-                           [B31, 0],
-                           [0, 0],
-                           [0, 0],
-                           [0, 0],
-                           [0, 0],
-                           [0, 0],
-                           [0, 0]])
-
-
-            Ci  = np.array([[ 0 ], 
-                            [ 0 ],
-                            [ 0 ],
-                            [ 0 ],
-                            [ 0 ],
-                            [0],
-                            [0],
-                            [0],
-                            [ 0 ]])               
-
-
-            Ai = np.eye(len(Ai)) + self.dt * Ai
-            Bi = self.dt * Bi
-            Ci = self.dt * Ci
-
-            states_new = np.dot(Ai, states) + np.dot(Bi, np.transpose(np.reshape(u[i,:],(1,2))))
-
-            STATES_vec[i] = np.reshape(states_new, (6,))
-
-            states = states_new
-
-            Atv.append(Ai)
-            Btv.append(Bi)
-            Ctv.append(Ci)
-
-        return STATES_vec, Atv, Btv, Ctv
-        
 
 
 
@@ -425,9 +289,9 @@ def _buildMatIneqConst(Controller):
     n_exp = Controller.n_exp
 
     max_vel = Controller.max_vel
-
+    min_vel = Controller.min_vel
     # Ax< B
-    Fx = np.zeros((4+ Controller.n_agents,n_exp))
+    Fx = np.zeros((4,n_exp))
     # limit velocity
     Fx[0,0] = -1
     Fx[1,0] = 1
@@ -435,26 +299,23 @@ def _buildMatIneqConst(Controller):
     # limit lateral error
     Fx[2,3] = 1
     Fx[3,3] = -1
-
+    Fx[2,-1] = -1
+    Fx[3,-1] = -1
     # Limits slack variables
 
-    # TODO MAKE THIS LOOPS BEETTER
-    Fx[4, 13] = 1
-    Fx[5, 14] = 1
-
     #B
-    bx = np.array([[-0.0],
+    bx = np.array([[-min_vel],
                    [max_vel],
-                   [1.5],
-                   [1.5]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
+                   [0.75],
+                   [0.75]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
     # btl = -(Controller.radius)**2*np.ones((Controller.n_agents,1)) # vx min; vx max; ey min; ey max; t1 min ... tn min
-    btl = np.zeros((Controller.n_agents,1)) # vx min; vx max; ey min; ey max; t1 min ... tn min
+    # btl = np.zeros((Controller.n_agents,1)) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
     # btu = 100 * np.ones((Controller.n_agents, 1))  # vx min; vx max; ey min; ey max; t1 min ... tn min
     # bx = np.vstack((bx,btl,btu))
 
-    bx = np.vstack((bx, btl))
+    # bx = np.vstack((bx, btl))
 
     # Builc the matrices for the input constraint in each region. In the region i we want Fx[i]x <= bx[b]
     Fu = np.array([[1., 0.],
@@ -470,17 +331,20 @@ def _buildMatIneqConst(Controller):
 
     rep_a = [Fx] * (N) # add n times Fx to a list
     Mat = linalg.block_diag(*rep_a) # make a block diagonal where the elements of the diagonal are the matrices in the list
+    '''
     NoTerminalConstr = np.zeros((np.shape(Mat)[0], n_exp))  # No need to constraint also the terminal point
     Fxtot = np.hstack((Mat, NoTerminalConstr))
+    '''
+    Fxtot = Mat
     bxtot = np.tile(np.squeeze(bx), N)
-    bxtot = np.append(bxtot,(0,0))
-    t_limtis = np.zeros((Controller.n_agents, np.shape(Fxtot)[1]))
-
-    # TODO generalitzar
-    t_limtis[0,163] = 1
-    t_limtis[1,164] = 1
-
-    Fxtot = np.vstack((Fxtot,t_limtis))
+    # bxtot = np.append(bxtot,(0,0))
+    # t_limtis = np.zeros((Controller.n_agents, np.shape(Fxtot)[1]))
+    #
+    # # TODO generalitzar
+    # t_limtis[0,163] = -1
+    # t_limtis[1,164] = -1
+    #
+    # Fxtot = np.vstack((Fxtot,t_limtis))
 
     # Let's start by computing the submatrix of F relates with the input
     rep_b = [Fu] * (N)
@@ -525,10 +389,14 @@ def _buildMatCost(Controller):
     M0 = linalg.block_diag(Mx, Mu)
 
     # Maximise change on S
-    P = np.zeros((N+1)*Controller.n_exp + N*Controller.d)
-    P[Controller.n_exp*(N-1) + 6] = -1
-    for i in range(0,Controller.d):
-        P[2*Controller.n_exp - Controller.d + i :-(Controller.N-1)*2:Controller.n_exp ] = Controller.lambdas[i,:]
+    Pu = np.zeros(N*Controller.d)
+    Px = np.zeros(Controller.n_exp)
+    Px[6] = -1
+    # Px[0] = -1
+    Px = np.tile(Px,N-1 )
+    P= np.hstack((np.zeros(Controller.n_exp),Px, Pu) )
+    # for i in range(0,Controller.d):
+    #     P[2*Controller.n_exp - Controller.d + i :-(Controller.N-1)*2:Controller.n_exp ] = 0 #Controller.lambdas[i,:]
 
     M = 2 * M0  # Need to multiply by two because CVX considers 1/2 in front of quadratic cost
 
@@ -538,7 +406,7 @@ def _buildMatCost(Controller):
     else:
         M_return = M
 
-    return M_return, P
+    return M_return, 100*P
 
 
 
@@ -551,28 +419,26 @@ def _buildMatEqConst(Controller, agents):
     # TODO Check Eu and E
     A = Controller.A
     B = Controller.B
-    C = Controller.C
     N = Controller.N # N horizon
     n_exp = Controller.n_exp # N horizon
     d = Controller.d # N horizon
 
-    auxG = np.eye(Controller.n_exp-2)
+    auxG = np.eye(Controller.n_exp-1)
 
-    Gx = np.zeros((n_exp-2,n_exp ))
+    Gx = np.zeros((n_exp,n_exp ))
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG
-    Gx = linalg.block_diag(*[Gx]*(N+1))
-    Gx[-(n_exp - 2):, -(n_exp):] = np.zeros((n_exp - 2, n_exp))
-    # Gx[:(Controller.n_exp - 2),:(Controller.n_exp - 2)] += np.eye(Controller.n_exp - 2)
+    Gx = linalg.block_diag(*[Gx]*(N))
+    # Gx[:(Controller.n_exp),:(Controller.n_exp)] += np.eye(Controller.n_exp)
 
-    Gu = np.zeros(((n_exp-2) * (N + 1), d * (N)))
+    Gu = np.zeros(((n_exp) * (N), d * (N)))
 
-    E = np.zeros(((n_exp-2) * (N + 1), Controller.n_s))
+    E = np.zeros(((n_exp) * (N), Controller.n_s))
     E[:Controller.n_s,:Controller.n_s] = np.eye(Controller.n_s)
 
-    Eu = np.zeros(((n_exp-2) * (N + 1), d))
+    Eu = np.zeros(((n_exp) * (N), d))
 
-    Eoa = np.zeros(((n_exp-2) * (N + 1), 1))
-    L = np.zeros(((n_exp-2) * (N + 1), 1)) # I guess L represents previous inputs? whatever rn is 0s
+    Eoa = np.zeros(((n_exp) * (N), 1))
+    L = np.zeros(((n_exp) * (N), 1)) # I guess L represents previous inputs? whatever rn is 0s
 
     # TODO ADD agent initial state
 
@@ -581,117 +447,132 @@ def _buildMatEqConst(Controller, agents):
         Eoa[Controller.n_s + j + 1, 0] = agents[0, int(j / 2), 1]
 
     for i in range(1, N):
-        Gx[i * (n_exp-2):i * (n_exp-2)+Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] -= A[i]
+        Gx[i * (n_exp):i * (n_exp)+Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i]
+        Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i]
+        for j in range(0, Controller.n_agents*2,2): #TODO fix this loop
+            Eoa[i * (Controller.n_exp) + Controller.n_s + j, 0] = agents[i,int(j/2),0]
+            Eoa[i * (Controller.n_exp) + Controller.n_s + j + 1, 0] = agents[i,int(j/2),1]
+            Gx[i * (Controller.n_exp) + Controller.n_s + j, i * (Controller.n_exp) + Controller.n_s + j] = 1
+            Gx[i * (Controller.n_exp) + Controller.n_s + j + 1, i * (Controller.n_exp) + Controller.n_s + j + 1] = 1
 
-        for j in range(0, Controller.d*2,2): #TODO fix this loop
-            Eoa[i * (Controller.n_exp-2) + Controller.n_s + j, 0] = agents[i,int(j/2),0]
-            Eoa[i * (Controller.n_exp-2) + Controller.n_s + j + 1, 0] = agents[i,int(j/2),1]
 
-        Gu[i * (n_exp-2):i * (n_exp-2)+Controller.n_s, (i-1) * Controller.d: (i-1) * Controller.d + Controller.d] -= B[i]
+
 
     G = np.hstack((Gx, Gu))
     
     return G, E, L, Eu, Eoa
 
+def _EstimateABC(Controller,states, u):
 
-def _EstimateABC(Controller,Last_xPredicted, uPredicted):
+        lf = Controller.lf
+        lr = Controller.lr
+        m = Controller.m
+        I = Controller.I
+        Cf = Controller.Cf
+        Cr = Controller.Cr
+        mu = Controller.mu
 
-    N   = Controller.N
-    dt  = Controller.dt
-    lf  = Controller.lf
-    lr  = Controller.lr
-    m   = Controller.m
-    I   = Controller.I
-    Cf  = Controller.Cf
-    Cr  = Controller.Cr
-    mu  = Controller.mu
+        Atv = []
+        Btv = []
+        Ctv = []
 
-    Atv = []
-    Btv = []
-    Ctv = []
+        for i in range(0, Controller.N):
 
-    for i in range(0, N):
+            vx = states[i,0]
+            vy = states[i,1]
+            ey = states[i,3]
+            epsi = states[i,4]
+            theta = states[i,5]
+            s = states[i,6]
 
-        vy      = Last_xPredicted[i,1]
-        epsi    = Last_xPredicted[i,3]
-        s       = Last_xPredicted[i,8]
-        ey      = Last_xPredicted[i,4]
-        theta   = Last_xPredicted[i, 7]
-        cur     = Curvature(s, Controller.map)
-        vx      = Last_xPredicted[i,0]
-        delta   = uPredicted[i,0]             #EA: set of predicted steering angles
+            cur = Curvature(s, Controller.map)
+            delta = u[i, 0]  # EA: steering angle at K-1
 
-        if vx < 1.1:
+            if vx < 100:
 
-            # low vel model: straight line .
-            A12 = 0
-            A13 = 0
-            A22 = 0
-            A23 = 0
-            A32 = 0
-            A33 = 0
-            B11 = 0
-            B12 = 1
-            B22 = 0
+                # low vel model: straight line .
+                A12 = 0
+                A13 = 0
+                A22 = 0
+                A23 = 0
+                A32 = 0
+                A33 = 0
+                B11 = 0
+                B12 = 1
+                B22 = 0
 
 
-        else:
+            else:
 
-            # standard model
-            A12 = (np.sin(delta) * Cf) / (m * vx)
-            A13 = (np.sin(delta) * Cf * lf) / (m * vx) + vy
-            A22 = -(Cr + Cf * np.cos(delta)) / (m * vx)
-            A23 = -(lf * Cf * np.cos(delta) - lr * Cr) / (m * vx) - vx
-            A32 = -(lf * Cf * np.cos(delta) - lr * Cr) / (I * vx)
-            A33 = -(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I * vx)
-            B11 = -(np.sin(delta) * Cf) / m
-            B12 = 1
-            B22 = np.sin(delta)
+                # standard model
+                A12 = (np.sin(delta) * Cf) / (m * vx)
+                A13 = (np.sin(delta) * Cf * lf) / (m * vx) + vy
+                A22 = -(Cr + Cf * np.cos(delta)) / (m * vx)
+                A23 = -(lf * Cf * np.cos(delta) - lr * Cr) / (m * vx) - vx
+                A32 = -(lf * Cf * np.cos(delta) - lr * Cr) / (I * vx)
+                A33 = -(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I * vx)
+                B11 = -(np.sin(delta) * Cf) / m
+                B12 = 1
+                B22 = np.sin(delta)
 
-        A11 = -mu
-        A41 = np.sin(epsi)
-        A42 = np.cos(epsi)
-        A51 = (1 / (1 - ey * cur)) * (-np.cos(epsi) * cur)
-        A52 = (1 / (1 - ey * cur)) * (+np.sin(epsi) * cur)
-        A61 = np.cos(theta)
-        A62 = -np.sin(theta)
-        A71 = np.sin(theta)
-        A72 = np.cos(theta)
-        A91 = np.cos(epsi) / (1 - ey * cur)
-        A92 = -np.sin(epsi) / (1 - ey * cur)
+            A11 = -mu
+            A51 = (1 / (1 - ey * cur)) * (-np.cos(epsi) * cur)
+            A52 = (1 / (1 - ey * cur)) * (+np.sin(epsi) * cur)
+            A61 = np.cos(epsi) / (1 - ey * cur)
+            A62 = np.sin(epsi) / (1 - ey * cur)
+            A7 = np.sin(epsi)
+            A8 = np.cos(epsi)
 
-        B21 = (np.cos(delta) * Cf) / m
-        B31 = (lf * Cf * np.cos(delta)) / I
+            A81 = np.cos(theta)
+            A82 = -np.sin(theta)
+            A91 = np.sin(theta)
+            A92 = np.cos(theta)
 
-        Ai = np.array([[A11, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
-                       [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
-                       [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
-                       [A41, A42, 0, 0., 0., 0., 0., 0., 0.],  # [ey]
-                       [A51, A52, 1., 0., 0., 0., 0., 0., 0.],  # [epsi]
-                       [0, 0, 1., 0., 0., 0., 0., 0., 0.],  # [theta]
-                       [A91, A92, 0., 0., 0., 0., 0., 0., 0.], # [s]
-                       [A61, A62, 0., 0., 0., 0., 0., 0., 0.],  # [x]
-                       [A71, A72, 0., 0., 0., 0., 0., 0., 0.],  # [y]
-                        ])
+            B21 = (np.cos(delta) * Cf) / m
+            B31 = (lf * Cf * np.cos(delta)) / I
 
-        Bi = np.array([[B11, B12],  # [delta, a]
-                       [B21, B22],
-                       [B31, 0],
-                       [0, 0],
-                       [0, 0],
-                       [0, 0],
-                       [0, 0],
-                       [0, 0],
-                       [0, 0]])
+            Ai = np.array([[A11, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
+                           [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
+                           [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
+                           [A7, A8, 0, 0., 0., 0., 0., 0., 0.],    # [ey]
+                           [A51, A52, 1.,0., 0., 0., 0., 0., 0.],  # [epsi]
+                           [0, 0, 1.,0., 0., 0., 0., 0., 0.],  # [theta]
+                           [A61, A62, 0, 0., 0., 0., 0., 0., 0.],  # [s]
+                           [A81, A82, 0, 0., 0., 0., 0., 0., 0.],  # [x]
+                           [A91, A92, 0, 0., 0., 0., 0., 0., 0.],  # [y]
+                           ])
 
-        Ai = np.eye(len(Ai)) + dt * Ai
-        Bi = dt * Bi
-        Ci = np.zeros((9,1))
-        #############################################
-        Atv.append(Ai)
-        Btv.append(Bi)
-        Ctv.append(Ci)
+            Bi = np.array([[B11, B12],  # [delta, a]
+                           [B21, B22],
+                           [B31, 0],
+                           [0, 0],
+                           [0, 0],
+                           [0, 0],
+                           [0, 0],
+                           [0, 0],
+                           [0, 0]])
 
-    return Atv, Btv, Ctv
+            Ci = np.array([[0],
+                           [0],
+                           [0],
+                           [0],
+                           [0],
+                           [0],
+                           [0],
+                           [0],
+                           [0]])
+
+            Ai = np.eye(len(Ai)) + Controller.dt * Ai
+            Bi = Controller.dt * Bi
+            Ci = Controller.dt * Ci
+
+            Atv.append(Ai)
+            Btv.append(Bi)
+            Ctv.append(Ci)
+
+        return Atv, Btv, Ctv
+
+
+
 
 

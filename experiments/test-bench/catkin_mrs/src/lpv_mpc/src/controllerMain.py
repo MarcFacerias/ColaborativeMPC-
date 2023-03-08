@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import datetime
 import rospy
 import numpy as np
-import os
+import scipy.io as sio
+import pdb
+import pickle
 import matplotlib.pyplot as plt
 
 sys.path.append(sys.path[0]+'/ControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
+
 from lpv_mpc.msg import ECU, prediction, Racing_Info, My_Planning
 from std_msgs.msg import Bool, Int16, UInt8
 from dataStructures import LMPCprediction, EstimatorData
@@ -18,11 +22,13 @@ from trackInitialization import Map, wrap
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 
-def main():
+def main(group):
 
     rospy.init_node("LPV-MPC")
     input_commands  = rospy.Publisher('ecu', ECU, queue_size=1)
     pub_flag        = rospy.Publisher('flag', Bool, queue_size=1)
+    pred_treajecto  = rospy.Publisher('predictions', prediction, queue_size=1)
+    OL_predictions  = prediction()
 
     N               = rospy.get_param("control/N")
     Vx_ref          = rospy.get_param("control/vel_ref")
@@ -36,6 +42,8 @@ def main():
     rate            = rospy.Rate(loop_rate)
     rise_flag       = Bool()
 
+
+    ## TODO: change this in order to be taken from the launch file
     Steering_Delay  = 0 #3
     Velocity_Delay  = 0
 
@@ -52,7 +60,7 @@ def main():
     cmd.servo       = 0.0
     cmd.motor       = 0.0                    # Closed-Loop Data
 
-    estimatorData   = EstimatorData()                                      # Map
+    estimatorData   = EstimatorData(group)                                      # Map
 
     first_it        = 1
     Pub_counter     = 0
@@ -61,7 +69,7 @@ def main():
     GlobalState     = np.zeros(6)
     LocalState      = np.zeros(6)
     RunController   = 1
-
+    uApplied        = np.array([0.0, 0.0])
 
     vector_length   = 42000
     DATA            = np.zeros((vector_length,8))      # [vx vy psidot thetae s ye vxaccel vyaccel udelta uaccel]
@@ -70,7 +78,7 @@ def main():
     PREDICTED_DATA  = np.zeros((vector_length,120))     # [vx vy psidot thetae s ye] presicted to N steps
     ELAPSD_TIME     = np.zeros((vector_length,1))
     CONTROL_ACTIONS = np.zeros((vector_length,2))
-    Hist_pos        = np.zeros((vector_length,6))
+    Hist_pos        = np.zeros((vector_length,4))
     Hist_traj       = np.zeros((vector_length,4))
 
     vel_ref = np.zeros([N,1])
@@ -82,8 +90,8 @@ def main():
     # Loop running at loop rate
     TimeCounter     = 0
     PlannerCounter  = 0
-    test_gen        = 0
-    test_type       = 1
+    test_gen        = 0# test generated plan
+    test_type       = 1# 1=vel cte 0=acc cte
     acc_ref         = 1.5
     dacc_ref        = 0
     velocity        = 0
@@ -92,19 +100,49 @@ def main():
 
     rospy.sleep(1.2)   # Soluciona los problemas de inicializacion esperando a que el estimador se inicialice bien
 
+    #maximum values
+    v_max     = 3.0 #TODO Max Vel
+    v_min     = 0.01
+    ac_max    = 3.0
+    ac_min    = -3.0
+    e_max     = 0.5
+    e_min     = -0.5
+    str_max   = 0.249
+    str_min   = -0.249
+    dstr_max  = str_max*0.1
+    dstr_min  = str_min*0.1
+    dac_max   = ac_max*0.1
+    dac_min   = ac_min*0.1
     Counter   = 0
+
+    vx_scale  = 1/((v_max-v_min)**2)
+    acc_scale = 1/((ac_max-ac_min)**2)
+    ey_scale  = 1/((e_max-e_min)**2)
+    str_scale = 1/((str_max-str_min)**2)
+    dstr_scale = 1/((dstr_max-dstr_min)**2)
+    dacc_scale = 1/((dac_max-dac_min)**2)
 
 ###----------------------------------------------------------------###
     ### PATH TRACKING TUNING:
+
+    # Q  = 0.8 * np.diag([0.7*vx_scale, 0.0, 0.0, 0.1*ey_scale, 0.0, 0.6*ey_scale])
+    # R  = 0.05* np.diag([0.15*str_scale,0.1*acc_scale])  # delta, a
+    # dR = 0.15 * np.array([0.001*dstr_scale,0.01*dacc_scale])  # Input rate cost u
 
     Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
     R  = 1 * np.diag([3, 0.8])                         #[delta ; a]
     dR = 15 * np.array([1.0, 1.5])                        #Input rate cost u
 
+    # #ref mapa
+    # Q  = 0.8 * np.diag([0.7*vx_scale, 0.0, 0.0, 0.3*ey_scale, 0.0, 0.8*ey_scale])
+    # R  = 0.05* np.diag([0.05*str_scale,0.1*acc_scale])  # delta, a
+    # dR = 0.15 * np.array([0.0005*dstr_scale,0.01*dacc_scale])  # Input rate cost u
+
     Controller  = PathFollowingLPV_MPC(Q, R, dR, N, Vx_ref, dt,map, "OSQP", Steering_Delay, Velocity_Delay)
 
 ###----------------------------------------------------------------###
 
+    L_LPV_States_Prediction = np.zeros((N,6))
     LPV_States_Prediction   = np.zeros((N,6))
 
     pub_flag.publish(rise_flag)
@@ -117,8 +155,9 @@ def main():
         GlobalState[:] = estimatorData.CurrentState  # The current estimated state vector [vx vy w x y psi]
         LocalState[:]  = estimatorData.CurrentState  # [vx vy w x y psi]
 
+        GLOBAL_DATA[TimeCounter,:] = LocalState[3::]
         if test_gen == 0: # wait until the plan is online
-            GLOBAL_DATA[TimeCounter, :] = LocalState[3::]
+
             LocalState[4], LocalState[5], LocalState[3], insideTrack = map.getLocalPosition(GlobalState[3], GlobalState[4], GlobalState[5])
 
             if (LocalState[4] <= 3*map.TrackLength[0]/4):
@@ -177,7 +216,9 @@ def main():
                         vel_ref[i,0] = vel_ref[i+1,0]
                         x_ref[i,0]   = x_ref[i+1,0]
 
+        startTimer = datetime.datetime.now()
 
+        oldU = uApplied
         uApplied = np.array([cmd.servo, cmd.motor])
 
         Controller.OldSteering.append(cmd.servo) # meto al final del vector
@@ -185,7 +226,7 @@ def main():
         Controller.OldSteering.pop(0)
         Controller.OldAccelera.pop(0)
 
-        Hist_pos[TimeCounter,:]   = LocalState
+        Hist_pos[TimeCounter,:]   = [LocalState[3], LocalState[4], wrap(LocalState[5]), LocalState[0] ]
         Hist_traj[TimeCounter,:]  = [x_ref[0,0], y_ref[0,0], wrap(yaw_ref[0,0]), vel_ref[0,0] ]        
 
         GlobalState[5] = wrap(GlobalState[5])
@@ -198,22 +239,11 @@ def main():
             accel_rate = 0.0
 
             xx, uu      = predicted_vectors_generation_V2(N, LocalState, accel_rate, dt)
-
             feasible = Controller.solve(LocalState[0:6], xx, uu, NN_LPV_MPC, vel_ref,curv_ref, 0, 0, 0, first_it)
 
-            if not feasible:
+            if feasible != 0:
+                first_it    = first_it + 1
                 rospy.logwarn("Controller unable to find a solution, retrying warmup ..." )
-            first_it += 1
-
-            # print(Controller.uPred)
-            # print("----------------")
-            # print(Controller.xPred)
-            # print("----------------")
-            # print(Controller.xPred)
-            # print("----------------")
-            # print(GlobalState)
-            # print("----------------")
-            # print("----------------")
 
             Controller.OldPredicted = np.hstack((Controller.OldSteering[0:len(Controller.OldSteering)-1], Controller.uPred[Controller.steeringDelay:Controller.N,0]))
             Controller.OldPredicted = np.concatenate((np.matrix(Controller.OldPredicted).T, np.matrix(Controller.uPred[:,1]).T), axis=1)
@@ -259,15 +289,15 @@ def main():
 
             ## Publish input car IDIADA
             ### Parse from cmd to cmd_car -> IDIADA
-            
+
             Pub_counter = 0
             PlannerCounter  += 1
             '''print cmd.motor
             print cmd.servo'''
             if cmd.motor is None:
-                cmd.motor = 0
+            	cmd.motor = 0
             if cmd.servo is None:
-                cmd.servo = 0
+            	cmd.servo = 0
 
             input_commands.publish(cmd)
             velocity += cmd.motor * dt
@@ -326,16 +356,16 @@ def main():
     plt.grid()
 
     plt.show()
-    '''
-    robot = rospy.get_namespace()
-    day         = 'test_bank'
-    num_test    = 'Trajectory_generation_ux' + robot
+
+    day         = '28_1_2019'
+    num_test    = 'ResultsPaper'
     newpath     = '/home/marc/Escritorio/results_simu_test/'+day+'/'+num_test+'/'
     if not os.path.exists(newpath):
         os.makedirs(newpath)
-    np.savetxt(newpath+'/global_pose.dat', GLOBAL_DATA, fmt='%.5e')
-    np.savetxt(newpath + '/local_pose.dat', Hist_pos, fmt='%.5e')
-    np.savetxt(newpath+'/control.dat', CONTROL_ACTIONS, fmt='%.5e')
+    np.savetxt(newpath+'/DATA2.dat', DATA, fmt='%.5e')
+    np.savetxt(newpath+'/REFS2.dat', REFS, fmt='%.5e') 
+    np.savetxt(newpath+'/GLOBAL_DATA2.dat', GLOBAL_DATA, fmt='%.5e')
+'''
     quit()
 
 # ===============================================================================================================================
@@ -438,8 +468,8 @@ def plotTrajectory(map, ClosedLoop, Complete_Vel_Vect):
 if __name__ == "__main__":
 
     try:
-        # myargv = rospy.myargv(argv=sys.argv)
-        main()
+        myargv = rospy.myargv(argv=sys.argv)
+        main(myargv[1])
 
     except rospy.ROSInterruptException:
         pass

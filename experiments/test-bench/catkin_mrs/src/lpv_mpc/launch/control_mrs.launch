@@ -1,0 +1,15 @@
+<launch>
+
+  <node pkg="colab_mpc" type="plotCarTrajectory.py" name="visualization" output="screen">
+        <param name="plotGPS"     type="bool" value="true" />
+  </node>
+
+  <rosparam file="$(find colab_mpc)/config/agents.yaml" command="load"/>
+  <rosparam file="$(find colab_mpc)/config/experiment.yaml" command="load"/>
+  <rosparam file="$(find colab_mpc)/config/model.yaml" command="load"/>
+
+
+  <include file="$(find colab_mpc)/launch/control_spawner.launch" >
+    <arg name="agents" value="2"/>
+  </include>
+</launch>

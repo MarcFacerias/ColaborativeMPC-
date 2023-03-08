@@ -94,11 +94,11 @@ def main():
 ###----------------------------------------------------------------###
 
     Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
-    R  = 0.0000001 * np.diag([3, 0.8])                         #[delta ; a]
+    R  = 0.1 * np.diag([3, 0.8])                         #[delta ; a]
 
     Controller  = PathFollowingLPV_MPC(Q, R, N, 0.033,map, "OSQP")
     # 7.20272e-01 -1.61402e-01 -7.62251e-01 9.64952e-03 8.09713e-01 -1.83660e-03
-    x0 = [0.720, -0.16, 0.00,-0.2, -0.009, 0.260, 8.09713e-01, 0.75, 1.0 ] #[vx vy psidot y_e thetae theta s x y]
+    x0 = [0.720, -0.16, 0.00,-0.2, 0, 0.260, 8.09713e-01, 0.75, 1.0 ] #[vx vy psidot y_e thetae theta s x y]
     # uPred = np.array([-0.154, 2.491])
     Last_xPredicted = np.array(x0)
 
