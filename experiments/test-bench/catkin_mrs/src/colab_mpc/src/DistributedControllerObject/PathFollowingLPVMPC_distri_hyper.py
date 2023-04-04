@@ -80,59 +80,25 @@ class PathFollowingLPV_MPC:
             Q_states[1,1] = 1
             Q_states[2,2] = 1
             Q_states[4,4] = 1
-            # TODO end set proper matrix value
-            Q_x1 = np.zeros((1,self.n_exp))
-            Q_x1[0,self.n_s-2] = -np.sum(self.lambdas[:,t])
 
-            j = 0
-            for i in range(self.n_s,self.n_exp,2):
+            Q_slack = np.zeros((2*self.n_agents, self.n_exp))
 
-                Q_x1[0,i] = self.lambdas[j,t]
-                j += 1
+            for i in range(0, Controller.n_agents * 2, 2):
+                Q_cons[i,7] = self.lambdas[i,t,0] * self.planes[t,0,i/2]
+                Q_cons[i,8] = self.lambdas[i,t,0] * self.planes[t,1,i/2]
 
-                if j >= self.n_agents:
-                    j = 0
-
-            Q_y1 = np.zeros((1,self.n_exp))
-            Q_y1[0,self.n_s-1] = -np.sum(self.lambdas[:,t])
-
-            j = 0
-            for i in range(self.n_s+1,self.n_exp,2):
-
-                Q_y1[0,i] = self.lambdas[j,t]
-                j += 1
-
-                if j >= self.n_agents:
-                    j = 0
-
-            Q_n = np.zeros((self.n_agents*2,self.n_exp))
-            j = 0
-            for i in range(0,self.n_agents*2,2):
-
-                Q_n[i,7]       = self.lambdas[j,t]
-                Q_n[i+1,8]     = self.lambdas[j,t]
-                Q_n[i,9+i]     = -self.lambdas[j,t]
-                Q_n[i+1,9+i+1] = -self.lambdas[j,t]
-
-                j += 1
-            Q_slack = np.zeros((1, self.n_exp))
+                Q_cons[i+1,self.n_s + i] = -self.lambdas[i,t,1] * self.planes[t,0,i/2]
+                Q_cons[i+1,self.n_s + i + 1] = -self.lambdas[i,t,1] * self.planes[t,1,i/2]
 
             if t > 0:
                 Q_slack[-1,-1] = 1000000 # minimise the slack variable
 
-            Q = np.vstack((Q_states,Q_x1,Q_y1,Q_n,Q_slack))
+            Q = np.vstack((Q_states,Q_cons,Q_slack))
             Q_list.append(Q)
 
-        # terminal cost
-        # Q_states = np.zeros((self.n_s - 2, self.n_exp))
-        # Q_x1 = np.zeros((1, self.n_exp))
-        # Q_y1 = np.zeros((1, self.n_exp))
-        # Q_n = np.zeros((self.n_agents * 2, self.n_exp))
-        # Q = np.vstack((Q_states, Q_x1, Q_y1, Q_n))
-        # Q_list.append(Q)
         return Q_list
 
-    def solve(self, x0, Last_xPredicted, uPred, NN_LPV_MPC, lambdas, x_agents):
+    def solve(self, x0, Last_xPredicted, uPred, lambdas, x_agents, pose):
         """Computes control action
         Arguments:
             x0: current state position
@@ -143,6 +109,9 @@ class PathFollowingLPV_MPC:
         startTimer              = datetime.datetime.now()
 
         self.lambdas = lambdas # TODO fix lambdas into n neighbours x H time
+
+        planes = hyperplane_separator(2, 10)
+        self.planes = planes.compute_hyperplane(x_agents, pose)
 
         self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
 

@@ -261,7 +261,7 @@ class PathFollowingLPV_MPC:
             Ctv.append(Ci)
 
         return STATES_vec, Atv, Btv, Ctv
-        
+
 
 
 
@@ -732,8 +732,6 @@ def _EstimateABC(Controller,Last_xPredicted, uPredicted,curv_ref):
             A23 = 0
             A32 = 0
             A33 = 0
-            B21 = 0
-            B31 = 1
             B11 = 0
             B12 = 1
             B22 = 0

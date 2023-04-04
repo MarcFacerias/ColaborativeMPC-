@@ -247,6 +247,8 @@ class Map():
         while (s >= self.TrackLength[lane]):
             s = s - self.TrackLength[lane]
 
+        if s < 0:
+            s = 0
         # Compute the segment in which system is evolving
         PointAndTangent = self.PointAndTangent[:,:,lane]
 

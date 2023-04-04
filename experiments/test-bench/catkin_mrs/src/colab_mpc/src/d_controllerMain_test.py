@@ -12,6 +12,33 @@ sys.path.append(sys.path[0]+'/Utilities')
 from PathFollowingLPVMPC_distri import PathFollowingLPV_MPC, _buildMatEqConst
 from trackInitialization import Map, wrap
 
+class agent():
+
+    #TODO: define Q and R
+    def __init__(self, N, Map, dt, x0, Q=None,R=None):
+        self.map = Map
+        self.N = N
+        self.dt = dt
+        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
+        self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
+        self.Controller = PathFollowingLPV_MPC(self.Q, self.R, N, dt, Map, "OSQP")
+        self.x0 = x0
+
+    def one_step(self, lambdas, agents, uPred = None, xPred = None):
+
+        if (xPred is None):
+            xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
+
+        feas, uPred, xPred = self._solve(self.x0, agents, lambdas,xPred, uPred)
+
+        return feas,uPred, xPred
+
+
+    def _solve(self, x0, agents,lambdas, Xpred, uPred):
+
+        feas, Solution = self.Controller.solve(x0, Xpred, uPred, False, "A_L", "B_L", "C_L", 4, lambdas, agents)
+
+        return feas, self.Controller.uPred, self.Controller.xPred
 
 def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     # We need a prediction of the states for the start-up proces of the controller (To instantiate the LPV variables)
@@ -57,20 +84,6 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     uu = np.zeros(( Hp, 1 ))
     return xx, uu
 
-# def test_dist(pa, pb, th):
-#
-#     if pa.shape[0] == pb.shape[0]:
-#         state = np.zeros(pa.shape[0])
-#         for row in range(0,pa.shape[0]):
-#
-#             if((pa[row,0] + pb[row,0])**2 + (pa[row,1] + pb[row,1])**2 < th):
-#
-#                 state[row] = 1
-#
-#
-#         return state
-#
-#     return None
 
 def main():
 
@@ -101,13 +114,11 @@ def main():
     x0 = [0.720, -0.16, 0.00,-0.2, 0, 0.260, 8.09713e-01, 0.75, 1.0 ] #[vx vy psidot y_e thetae theta s x y]
     # uPred = np.array([-0.154, 2.491])
     Last_xPredicted = np.array(x0)
-
-
-
     Last_xPredicted, uPred = predicted_vectors_generation_V2(N, Last_xPredicted, 0.033 , map)
-    t = time.time()
-    lambdas = 0.25*np.ones((2,N)) # one lambda per neighbour per optimisation within the horizon
+
+
     feas, Solution = Controller.solve(x0, Last_xPredicted, uPred, False, "A_L", "B_L" ,"C_L", 4,lambdas, agents )
+
 
     # print(Solution)
     # test_dist(Controller.xPred[:-1,[7,8]], agents[:,0,:] ,1.5**2)

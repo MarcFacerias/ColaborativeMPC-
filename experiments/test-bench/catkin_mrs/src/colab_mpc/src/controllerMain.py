@@ -205,8 +205,8 @@ def main():
                 rospy.logwarn("Controller unable to find a solution, retrying warmup ..." )
             first_it += 1
 
-            # print(Controller.uPred)
-            # print("----------------")
+            print(Controller.uPred)
+            print("----------------")
             # print(Controller.xPred)
             # print("----------------")
             # print(Controller.xPred)
@@ -231,12 +231,11 @@ def main():
         ###################################################################################################
         ###################################################################################################
 
-        if Counter >-1:
-            if first_it > 19:
-                new_LPV_States_Prediction = LPV_States_Prediction[0, :]
-                for i in range(1,N):
-                    new_LPV_States_Prediction = np.hstack((new_LPV_States_Prediction, LPV_States_Prediction[i,:]))
-                PREDICTED_DATA[Counter,:] = new_LPV_States_Prediction
+
+            new_LPV_States_Prediction = LPV_States_Prediction[0, :]
+            for i in range(1,N):
+                new_LPV_States_Prediction = np.hstack((new_LPV_States_Prediction, LPV_States_Prediction[i,:]))
+            PREDICTED_DATA[Counter,:] = new_LPV_States_Prediction
 
             # # Model delay with an small horizon? 
 
@@ -333,9 +332,10 @@ def main():
     newpath     = '/home/marc/Escritorio/results_simu_test/'+day+'/'+num_test+'/'
     if not os.path.exists(newpath):
         os.makedirs(newpath)
-    np.savetxt(newpath+'/global_pose.dat', GLOBAL_DATA, fmt='%.5e')
-    np.savetxt(newpath + '/local_pose.dat', Hist_pos, fmt='%.5e')
-    np.savetxt(newpath+'/control.dat', CONTROL_ACTIONS, fmt='%.5e')
+    np.savetxt(newpath+'/global_pose.dat', GLOBAL_DATA[0:TimeCounter,:], fmt='%.5e',delimiter=' ')
+    np.savetxt(newpath + '/local_pose.dat', Hist_pos[0:TimeCounter,:], fmt='%.5e',delimiter=' ')
+    np.savetxt(newpath+'/control.dat', CONTROL_ACTIONS[0:TimeCounter,:], fmt='%.5e',delimiter=' ')
+    np.savetxt(newpath + '/predictions.dat', PREDICTED_DATA[0:TimeCounter, :], fmt='%.5e',delimiter=' ')
     quit()
 
 # ===============================================================================================================================

@@ -11,7 +11,7 @@ sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/Utilities')
 
-from PathFollowingLPVMPC_distri import PathFollowingLPV_MPC, _buildMatEqConst
+from PathFollowingLPVMPC_distri_hyper import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -29,19 +29,19 @@ class agent():
         self.Controller = PathFollowingLPV_MPC(self.Q, self.R, N, dt, Map, "OSQP")
         self.x0 = x0
 
-    def one_step(self, lambdas, agents, uPred = None, xPred = None):
+    def one_step(self, lambdas, agents, pose, uPred = None, xPred = None):
 
         if (xPred is None):
             xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
-        feas, uPred, xPred = self._solve(self.x0, agents, lambdas,xPred, uPred)
+        feas, uPred, xPred = self._solve(self.x0, agents, pose, lambdas,xPred, uPred)
 
         return feas,uPred, xPred
 
 
     def _solve(self, x0, agents,lambdas, Xpred, uPred):
 
-        feas, Solution = self.Controller.solve(x0, Xpred, uPred, False, lambdas, agents)
+        feas, Solution = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, pose)
 
         return feas, self.Controller.uPred, self.Controller.xPred
 

@@ -16,7 +16,8 @@ from numpy import tan, arctan, cos, sin, pi
 
 solvers.options['show_progress'] = False
 
-np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
+# np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
+np.set_printoptions(precision=5)
 
 class PathFollowingLPV_MPC:
     """Create the Path Following LMPC controller with LTV model
@@ -26,8 +27,8 @@ class PathFollowingLPV_MPC:
     def __init__(self, Q, R, N, dt, map, Solver):
 
         self.n_s = 9
-        self.n_agents = 2
-        self.n_exp = self.n_s + 2 * (self.n_agents) + 1 # slack variable
+        self.d = 2
+        self.n_exp = self.n_s + 1 # slack variable
         # Vehicle parameters:
         self.lf = 0.12
         self.lr = 0.14
@@ -36,6 +37,7 @@ class PathFollowingLPV_MPC:
         self.Cf = 60.0
         self.Cr = 60.0
         self.mu = 0.1
+        self.g  = 9.81
 
         self.max_vel = 10
         self.min_vel = 0.2
@@ -75,64 +77,21 @@ class PathFollowingLPV_MPC:
         Q_list = []
 
         for t in range(0,self.N):
-            Q_states = np.zeros((self.n_s-2,self.n_exp))
+            Q_states = np.zeros((self.n_s,self.n_exp))
             # TODO set proper matrix value
             Q_states[1,1] = 1
             Q_states[2,2] = 1
             Q_states[4,4] = 1
-            # TODO end set proper matrix value
-            Q_x1 = np.zeros((1,self.n_exp))
-            Q_x1[0,self.n_s-2] = -np.sum(self.lambdas[:,t])
-
-            j = 0
-            for i in range(self.n_s,self.n_exp,2):
-
-                Q_x1[0,i] = self.lambdas[j,t]
-                j += 1
-
-                if j >= self.n_agents:
-                    j = 0
-
-            Q_y1 = np.zeros((1,self.n_exp))
-            Q_y1[0,self.n_s-1] = -np.sum(self.lambdas[:,t])
-
-            j = 0
-            for i in range(self.n_s+1,self.n_exp,2):
-
-                Q_y1[0,i] = self.lambdas[j,t]
-                j += 1
-
-                if j >= self.n_agents:
-                    j = 0
-
-            Q_n = np.zeros((self.n_agents*2,self.n_exp))
-            j = 0
-            for i in range(0,self.n_agents*2,2):
-
-                Q_n[i,7]       = self.lambdas[j,t]
-                Q_n[i+1,8]     = self.lambdas[j,t]
-                Q_n[i,9+i]     = -self.lambdas[j,t]
-                Q_n[i+1,9+i+1] = -self.lambdas[j,t]
-
-                j += 1
             Q_slack = np.zeros((1, self.n_exp))
 
-            if t > 0:
-                Q_slack[-1,-1] = 1000000 # minimise the slack variable
+            Q_slack[0,-1] = 2000 # minimise the slack variable
 
-            Q = np.vstack((Q_states,Q_x1,Q_y1,Q_n,Q_slack))
+            Q = np.vstack((Q_states,Q_slack))
             Q_list.append(Q)
 
-        # terminal cost
-        # Q_states = np.zeros((self.n_s - 2, self.n_exp))
-        # Q_x1 = np.zeros((1, self.n_exp))
-        # Q_y1 = np.zeros((1, self.n_exp))
-        # Q_n = np.zeros((self.n_agents * 2, self.n_exp))
-        # Q = np.vstack((Q_states, Q_x1, Q_y1, Q_n))
-        # Q_list.append(Q)
         return Q_list
 
-    def solve(self, x0, Last_xPredicted, uPred, NN_LPV_MPC, lambdas, x_agents):
+    def solve(self, x0, Last_xPredicted, uPred, NN_LPV_MPC, A_L, B_L ,C_L, first_it):
         """Computes control action
         Arguments:
             x0: current state position
@@ -142,12 +101,15 @@ class PathFollowingLPV_MPC:
         """
         startTimer              = datetime.datetime.now()
 
-        self.lambdas = lambdas # TODO fix lambdas into n neighbours x H time
-
-        self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
+        if (NN_LPV_MPC == False) and (first_it < 5):
+            self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
+        else:
+            self.A = A_L
+            self.B = B_L
+            self.C = C_L
 
         # TODO fix agents into (H,2,n)
-        self.G, self.E, self.L, self.Eu, self.Eoa  = _buildMatEqConst(self,x_agents) # It's been introduced the C matrix (L in the output)
+        self.G, self.E, self.L, self.Eu, self.Eoa  = _buildMatEqConst(self) # It's been introduced the C matrix (L in the output)
 
         self.M, self.q          = _buildMatCost(self)
 
@@ -261,9 +223,9 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
             qp_A = G
             qp_l = l
             qp_u = h
-        osqp.setup(P=P.tocsc(), q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True, max_iter=100000)
+        osqp.setup(P=P, q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True)
     else:
-        osqp.setup(P=P, q=q, A=None, l=None, u=None, verbose=False, polish=True)
+        osqp.setup(P=P, q=q, A=None, l=None, u=None, verbose=True, polish=True)
     if initvals is not None:
         osqp.warm_start(x=initvals)
     res = osqp.solve()
@@ -291,24 +253,25 @@ def _buildMatIneqConst(Controller):
     Fx[0,0] = -1
     Fx[1,0] = 1
 
-    # limit lateral error with slack variables
+    # limit lateral error
     Fx[2,3] = 1
     Fx[3,3] = -1
     Fx[2,-1] = -1
     Fx[3,-1] = -1
 
+    # TODO limit acceleration
+    # Limits slack variables
+    # Fx[3,0] = 1/Controller.dt
+    # Fx[4,0] = -1/Controller.dt
+    # Fx[5,0] = 1/Controller.dt
+    # Fx[6,0] = -1/Controller.dt
+
     #B
     bx = np.array([[-min_vel],
                    [max_vel],
-                   [0.5],
-                   [0.5]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
+                   [0.35],
+                   [0.35]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
-    # btu = 100 * np.ones((Controller.n_agents, 1))  # vx min; vx max; ey min; ey max; t1 min ... tn min
-    # bx = np.vstack((bx,btl,btu))
-
-    # bx = np.vstack((bx, btl))
-
-    # Builc the matrices for the input constraint in each region. In the region i we want Fx[i]x <= bx[b]
     Fu = np.array([[1., 0.],
                    [-1., 0.],
                    [0., 1.],
@@ -322,22 +285,10 @@ def _buildMatIneqConst(Controller):
 
     rep_a = [Fx] * (N) # add n times Fx to a list
     Mat = linalg.block_diag(*rep_a) # make a block diagonal where the elements of the diagonal are the matrices in the list
-    '''
-    NoTerminalConstr = np.zeros((np.shape(Mat)[0], n_exp))  # No need to constraint also the terminal point
-    Fxtot = np.hstack((Mat, NoTerminalConstr))
-    '''
+
     Fxtot = Mat
     bxtot = np.tile(np.squeeze(bx), N)
-    # bxtot = np.append(bxtot,(0,0))
-    # t_limtis = np.zeros((Controller.n_agents, np.shape(Fxtot)[1]))
-    #
-    # # TODO generalitzar
-    # t_limtis[0,163] = -1
-    # t_limtis[1,164] = -1
-    #
-    # Fxtot = np.vstack((Fxtot,t_limtis))
 
-    # Let's start by computing the submatrix of F relates with the input
     rep_b = [Fu] * (N)
     Futot = linalg.block_diag(*rep_b)
     butot = np.tile(np.squeeze(bu), N)
@@ -361,12 +312,8 @@ def _buildMatIneqConst(Controller):
 
 
 def _buildMatCost(Controller):
-    # EA: This represents to be: [(r-x)^T * Q * (r-x)] up to N+1
-    # and [u^T * R * u] up to N
 
-    # I consider Q to have the proper shape (9 base states +3N  with N being the neighbours )
     b  = Controller._buildQ()
-    # I consider R to have the proper shape ( 2xN )
     R  = Controller.R
     N  = Controller.N
 
@@ -386,7 +333,7 @@ def _buildMatCost(Controller):
     Px[0] = -1
     P= 2*np.hstack((np.tile(Px,N ), Pu) )
 
-    M = 2 * M0  # Need to multiply by two because CVX considers 1/2 in front of quadratic cost
+    M = 2*M0  # Need to multiply by two because CVX considers 1/2 in front of quadratic cost
 
     if Controller.Solver == "CVX":
         M_sparse = spmatrix(M[np.nonzero(M)], np.nonzero(M)[0].astype(int), np.nonzero(M)[1].astype(int), M.shape)
@@ -398,12 +345,8 @@ def _buildMatCost(Controller):
 
 
 
-def _buildMatEqConst(Controller, agents):
-    # Buil matrices for optimization (Convention from Chapter 15.2 Borrelli, Bemporad and Morari MPC book)
-    # We are going to build our optimization vector z \in \mathbb{R}^((N+1) \dot n \dot N \dot d), note that this vector
-    # stucks the predicted trajectory x_{k|t} \forall k = t, \ldots, t+N+1 over the horizon and
-    # the predicted input u_{k|t} \forall k = t, \ldots, t+N over the horizon
-    # G * z = L + E * x(t) + Eu * OldInputs
+def _buildMatEqConst(Controller):
+
     # TODO Check Eu and E
     A = Controller.A
     B = Controller.B
@@ -416,7 +359,6 @@ def _buildMatEqConst(Controller, agents):
     Gx = np.zeros((n_exp,n_exp ))
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG
     Gx = linalg.block_diag(*[Gx]*(N))
-    # Gx[:(Controller.n_exp),:(Controller.n_exp)] += np.eye(Controller.n_exp)
 
     Gu = np.zeros(((n_exp) * (N), d * (N)))
 
@@ -430,18 +372,9 @@ def _buildMatEqConst(Controller, agents):
 
     # TODO ADD agent initial state
 
-    for j in range(0, Controller.n_agents * 2, 2):  # TODO fix this loop
-        Eoa[Controller.n_s + j, 0] = agents[0, int(j / 2), 0]
-        Eoa[Controller.n_s + j + 1, 0] = agents[0, int(j / 2), 1]
-
-    for i in range(1, N): # TODO: there's redundancy in this loops
+    for i in range(1, N):
         Gx[i * (n_exp):i * (n_exp)+Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i]
         Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i]
-        for j in range(0, Controller.n_agents*2,2): #TODO fix this loop
-            Eoa[i * (Controller.n_exp) + Controller.n_s + j, 0] = agents[i,int(j/2),0]
-            Eoa[i * (Controller.n_exp) + Controller.n_s + j + 1, 0] = agents[i,int(j/2),1]
-            Gx[i * (Controller.n_exp) + Controller.n_s + j, i * (Controller.n_exp) + Controller.n_s + j] = 1
-            Gx[i * (Controller.n_exp) + Controller.n_s + j + 1, i * (Controller.n_exp) + Controller.n_s + j + 1] = 1
 
     G = np.hstack((Gx, Gu))
     
@@ -462,7 +395,7 @@ def _EstimateABC(Controller,states, u):
         Ctv = []
 
         for i in range(0, Controller.N):
-
+            # [vx,vy,w,ey, etheta,theta,s,x,y]
             vx = states[i,0]
             vy = states[i,1]
             ey = states[i,3]
@@ -565,6 +498,7 @@ def _EstimateABC(Controller,states, u):
             Ctv.append(Ci)
 
         return Atv, Btv, Ctv
+
 
 
 
