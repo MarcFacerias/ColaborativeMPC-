@@ -1,13 +1,5 @@
-from scipy import linalg, sparse
-from cvxopt.solvers import qp
-from cvxopt import spmatrix, matrix, solvers
-from utilities import Curvature, GBELLMF
-import datetime
-import numpy as np
 
-from numpy import hstack, inf, ones
-from scipy.sparse import vstack
-from osqp import OSQP
+import numpy as np
 
 class hyperplane_separator():
     """

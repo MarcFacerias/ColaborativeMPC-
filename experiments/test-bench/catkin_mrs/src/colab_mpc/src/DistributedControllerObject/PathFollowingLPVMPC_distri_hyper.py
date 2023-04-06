@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 
 from scipy import linalg, sparse
-import numpy as np
 from cvxopt.solvers import qp
 from cvxopt import spmatrix, matrix, solvers
 from utilities import Curvature, GBELLMF
 import datetime
 import numpy as np
-from numpy import linalg as la
-import pdb
 from numpy import hstack, inf, ones
 from scipy.sparse import vstack
 from osqp import OSQP
-from numpy import tan, arctan, cos, sin, pi
+from compute_plane import hyperplane_separator
 
 solvers.options['show_progress'] = False
 
@@ -27,7 +24,7 @@ class PathFollowingLPV_MPC:
 
         self.n_s = 9
         self.n_agents = 2
-        self.n_exp = self.n_s + 2 * (self.n_agents) + 1 # slack variable
+        self.n_exp = self.n_s + 2 * (self.n_agents) # slack variable
         # Vehicle parameters:
         self.lf = 0.12
         self.lr = 0.14
@@ -76,24 +73,20 @@ class PathFollowingLPV_MPC:
 
         for t in range(0,self.N):
             Q_states = np.zeros((self.n_s-2,self.n_exp))
-            # TODO set proper matrix value
             Q_states[1,1] = 1
             Q_states[2,2] = 1
             Q_states[4,4] = 1
 
-            Q_slack = np.zeros((2*self.n_agents, self.n_exp))
+            Q_cons = np.zeros((2*self.n_agents, self.n_exp))
 
-            for i in range(0, Controller.n_agents * 2, 2):
+            for i in range(0, self.n_agents * 2, 2):
                 Q_cons[i,7] = self.lambdas[i,t,0] * self.planes[t,0,i/2]
                 Q_cons[i,8] = self.lambdas[i,t,0] * self.planes[t,1,i/2]
 
                 Q_cons[i+1,self.n_s + i] = -self.lambdas[i,t,1] * self.planes[t,0,i/2]
                 Q_cons[i+1,self.n_s + i + 1] = -self.lambdas[i,t,1] * self.planes[t,1,i/2]
 
-            if t > 0:
-                Q_slack[-1,-1] = 1000000 # minimise the slack variable
-
-            Q = np.vstack((Q_states,Q_cons,Q_slack))
+            Q = np.vstack((Q_states,Q_cons))
             Q_list.append(Q)
 
         return Q_list
