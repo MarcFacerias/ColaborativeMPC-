@@ -34,16 +34,16 @@ class agent():
         if (xPred is None):
             xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
-        feas, uPred, xPred = self._solve(self.x0, agents, pose, lambdas,xPred, uPred)
+        feas, uPred, xPred, planes = self._solve(self.x0, agents, pose, lambdas, xPred, uPred)
 
-        return feas,uPred, xPred
+        return feas,uPred, xPred, planes
 
 
-    def _solve(self, x0, agents,lambdas, Xpred, uPred):
+    def _solve(self, x0, agents, pose, lambdas, Xpred, uPred):
 
-        feas, Solution = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, pose)
+        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, pose)
 
-        return feas, self.Controller.uPred, self.Controller.xPred
+        return feas, self.Controller.uPred, self.Controller.xPred, planes
 
 
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
@@ -99,14 +99,12 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     uu = np.zeros(( Hp, 2 ))
     return xx, uu
 
-def eval_constraint(x1, x2, D):
+def eval_constraint(x1, x2, planes, D):
 
-    cost = -(math.sqrt((x1[0] - x2[0]) ** 2 + (x1[1] - x2[1]) ** 2) - D)
+    cost0 = planes[0]*x1[0] + planes[1]*x1[1] - planes[2] - D
+    cost1 = -planes[0] * x2[0] + planes[1] * x2[1] + planes[2] + D
 
-    if (cost<0):
-        cost = 0
-
-    return cost
+    return np.array([cost0,cost1])
 
 def stop_criteria(cost, th):
 
@@ -125,10 +123,9 @@ def main():
     N = 10
     dt = 0.01
     alpha = 5
-    lambdas = np.zeros((3,3,N))
     max_it = 100
     finished = False
-    lambdas_hist = [lambdas]
+    # lambdas_hist = [lambdas]
 
     # define neighbours
     n_0 = [0,2]
@@ -141,6 +138,7 @@ def main():
 
     maps = [Map(),Map(),Map()]
     agents = initialise_agents([x0_0,x0_1,x0_2],N,dt,maps)
+    planes = np.zeros((3,10,3,2))
     states_hist = [agents]
 
     if plot:
@@ -159,18 +157,17 @@ def main():
 
     while(it):
 
-        lambdas = np.zeros((3, 3, N))
+        lambdas = np.zeros((3, 3, 2, N))
         it_OCD = 0
         while(not finished or it_OCD == max_it):
 
             it_OCD = + 1
             # TODO acces the subset of lambdas of our problem
-
-            f0, uPred0, xPred0 = r0.one_step(lambdas[0,n_0,:], agents[:,n_0,:], u_old0, x_old0 )
+            f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,1,:], u_old0, x_old0 )
             print("end 1")
-            f1, uPred1, xPred1 = r1.one_step(lambdas[1,n_1,:], agents[:,n_1,:], u_old1, x_old1)
+            f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,0,:], u_old1, x_old1)
             print("end 2")
-            f2, uPred2, xPred2 = r2.one_step(lambdas[2,n_2,:], agents[:,n_2,:], u_old2, x_old2)
+            f2, uPred2, xPred2, planes2 = r2.one_step(lambdas[2,n_2,:,:], agents[:,n_2,:], agents[:,2,:], u_old2, x_old2)
             print("end 3")
 
             if not( f0 and f1 and f2):
@@ -178,18 +175,22 @@ def main():
                 print("one of the optimisation problems was not feasible exiting ...")
                 break
 
-            cost = np.zeros((3,3,N))
+            cost = np.zeros((3,3,2,N))
 
             agents[:,0,:] = xPred0[:,-2:]
             agents[:,1,:] = xPred1[:,-2:]
             agents[:,2,:] = xPred2[:,-2:]
+
+            planes[0,:,:,:] = planes0
+            planes[1,:,:,:] = planes1
+            planes[2,:,:,:] = planes2
 
             for k in range(0,N):
                 for i in range(0,3):
                     for j in range(0, 3):
 
                         if (i != j):
-                            cost[i,j,k]= eval_constraint(agents[k,i,:],agents[k,j,:],0.5)
+                            cost[i,j,:,k]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[i,k,j,:],0.5)
 
             # update lambdas
             lambdas += alpha*cost

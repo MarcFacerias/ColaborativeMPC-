@@ -33,6 +33,7 @@ class PathFollowingLPV_MPC:
         self.Cf = 60.0
         self.Cr = 60.0
         self.mu = 0.1
+        self.plane_comp = hyperplane_separator(2, 10)
 
         self.max_vel = 10
         self.min_vel = 0.2
@@ -70,26 +71,27 @@ class PathFollowingLPV_MPC:
     def _buildQ(self):
 
         Q_list = []
+        p_list = []
 
         for t in range(0,self.N):
-            Q_states = np.zeros((self.n_s-2,self.n_exp))
-            Q_states[1,1] = 1
-            Q_states[2,2] = 1
-            Q_states[4,4] = 1
+            Q = np.zeros((self.n_exp,self.n_exp))
+            Q[1,1] = 1
+            Q[2,2] = 1
+            Q[4,4] = 1
 
-            Q_cons = np.zeros((2*self.n_agents, self.n_exp))
+            p = np.zeros((1, self.n_exp))
 
             for i in range(0, self.n_agents * 2, 2):
-                Q_cons[i,7] = self.lambdas[i,t,0] * self.planes[t,0,i/2]
-                Q_cons[i,8] = self.lambdas[i,t,0] * self.planes[t,1,i/2]
+                p[0,7] += self.lambdas[i//2,0,t] * self.planes[t,0,i//2]
+                p[0,8] += self.lambdas[i//2,0,t] * self.planes[t,1,i//2]
 
-                Q_cons[i+1,self.n_s + i] = -self.lambdas[i,t,1] * self.planes[t,0,i/2]
-                Q_cons[i+1,self.n_s + i + 1] = -self.lambdas[i,t,1] * self.planes[t,1,i/2]
+                p[0,self.n_s + i] = -self.lambdas[i//2,1,t] * self.planes[t,0,i//2]
+                p[0,self.n_s + i + 1] = -self.lambdas[i//2,1,t] * self.planes[t,1,i//2]
 
-            Q = np.vstack((Q_states,Q_cons))
             Q_list.append(Q)
+            p_list.append(p)
 
-        return Q_list
+        return Q_list, p_list
 
     def solve(self, x0, Last_xPredicted, uPred, lambdas, x_agents, pose):
         """Computes control action
@@ -103,8 +105,7 @@ class PathFollowingLPV_MPC:
 
         self.lambdas = lambdas # TODO fix lambdas into n neighbours x H time
 
-        planes = hyperplane_separator(2, 10)
-        self.planes = planes.compute_hyperplane(x_agents, pose)
+        self.planes = self.plane_comp.compute_hyperplane(x_agents, pose)
 
         self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
 
@@ -167,7 +168,7 @@ class PathFollowingLPV_MPC:
             self.xPred = np.reshape((Solution[idx]), (N, self.n_s))
             self.uPred = np.reshape((Solution[self.n_exp * (N) + np.arange(d * N)]), (N, d))
 
-        return feasible, Solution
+        return feasible, Solution, self.planes
 
 
 
@@ -327,14 +328,14 @@ def _buildMatCost(Controller):
     # and [u^T * R * u] up to N
 
     # I consider Q to have the proper shape (9 base states +3N  with N being the neighbours )
-    b  = Controller._buildQ()
+    b,p_obs  = Controller._buildQ()
     # I consider R to have the proper shape ( 2xN )
     R  = Controller.R
     N  = Controller.N
 
     Mx = linalg.block_diag(*b)
 
-    c = [R] * (N) # Need to add dR for the derivative input cost
+    c = [R] * (N)
 
     Mu = linalg.block_diag(*c)
 
@@ -346,7 +347,8 @@ def _buildMatCost(Controller):
     Px = np.zeros(Controller.n_exp)
     Px[6] = -1
     Px[0] = -1
-    P= 2*np.hstack((np.tile(Px,N ), Pu) )
+    Px_total = (np.tile(Px, N) + np.concatenate(p_obs).ravel())
+    P= 2*np.hstack((Px_total, Pu))
 
     M = 2 * M0  # Need to multiply by two because CVX considers 1/2 in front of quadratic cost
 
@@ -373,7 +375,7 @@ def _buildMatEqConst(Controller, agents):
     n_exp = Controller.n_exp # N horizon
     d = Controller.d # N horizon
 
-    auxG = np.eye(Controller.n_exp-1)
+    auxG = np.eye(Controller.n_exp)
 
     Gx = np.zeros((n_exp,n_exp ))
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG
