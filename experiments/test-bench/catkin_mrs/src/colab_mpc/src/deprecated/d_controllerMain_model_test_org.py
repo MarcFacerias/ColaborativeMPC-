@@ -126,7 +126,7 @@ def main():
     # set constants
 
     x0_0 = [0.5, 2.66390e-03, 3.16542e-02, -1.45239e-02, 1.85883e-01, -4.05752e-02]  # [vx vy psidot y_e thetae theta s x y]
-
+    j = 0
     map = Map()
     states =  predicted_vectors_generation_V2(10, x0_0,0 , 0.1)[0][0,:]
     disp = plotter(map,2)

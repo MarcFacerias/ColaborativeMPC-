@@ -128,8 +128,8 @@ def main():
     # lambdas_hist = [lambdas]
 
     # define neighbours
-    n_0 = [0,2]
-    n_1 = [1,2]
+    n_0 = [1,2]
+    n_1 = [0,2]
     n_2 = [0,1]
 
     x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.55]  # [vx vy psidot y_e thetae theta s x y]
@@ -138,7 +138,7 @@ def main():
 
     maps = [Map(),Map(),Map()]
     agents = initialise_agents([x0_0,x0_1,x0_2],N,dt,maps)
-    planes = np.zeros((3,10,3,2))
+    planes = np.zeros((3,10,3,3))
     states_hist = [agents]
 
     if plot:
@@ -154,6 +154,7 @@ def main():
     u_old0 = None
     u_old1 = None
     u_old2 = None
+    lambdas_hist = []
 
     while(it):
 
@@ -163,9 +164,9 @@ def main():
 
             it_OCD = + 1
             # TODO acces the subset of lambdas of our problem
-            f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,1,:], u_old0, x_old0 )
+            f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
             print("end 1")
-            f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,0,:], u_old1, x_old1)
+            f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
             print("end 2")
             f2, uPred2, xPred2, planes2 = r2.one_step(lambdas[2,n_2,:,:], agents[:,n_2,:], agents[:,2,:], u_old2, x_old2)
             print("end 3")
@@ -181,23 +182,31 @@ def main():
             agents[:,1,:] = xPred1[:,-2:]
             agents[:,2,:] = xPred2[:,-2:]
 
-            planes[0,:,:,:] = planes0
-            planes[1,:,:,:] = planes1
-            planes[2,:,:,:] = planes2
+            planes0_aux = np.zeros((10,3,3))
+            planes1_aux = np.zeros((10,3,3))
+            planes2_aux = np.zeros((10,3,3))
+
+            planes0_aux[:,:,n_0] = planes0
+            planes1_aux[:,:,n_1] = planes1
+            planes2_aux[:,:,n_2] = planes2
+
+            planes[0,:,:,:] = planes0_aux
+            planes[1,:,:,:] = planes1_aux
+            planes[2,:,:,:] = planes2_aux
 
             for k in range(0,N):
                 for i in range(0,3):
                     for j in range(0, 3):
 
                         if (i != j):
-                            cost[i,j,:,k]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[i,k,j,:],0.5)
+                            cost[i,j,:,k]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[i,k,:,j],0.0)
 
             # update lambdas
             lambdas += alpha*cost
             lambdas[lambdas<0] = 0
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
-            finished = stop_criteria(cost,0.1)
+            finished = True #stop_criteria(cost,0.1)
 
             if not finished:
                 print("breakpoint placeholder")

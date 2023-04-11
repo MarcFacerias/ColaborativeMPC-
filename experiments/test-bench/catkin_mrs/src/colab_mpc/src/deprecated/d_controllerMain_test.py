@@ -9,7 +9,7 @@ import time
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 
-from PathFollowingLPVMPC_distri import PathFollowingLPV_MPC, _buildMatEqConst
+from PathFollowingLPVMPC_distri_hyper import PathFollowingLPV_MPC, _buildMatEqConst
 from trackInitialization import Map, wrap
 
 class agent():
@@ -102,9 +102,11 @@ def main():
         agents[k,0,:] = [float(datContent_agent1[i][0]),float(datContent_agent1[i][1])]
         agents[k,1,:] = [float(datContent_agent2[i][0]),float(datContent_agent2[i][1])]
 
-# TODO Update controller with multiagent version
-# TODO: Generate trajectories to test one optimisation problem   
-###----------------------------------------------------------------###
+    lambdas = np.zeros((3, 3, 2, N))
+
+    # TODO Update controller with multiage  nt version
+    # TODO: Generate trajectories to test one optimisation problem
+    ###----------------------------------------------------------------###
 
     Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
     R  = 0.1 * np.diag([3, 0.8])                         #[delta ; a]
@@ -117,7 +119,7 @@ def main():
     Last_xPredicted, uPred = predicted_vectors_generation_V2(N, Last_xPredicted, 0.033 , map)
 
 
-    feas, Solution = Controller.solve(x0, Last_xPredicted, uPred, False, "A_L", "B_L" ,"C_L", 4,lambdas, agents )
+    feas, Solution = Controller.solve(x0, Last_xPredicted, uPred,lambdas, agents )
 
 
     # print(Solution)

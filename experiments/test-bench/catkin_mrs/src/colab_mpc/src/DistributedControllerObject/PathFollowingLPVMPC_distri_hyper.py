@@ -103,9 +103,19 @@ class PathFollowingLPV_MPC:
         """
         startTimer              = datetime.datetime.now()
 
-        self.lambdas = lambdas # TODO fix lambdas into n neighbours x H time
+        if lambdas is None:
+            self.lambdas = np.zeros((self.n_agents, 2, self.N)) # TODO fix lambdas into n neighbours x H time
 
-        self.planes = self.plane_comp.compute_hyperplane(x_agents, pose)
+        else:
+            self.lambdas = lambdas
+
+        if x_agents is None:
+            self.planes = np.zeros((10,self.n_agents,3)) # TODO fix lambdas into n neighbours x H time
+            x_agents = np.zeros((10,self.n_agents,2))
+        else:
+            self.planes = self.plane_comp.compute_hyperplane(x_agents, pose)
+
+
 
         self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
 

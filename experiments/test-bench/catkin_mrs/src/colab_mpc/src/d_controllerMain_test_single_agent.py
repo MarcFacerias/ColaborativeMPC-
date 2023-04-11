@@ -6,74 +6,45 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import time
 import math
-from math import isclose
 
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/Utilities')
 
-from PathFollowingLPVMPC_distri import PathFollowingLPV_MPC, _buildMatEqConst
+from PathFollowingLPVMPC_distri_hyper import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
-from compute_plane import *
 
 plot = True
 it = True
+class agent():
 
-def plot_hyperplanes(planes, points):
-    plt.ion()
+    #TODO: define Q and R
+    def __init__(self, N, Map, dt, x0, Q=None,R=None):
+        self.map = Map
+        self.N = N
+        self.dt = dt
+        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
+        self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
+        self.Controller = PathFollowingLPV_MPC(self.Q, self.R, N, dt, Map, "OSQP")
+        self.x0 = x0
 
-    for row in range(0,planes.shape[0]):
-        ego = points[row,0,:]
-        neighbour = points[row,1,:]
+    def one_step(self, lambdas, agents, pose, uPred = None, xPred = None):
 
-        # Define hyperplane equation
-        a = planes[row,0]
-        b = planes[row,1]
-        c = -planes[row,2]
+        if (xPred is None):
+            xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
-        # Generate random data points
-        y = np.random.rand(50)
+        feas, uPred, xPred, planes = self._solve(self.x0, agents, pose, lambdas, xPred, uPred)
 
-        # Calculate values of x and y based on hyperplane equation
-
-        if isclose(b,0):
-            y_hyperplane = (-b * y -c) / a
-            plt.plot(y_hyperplane,y , color='red')
-        else:
-            y_hyperplane = (-a * y - c) / b
-            plt.plot(y,y_hyperplane , color='red')
-        # Plot data points and hyperplane
-        # plt.scatter(x, y)
-
-        plt.scatter(ego[0], ego[1], color='blue',marker="o")
-        plt.scatter(neighbour[0], neighbour[1], color='green',marker="o")
-        plt.show()
-        plt.pause(0.001)
-    plt.waitforbuttonpress()
+        return feas,uPred, xPred, planes
 
 
-def generate_bounding_boxes(agents,dx,dy):
-    print("placeholder")
-    # (agent, points, x / y, horizon)
-    # (horizon, agent, x / y, )
+    def _solve(self, x0, agents, pose, lambdas, Xpred, uPred):
 
-    agents_expanded = np.empty((2,4,2,10))
+        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, pose)
 
-    for i in range(0,2):
-        agents_expanded[i,0,0,:] = agents[:,i,0] + dx
-        agents_expanded[i,0,1,:] = agents[:,i,1] + dy
+        return feas, self.Controller.uPred, self.Controller.xPred, planes
 
-        agents_expanded[i,1,0,:] = agents[:,i,0] - dx
-        agents_expanded[i,1,1,:] = agents[:,i,1] + dy
-
-        agents_expanded[i,2,0,:] = agents[:,i,0] + dx
-        agents_expanded[i,2,1,:] = agents[:,i,1] - dy
-
-        agents_expanded[i,3,0,:] = agents[:,i,0] - dx
-        agents_expanded[i,3,1,:] = agents[:,i,1] - dy
-
-    return agents_expanded
 
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp,len(data),2))
@@ -139,16 +110,40 @@ def main():
     dt = 0.01
 
     x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.55]  # [vx vy psidot y_e thetae theta s x y]
-    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
-    x0_2 = [1.3, -0.16, 0.00, -0.55, 0, 0.0, 0, 0.0, 0.45]  # [vx vy psidot y_e thetae theta s x y]
 
-    maps = [Map(),Map(),Map()]
-    agents = initialise_agents([x0_1],N,dt,maps)
-    pose = initialise_agents([x0_0],N,dt,maps).squeeze()
+    maps = [Map()]
+    agents = initialise_agents([x0_0],N,dt,maps)
 
-    planes = hyperplane_separator(1, 10)
-    resu = planes.compute_hyperplane(agents,pose)[:,:,0]
-    plot_hyperplanes(resu,initialise_agents([x0_0,x0_1],N,dt,maps).squeeze())
+    if plot:
+        disp = plotter(maps[0],1)
+
+    r0 = agent(N, maps[0], dt, x0_0)
+
+    x_old0 = None
+    u_old0 = None
+
+    while(it):
+
+        lambdas = np.zeros((3, 3, 2, N))
+
+        # TODO acces the subset of lambdas of our problem
+        f0, uPred0, xPred0, planes0 = r0.one_step(None, None, agents[:,0,:], u_old0, x_old0 )
+        print("end 1")
+
+        if f0:
+
+            r0.x0 = xPred0[1,:]
+            x_old0 = xPred0
+            u_old0 = uPred0
+
+            if plot :
+                disp.plot_step(xPred0[1, 7], xPred0[1, 8], 0)
+
+        else:
+            print("Drame, problem not solvable")
+            quit()
+
+
 
 if __name__ == "__main__":
 
