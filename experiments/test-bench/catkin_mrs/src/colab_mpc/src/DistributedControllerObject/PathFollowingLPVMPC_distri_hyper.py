@@ -236,7 +236,7 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
             qp_A = G
             qp_l = l
             qp_u = h
-        osqp.setup(P=P.tocsc(), q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True, max_iter=100000)
+        osqp.setup(P=P.tocsc(), q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True, max_iter=10000000)
     else:
         osqp.setup(P=P, q=q, A=None, l=None, u=None, verbose=False, polish=True)
     if initvals is not None:

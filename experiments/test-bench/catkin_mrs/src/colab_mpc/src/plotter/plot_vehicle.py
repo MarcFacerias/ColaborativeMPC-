@@ -26,6 +26,9 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 
 class plotter_offline():
 
+    '''
+    https://osqp.org/docs/interfaces/status_values.html
+    '''
     def __init__(self,map):
 
         self.fig = plt.figure(figsize=(10, 8))
@@ -55,37 +58,35 @@ class plotter_offline():
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def add_agent_ti(self, agent, style):
-
-        states = np.concatenate( agent.states[-1], axis=0 ).reshape((-1,9))
-        plt.plot(states[:, 7],states[:, 8], style)
+    def plot_offline_experiment(self, agent, style_agent = "ob", style_plane = "-r"):
+        states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
+        plt.plot(states[:, 7],states[:, 8], style_agent)
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def add_planes_ti(self, agent):
-
-        for row in range(0, agent.planes.shape[0]):
+        for i,plane in enumerate(agent.planes):
 
             # Define hyperplane equation
-            a = agent.planes[row, 0]
-            b = agent.planes[row, 1]
-            c = -agent.planes[row, 2]
+            a = plane[0]
+            b = plane[1]
+            c = -plane[2]
 
             # Generate random data points
-            y = np.random.rand(10)
+
 
             # Calculate values of x and y based on hyperplane equation
 
-            if isclose(b, 0):
-                y_hyperplane = (-b * y - c) / a
-                plt.plot(y_hyperplane, y, color='red')
+            if np.isclose(b, 0):
+                y = agent.states[i][8] + np.random.rand(10)/10
+                x_hyperplane = (-b * y - c) / a
+                plt.plot(x_hyperplane, y, style_plane)
             else:
-                y_hyperplane = (-a * y - c) / b
-                plt.plot(y, y_hyperplane, color='red')
+                x =  agent.states[i][7] + np.random.rand(10)/10
+                y_hyperplane = (-a * x - c) / b
+                plt.plot(x, y_hyperplane, style_plane)
 
             self.fig.canvas.draw()
             plt.pause(0.001)
-
 
 
 class plotter():

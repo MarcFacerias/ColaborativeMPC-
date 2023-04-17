@@ -27,7 +27,7 @@ def compute_hyper(x_ego,x_neg):
 class agent():
 
     #TODO: define Q and R
-    def __init__(self, N, Map, dt, x0, Q=None,R=None):
+    def __init__(self, N, Map, dt, x0, Q=None, R=None):
         self.map = Map
         self.N = N
         self.dt = dt
@@ -39,6 +39,8 @@ class agent():
         self.u = []
         self.planes = []
         self.output_opti = []
+        self.time = []
+        self.status = []
 
     def one_step(self, lambdas, agents, pose, uPred = None, xPred = None):
 
@@ -49,18 +51,26 @@ class agent():
 
         return feas,uPred, xPred, planes
 
-
     def _solve(self, x0, agents, pose, lambdas, Xpred, uPred):
 
+        tic = time.time()
         feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, pose)
-
+        self.time.append(time.time() - tic)
+        self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes
 
     def plot_experiment(self):
 
         disp = plotter_offline(self.map)
+        disp.add_agent_ti(self)
+        disp.add_planes_ti(self)
 
 
+    def save(self, xPred, uPred, planes):
+
+        self.states.append(xPred[0,:])
+        self.u.append(uPred[0,:])
+        self.planes.append(planes[0,:])
 
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp,len(data),2))
@@ -170,7 +180,7 @@ def main():
     lambdas_hist = []
     it = 0
 
-    while(it<1000):
+    while(it<5):
 
         tic = time.time()
         lambdas = np.zeros((3, 3, 2, N))
@@ -217,13 +227,10 @@ def main():
             f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
             f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
 
-        r0.states.append(xPred0[0,:])
-        r0.u.append(uPred0[0,:])
-        r0.planes.append(planes0[0,:,:])
 
-        r1.states.append(xPred1[0,:])
-        r1.u.append(uPred1[0,:])
-        r1.planes.append(planes1[0,:,:])
+        r0.save(xPred0, uPred0, planes0)
+        r1.save(xPred1, uPred1, planes1)
+
 
         r0.x0 = xPred0[1,:]
         r1.x0 = xPred1[1,:]
@@ -243,10 +250,23 @@ def main():
             disp.plot_step(xPred0[1, 7], xPred0[1, 8], xPred0[1, 5], 0)
             disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)
 
-        if plot_end:
-            d.add_planes_ti(r1)
-            d.add_agent_ti(r0,"-oy")
-            # input("Press Enter to continue...")
+    if plot_end:
+        d.plot_offline_experiment(r0)
+        d.plot_offline_experiment(r1, "ob", "-y")
+        plot_performance(r0)
+        input("Press enter to continue...")
+        # input("Press Enter to continue...")
+
+def plot_performance( agent):
+
+    fig_status = plt.figure()
+    fig_status.add_subplot(2, 1, 1)
+    x = np.arange(0,len(agent.status))
+    plt.scatter(x, np.array(agent.status))
+    fig_status.add_subplot(2, 1, 2)
+    plt.scatter(x, np.array(agent.time))
+    plt.show()
+
 
 if __name__ == "__main__":
 
