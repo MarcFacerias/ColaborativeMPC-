@@ -81,17 +81,17 @@ class PathFollowingLPV_MPC:
             # TODO set proper matrix value
             Q_states[1,1] = 1
             Q_states[2,2] = 1
-            Q_states[4,4] = 1
+            Q_states[4,4] = 100
             Q_slack = np.zeros((1, self.n_exp))
 
-            Q_slack[0,-1] = 2000 # minimise the slack variable
+            Q_slack[0,-1] = 2000000000 # minimise the slack variable
 
             Q = np.vstack((Q_states,Q_slack))
             Q_list.append(Q)
 
         return Q_list
 
-    def solve(self, x0, Last_xPredicted, uPred, NN_LPV_MPC, A_L, B_L ,C_L, first_it):
+    def solve(self, x0, Last_xPredicted, uPred):
         """Computes control action
         Arguments:
             x0: current state position
@@ -101,12 +101,9 @@ class PathFollowingLPV_MPC:
         """
         startTimer              = datetime.datetime.now()
 
-        if (NN_LPV_MPC == False) and (first_it < 5):
-            self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
-        else:
-            self.A = A_L
-            self.B = B_L
-            self.C = C_L
+
+        self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
+
 
         # TODO fix agents into (H,2,n)
         self.G, self.E, self.L, self.Eu, self.Eoa  = _buildMatEqConst(self) # It's been introduced the C matrix (L in the output)
@@ -223,9 +220,9 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
             qp_A = G
             qp_l = l
             qp_u = h
-        osqp.setup(P=P, q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True)
+        osqp.setup(P=P.tocsc(), q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True)
     else:
-        osqp.setup(P=P, q=q, A=None, l=None, u=None, verbose=True, polish=True)
+        osqp.setup(P=P.tocsc(), q=q, A=None, l=None, u=None, verbose=True, polish=True)
     if initvals is not None:
         osqp.warm_start(x=initvals)
     res = osqp.solve()
@@ -279,7 +276,7 @@ def _buildMatIneqConst(Controller):
 
     bu = np.array([[0.45], # Max right Steering
                    [0.45], # Max left Steering
-                   [4.0],   # Max Acceleration
+                   [8.0],   # Max Acceleration
                    [3.0]])  # Max DesAcceleration
 
 

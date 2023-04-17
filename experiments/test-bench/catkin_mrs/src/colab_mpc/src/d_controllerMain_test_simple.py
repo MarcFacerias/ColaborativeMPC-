@@ -11,7 +11,7 @@ sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 
-from PathFollowingLPVMPC_distri_hyper import PathFollowingLPV_MPC
+from PathFollowingLPVMPC_simple import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -34,16 +34,16 @@ class agent():
         if (xPred is None):
             xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
-        feas, uPred, xPred, planes = self._solve(self.x0, agents, pose, lambdas, xPred, uPred)
+        feas, uPred, xPred = self._solve(self.x0, agents, pose, lambdas, xPred, uPred)
 
-        return feas,uPred, xPred, planes
+        return feas,uPred, xPred
 
 
     def _solve(self, x0, agents, pose, lambdas, Xpred, uPred):
 
-        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, pose)
+        feas, Solution = self.Controller.solve(x0, Xpred, uPred)
 
-        return feas, self.Controller.uPred, self.Controller.xPred, planes
+        return feas, self.Controller.uPred, self.Controller.xPred
 
 
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
@@ -124,24 +124,21 @@ def main():
 
     while(it):
 
-        # TODO acces the subset of lambdas of our problem
+        lambdas = np.zeros((3, 3, 2, N))
 
-        tic = time.time()
-        f0, uPred0, xPred0, planes0 = r0.one_step(None, None, agents[:,0,:], u_old0, x_old0 )
-        print(time.time() - tic)
+        # TODO acces the subset of lambdas of our problem
+        f0, uPred0, xPred0 = r0.one_step(None, None, agents[:,0,:], u_old0, x_old0 )
+        print("end 1")
 
         if f0:
-            print(xPred0[0,:])
+            print(xPred0)
             r0.x0 = xPred0[1,:]
             x_old0 = xPred0
             u_old0 = uPred0
 
             if plot :
-                print("Plot Time")
-                tic = time.time()
                 disp.plot_step(xPred0[1, 7], xPred0[1, 8], 0)
-                print(time.time() - tic)
-                print("End plot time")
+
         else:
             print("Drame, problem not solvable")
             quit()

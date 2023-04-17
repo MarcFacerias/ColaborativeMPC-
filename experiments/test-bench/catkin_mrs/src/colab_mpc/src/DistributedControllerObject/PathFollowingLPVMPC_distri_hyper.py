@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 from scipy import linalg, sparse
 from cvxopt.solvers import qp
@@ -15,6 +14,8 @@ solvers.options['show_progress'] = False
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
+
+
 class PathFollowingLPV_MPC:
     """Create the Path Following LMPC controller with LTV model
     Attributes:
@@ -23,8 +24,8 @@ class PathFollowingLPV_MPC:
     def __init__(self, Q, R, N, dt, map, Solver):
 
         self.n_s = 9
-        self.n_agents = 2
-        self.n_exp = self.n_s + 2 * (self.n_agents) # slack variable
+        self.n_agents = 1
+        self.n_exp = self.n_s + 2 * (self.n_agents) + 1 # slack variable
         # Vehicle parameters:
         self.lf = 0.12
         self.lr = 0.14
@@ -33,7 +34,7 @@ class PathFollowingLPV_MPC:
         self.Cf = 60.0
         self.Cr = 60.0
         self.mu = 0.1
-        self.plane_comp = hyperplane_separator(2, 10)
+        self.plane_comp = hyperplane_separator(self.n_agents, 10)
 
         self.max_vel = 10
         self.min_vel = 0.2
@@ -77,7 +78,8 @@ class PathFollowingLPV_MPC:
             Q = np.zeros((self.n_exp,self.n_exp))
             Q[1,1] = 1
             Q[2,2] = 1
-            Q[4,4] = 1
+            Q[4,4] = 100
+            Q[-1, -1] = 1000000000
 
             p = np.zeros((1, self.n_exp))
 
@@ -273,11 +275,8 @@ def _buildMatIneqConst(Controller):
     #B
     bx = np.array([[-min_vel],
                    [max_vel],
-                   [0.5],
-                   [0.5]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
-
-    # btu = 100 * np.ones((Controller.n_agents, 1))  # vx min; vx max; ey min; ey max; t1 min ... tn min
-    # bx = np.vstack((bx,btl,btu))
+                   [0.35],
+                   [0.35]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
     # bx = np.vstack((bx, btl))
 
@@ -289,7 +288,7 @@ def _buildMatIneqConst(Controller):
 
     bu = np.array([[0.45], # Max right Steering
                    [0.45], # Max left Steering
-                   [4.0],   # Max Acceleration
+                   [8.0],   # Max Acceleration
                    [3.0]])  # Max DesAcceleration
 
 
@@ -385,7 +384,7 @@ def _buildMatEqConst(Controller, agents):
     n_exp = Controller.n_exp # N horizon
     d = Controller.d # N horizon
 
-    auxG = np.eye(Controller.n_exp)
+    auxG = np.eye(Controller.n_exp-1)
 
     Gx = np.zeros((n_exp,n_exp ))
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG
@@ -414,8 +413,6 @@ def _buildMatEqConst(Controller, agents):
         for j in range(0, Controller.n_agents*2,2): #TODO fix this loop
             Eoa[i * (Controller.n_exp) + Controller.n_s + j, 0] = agents[i,int(j/2),0]
             Eoa[i * (Controller.n_exp) + Controller.n_s + j + 1, 0] = agents[i,int(j/2),1]
-            Gx[i * (Controller.n_exp) + Controller.n_s + j, i * (Controller.n_exp) + Controller.n_s + j] = 1
-            Gx[i * (Controller.n_exp) + Controller.n_s + j + 1, i * (Controller.n_exp) + Controller.n_s + j + 1] = 1
 
     G = np.hstack((Gx, Gu))
     

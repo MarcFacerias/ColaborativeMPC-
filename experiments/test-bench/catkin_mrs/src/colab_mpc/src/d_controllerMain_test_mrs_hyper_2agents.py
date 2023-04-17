@@ -135,7 +135,6 @@ def main():
 #########################################################
     # set constants
 
-    print_breackpoints = [100,200,300,400,500]
     N = 10
     dt = 0.01
     alpha = 5
@@ -144,17 +143,15 @@ def main():
     # lambdas_hist = [lambdas]
 
     # define neighbours
-    n_0 = [1,2]
-    n_1 = [0,2]
-    n_2 = [0,1]
+    n_0 = [1]
+    n_1 = [0]
 
     x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.55]  # [vx vy psidot y_e thetae theta s x y]
     x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
-    x0_2 = [1.3, -0.16, 0.00, -0.55, 0, 0.0, 0, 0.0, 0.45]  # [vx vy psidot y_e thetae theta s x y]
 
-    maps = [Map(),Map(),Map()]
-    agents = initialise_agents([x0_0,x0_1,x0_2],N,dt,maps)
-    planes = np.zeros((3,10,3,3))
+    maps = [Map(),Map()]
+    agents = initialise_agents([x0_0,x0_1],N,dt,maps)
+    planes = np.zeros((2,10,3,3))
     states_hist = [agents]
 
     if plot:
@@ -165,14 +162,11 @@ def main():
 
     r0 = agent(N, maps[0], dt, x0_0)
     r1 = agent(N, maps[1], dt, x0_1)
-    r2 = agent(N, maps[2], dt, x0_2)
 
     x_old0 = None
     x_old1 = None
-    x_old2 = None
     u_old0 = None
     u_old1 = None
-    u_old2 = None
     lambdas_hist = []
     it = 0
 
@@ -187,35 +181,25 @@ def main():
             # TODO acces the subset of lambdas of our problem
             f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
             f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
-            f2, uPred2, xPred2, planes2 = r2.one_step(lambdas[2,n_2,:,:], agents[:,n_2,:], agents[:,2,:], u_old2, x_old2)
 
-
-            if not( f0 and f1 and f2):
-                print(f0,f1,f2)
-                print("one of the optimisation problems was not feasible exiting ...")
-                break
 
             cost = np.zeros((3,3,2,N))
 
             agents[:,0,:] = xPred0[:,-2:]
             agents[:,1,:] = xPred1[:,-2:]
-            agents[:,2,:] = xPred2[:,-2:]
 
             planes0_aux = np.zeros((10,3,3))
             planes1_aux = np.zeros((10,3,3))
-            planes2_aux = np.zeros((10,3,3))
 
             planes0_aux[:,:,n_0] = planes0
             planes1_aux[:,:,n_1] = planes1
-            planes2_aux[:,:,n_2] = planes2
 
             planes[0,:,:,:] = planes0_aux
             planes[1,:,:,:] = planes1_aux
-            planes[2,:,:,:] = planes2_aux
 
             for k in range(0,N):
-                for i in range(0,3):
-                    for j in range(0, 3):
+                for i in range(0,2):
+                    for j in range(0, 2):
 
                         if (i != j):
                             cost[i,j,:,k]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[i,k,:,j],0.1)
@@ -232,7 +216,6 @@ def main():
 
             f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
             f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
-            f2, uPred2, xPred2, planes2 = r2.one_step(lambdas[2,n_2,:,:], agents[:,n_2,:], agents[:,2,:], u_old2, x_old2)
 
         r0.states.append(xPred0[0,:])
         r0.u.append(uPred0[0,:])
@@ -242,41 +225,27 @@ def main():
         r1.u.append(uPred1[0,:])
         r1.planes.append(planes1[0,:,:])
 
-        r2.states.append(xPred2[0,:])
-        r2.u.append(uPred2[0,:])
-        r2.planes.append(planes2[0,:,:])
-
         r0.x0 = xPred0[1,:]
         r1.x0 = xPred1[1,:]
-        r2.x0 = xPred2[1,:]
         x_old0 = xPred0
         x_old1 = xPred1
-        x_old2 = xPred2
         u_old0 = uPred0
         u_old1 = uPred1
-        u_old2 = uPred2
         finished = False
 
         print("-------------------------------------------------")
         print("it " + str(it))
         print(time.time() - tic)
         print("-------------------------------------------------")
-        #
-        # print("-------------------------------------------------")
-        # print("Control")
-        # print("-------------------------------------------------")
-        # print(uPred0)
 
         it += 1
         if plot :
             disp.plot_step(xPred0[1, 7], xPred0[1, 8], xPred0[1, 5], 0)
             disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)
-            disp.plot_step(xPred2[1, 7], xPred2[1, 8], xPred2[1, 5], 2)
 
         if plot_end:
-            d.add_agent(r1,"-ob")
-            d.add_agent(r0,"-oy")
-            d.add_agent(r2,"-og")
+            d.add_planes_ti(r1)
+            d.add_agent_ti(r0,"-oy")
             # input("Press Enter to continue...")
 
 if __name__ == "__main__":
