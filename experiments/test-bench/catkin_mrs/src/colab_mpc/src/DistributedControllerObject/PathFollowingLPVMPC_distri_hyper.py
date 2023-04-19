@@ -252,7 +252,32 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
         feasible = 1
     return res, feasible
 
+def GenerateColisionAvoidanceConstraints(Controller):
 
+    K_list = []
+    Lim_list = []
+
+    for t in range(0,Controller.N):
+
+        K = np.zeros(2*len(Controller.gent_list),Controller.self.n_exp)
+
+        for i,el in enumerate(Controller.agent_list):
+
+            idx = np.asarray([7,8]) + 2*el
+
+            K[i,7] = Controller.planes[t, 0, el]
+            K[i,8] = Controller.planes[t, 1, el]
+
+            K[i, idx] = -Controller.planes[t, 0, el]
+            K[i, idx] = -Controller.planes[t, 1, el]
+
+            Lim_list.append([- self.planes[t, 2, el] + Controller.radius,self.planes[t, 1, el] + Controller.radius])
+
+        K_list.append(K)
+
+    return K_list, Lim_list
+
+    '''END GENERATE HYPER CONSTRAITNS'''
 
 def _buildMatIneqConst(Controller):
     N = Controller.N
@@ -293,21 +318,23 @@ def _buildMatIneqConst(Controller):
 
 
     rep_a = [Fx] * (N) # add n times Fx to a list
+    k_list, lim_list = GenerateColisionAvoidanceConstraints()
+
+    for j,_ in enumerate(rep_a)
+        rep_a[j] = np.vstack(rep_a[j],k_list[j])
+
     Mat = linalg.block_diag(*rep_a) # make a block diagonal where the elements of the diagonal are the matrices in the list
     '''
     NoTerminalConstr = np.zeros((np.shape(Mat)[0], n_exp))  # No need to constraint also the terminal point
     Fxtot = np.hstack((Mat, NoTerminalConstr))
     '''
+
     Fxtot = Mat
     bxtot = np.tile(np.squeeze(bx), N)
-    # bxtot = np.append(bxtot,(0,0))
-    # t_limtis = np.zeros((Controller.n_agents, np.shape(Fxtot)[1]))
-    #
-    # # TODO generalitzar
-    # t_limtis[0,163] = -1
-    # t_limtis[1,164] = -1
-    #
-    # Fxtot = np.vstack((Fxtot,t_limtis))
+    aux = 0
+    for idx in range(0, len(bxtot), 4):
+        bxtot = np.insert(bxtot, idx, lim_list[aux])
+        aux += 1
 
     # Let's start by computing the submatrix of F relates with the input
     rep_b = [Fu] * (N)

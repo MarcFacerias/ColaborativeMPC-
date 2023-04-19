@@ -225,10 +225,6 @@ def main():
                 print("breakpoint placeholder")
                 print(xPred0)
 
-            f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
-            f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
-
-
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes1)
 
