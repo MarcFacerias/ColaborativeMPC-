@@ -147,7 +147,7 @@ def main():
 
     N = 10
     dt = 0.01
-    alpha = 5
+    alpha = 10000
     max_it = 100
     finished = False
     # lambdas_hist = [lambdas]
@@ -180,7 +180,7 @@ def main():
     lambdas_hist = []
     it = 0
 
-    while(it<5):
+    while(it<1000):
 
         tic = time.time()
         lambdas = np.zeros((3, 3, 2, N))
@@ -216,13 +216,14 @@ def main():
 
             # update lambdas
             lambdas += alpha*cost
-            lambdas[lambdas<0] = 0
+            lambdas[lambdas<0.0001] = 0
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
-            finished = True #stop_criteria(cost,0.1)
+            finished = stop_criteria(cost,0.0001)
 
             if not finished:
                 print("breakpoint placeholder")
+                print(xPred0)
 
             f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
             f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
@@ -252,7 +253,7 @@ def main():
 
     if plot_end:
         d.plot_offline_experiment(r0)
-        d.plot_offline_experiment(r1, "ob", "-y")
+        # d.plot_offline_experiment(r1, "ob", "-y")
         plot_performance(r0)
         input("Press enter to continue...")
         # input("Press Enter to continue...")
@@ -266,6 +267,7 @@ def plot_performance( agent):
     fig_status.add_subplot(2, 1, 2)
     plt.scatter(x, np.array(agent.time))
     plt.show()
+    plt.pause(0.001)
 
 
 if __name__ == "__main__":

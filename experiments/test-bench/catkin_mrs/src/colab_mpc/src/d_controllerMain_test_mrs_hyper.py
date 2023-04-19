@@ -218,7 +218,7 @@ def main():
                     for j in range(0, 3):
 
                         if (i != j):
-                            cost[i,j,:,k]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[i,k,:,j],0.1)
+                            cost[i,j,:,k]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[i,k,:,j],0.5)
 
             # update lambdas
             lambdas += alpha*cost
