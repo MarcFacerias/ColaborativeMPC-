@@ -25,7 +25,7 @@ class PathFollowingLPV_MPC:
 
         self.n_s = 9
         self.n_agents = 1
-        self.n_exp = self.n_s + 2 * (self.n_agents) + 1 # slack variable
+        self.n_exp = self.n_s + 1 # slack variable
         # Vehicle parameters:
         self.lf = 0.12
         self.lr = 0.14
@@ -56,7 +56,7 @@ class PathFollowingLPV_MPC:
 
         self.OldSteering = [0.0]
 
-        self.OldAccelera = [0.0]*int(1)        
+        self.OldAccelera = [0.0]*int(1)
 
         self.OldPredicted = [0.0]
 
@@ -65,39 +65,24 @@ class PathFollowingLPV_MPC:
         self.G = []
         self.E = []
         self.L = []
-        self.Eu =[]      
-        
+        self.Eu =[]
 
-    def _buildQ(self, agents_id):
+
+    def _buildQ(self):
 
         Q_list = []
-        p_list = []
 
-        for t in range(0,self.N):
-            Q = np.zeros((self.n_exp,self.n_exp))
-            Q[1,1] = 1
-            Q[2,2] = 1
-            Q[4,4] = 100
-            Q[-1, -1] = 1000000000
+        Q = np.zeros((self.n_exp,self.n_exp))
+        Q[1,1] = 1
+        Q[2,2] = 1
+        Q[4,4] = 100
+        Q[-1, -1] = 1000000000
 
-            p = np.zeros((1, self.n_exp))
+        Q_list.append(Q)
 
-            for i in range(0, self.n_agents * 2, 2):
+        return Q_list
 
-                if self.id > i//2:
-                    p[0,7] += self.lambdas[i//2,0,t] * self.planes[t,0,i//2]
-                    p[0,8] += self.lambdas[i//2,0,t] * self.planes[t,1,i//2]
-
-                    p[0,self.n_s + i] = -self.lambdas[i//2,1,t] * self.planes[t,0,i//2]
-                    p[0,self.n_s + i + 1] = -self.lambdas[i//2,1,t] * self.planes[t,1,i//2]
-                    p_list.append(p)
-
-            Q_list.append(Q)
-
-
-        return Q_list, p_list
-
-    def solve(self, x0, Last_xPredicted, uPred, lambdas, x_agents, agents_id, pose):
+    def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
         """Computes control action
         Arguments:
             x0: current state position
@@ -106,12 +91,6 @@ class PathFollowingLPV_MPC:
             EA: A_L, B_L ,C_L: Set of LPV matrices
         """
         startTimer              = datetime.datetime.now()
-
-        if lambdas is None:
-            self.lambdas = np.zeros((self.n_agents, 2, self.N)) # TODO fix lambdas into n neighbours x H time
-
-        else:
-            self.lambdas = lambdas
 
         if x_agents is None:
             self.planes = np.zeros((10,self.n_agents,3)) # TODO fix lambdas into n neighbours x H time
@@ -123,15 +102,9 @@ class PathFollowingLPV_MPC:
 
         self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
 
-        # TODO fix agents into (H,2,n)
         self.G, self.E, self.L, self.Eu, self.Eoa  = _buildMatEqConst(self,x_agents) # It's been introduced the C matrix (L in the output)
 
         self.M, self.q          = _buildMatCost(self)
-
-
-        endTimer                = datetime.datetime.now()
-        deltaTimer              = endTimer - startTimer
-        self.linearizationTime  = deltaTimer
 
         M = self.M
         q = self.q
@@ -147,7 +120,6 @@ class PathFollowingLPV_MPC:
 
         uOld  = [self.OldSteering[0], self.OldAccelera[0]]
 
-        
         if self.Solver == "CVX":
             startTimer = datetime.datetime.now()
             sol = qp(M, matrix(q), F, matrix(b), G, E * matrix(x0))
@@ -160,11 +132,12 @@ class PathFollowingLPV_MPC:
 
             self.xPred = np.squeeze(np.transpose(np.reshape((np.squeeze(sol['x'])[np.arange(n * (N + 1))]), (N + 1, n))))
             self.uPred = np.squeeze(np.transpose(np.reshape((np.squeeze(sol['x'])[n * (N + 1) + np.arange(d * N)]), (N, d))))
+
         else:
             startTimer = datetime.datetime.now()
             res_cons, feasible = osqp_solve_qp(sparse.csr_matrix(M), q, sparse.csr_matrix(F),
              b, sparse.csr_matrix(G), np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) ) + np.squeeze(self.Eoa) ) # TODO fix G and np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) )
-            
+
             if feasible == 0:
                 print ('QUIT...')
 
@@ -185,15 +158,11 @@ class PathFollowingLPV_MPC:
         return feasible, Solution, self.planes
 
 
-
-
 # ======================================================================================================================
 # ======================================================================================================================
 # =============================== Internal functions for MPC reformulation to QP =======================================
 # ======================================================================================================================
 # ======================================================================================================================
-
-
 
 
 def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
@@ -254,26 +223,26 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
         feasible = 1
     return res, feasible
 
-def GenerateColisionAvoidanceConstraints(Controller):
+def GenerateColisionAvoidanceConstraints(Controller, agent_list):
 
     K_list = []
     Lim_list = []
 
     for t in range(0,Controller.N):
 
-        K = np.zeros(2*len(Controller.gent_list),Controller.self.n_exp)
+        K = np.zeros(2*len(agent_list),Controller.self.n_exp)
 
-        for i,el in enumerate(Controller.agent_list):
+        for i,el in enumerate(agent_list):
 
-            idx = np.asarray([7,8]) + 2*el
+            if el < Controller.id:
+                K[i,7] = Controller.planes[t, 0, el]
+                K[i,8] = Controller.planes[t, 1, el]
+                Lim_list.append(Controller.radius - self.planes[t, 2, el] )
 
-            K[i,7] = Controller.planes[t, 0, el]
-            K[i,8] = Controller.planes[t, 1, el]
-
-            K[i, idx] = -Controller.planes[t, 0, el]
-            K[i, idx] = -Controller.planes[t, 1, el]
-
-            Lim_list.append([- self.planes[t, 2, el] + Controller.radius,self.planes[t, 1, el] + Controller.radius])
+            else:
+                K[i,7] = -Controller.planes[t, 0, el]
+                K[i,8] = -Controller.planes[t, 1, el]
+                Lim_list.append(self.planes[t, 2, el] - Controller.radius )
 
         K_list.append(K)
 
@@ -287,9 +256,8 @@ def _buildMatIneqConst(Controller):
 
     max_vel = Controller.max_vel
     min_vel = Controller.min_vel
-    # Ax< B
     Fx = np.zeros((4,n_exp))
-    # limit velocity
+
     Fx[0,0] = -1
     Fx[1,0] = 1
 
@@ -304,8 +272,6 @@ def _buildMatIneqConst(Controller):
                    [max_vel],
                    [0.35],
                    [0.35]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
-
-    # bx = np.vstack((bx, btl))
 
     # Builc the matrices for the input constraint in each region. In the region i we want Fx[i]x <= bx[b]
     Fu = np.array([[1., 0.],
@@ -356,7 +322,7 @@ def _buildMatIneqConst(Controller):
         F_return = F_sparse
     else:
         F_return = F
-    
+
     return F_return, b
 
 
@@ -418,7 +384,6 @@ def _buildMatEqConst(Controller, agents):
     Gx = np.zeros((n_exp,n_exp ))
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG
     Gx = linalg.block_diag(*[Gx]*(N))
-    # Gx[:(Controller.n_exp),:(Controller.n_exp)] += np.eye(Controller.n_exp)
 
     Gu = np.zeros(((n_exp) * (N), d * (N)))
 
@@ -432,19 +397,13 @@ def _buildMatEqConst(Controller, agents):
 
     # TODO ADD agent initial state
 
-    for j in range(0, Controller.n_agents * 2, 2):  # TODO fix this loop
-        Eoa[Controller.n_s + j, 0] = agents[0, int(j / 2), 0]
-        Eoa[Controller.n_s + j + 1, 0] = agents[0, int(j / 2), 1]
 
     for i in range(1, N): # TODO: there's redundancy in this loops
         Gx[i * (n_exp):i * (n_exp)+Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i]
         Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i]
-        for j in range(0, Controller.n_agents*2,2): #TODO fix this loop
-            Eoa[i * (Controller.n_exp) + Controller.n_s + j, 0] = agents[i,int(j/2),0]
-            Eoa[i * (Controller.n_exp) + Controller.n_s + j + 1, 0] = agents[i,int(j/2),1]
 
     G = np.hstack((Gx, Gu))
-    
+
     return G, E, L, Eu, Eoa
 
 def _EstimateABC(Controller,states, u):

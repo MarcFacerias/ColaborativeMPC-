@@ -10,7 +10,7 @@ sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 
-from PathFollowingLPVMPC_distri_hyper import PathFollowingLPV_MPC
+from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -42,19 +42,19 @@ class agent():
         self.time = []
         self.status = []
 
-    def one_step(self, lambdas, agents, agents_id, pose, uPred = None, xPred = None):
+    def one_step(self, lambdas, agents, pose, uPred = None, xPred = None):
 
         if (xPred is None):
             xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
-        feas, uPred, xPred, planes = self._solve(self.x0, agents, agents_id, pose, lambdas, xPred, uPred)
+        feas, uPred, xPred, planes = self._solve(self.x0, agents, pose, lambdas, xPred, uPred)
 
         return feas,uPred, xPred, planes
 
-    def _solve(self, x0, agents, agents_id, pose, lambdas, Xpred, uPred):
+    def _solve(self, x0, agents, pose, lambdas, Xpred, uPred):
 
         tic = time.time()
-        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, agents_id, pose)
+        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, pose)
         self.time.append(time.time() - tic)
         self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes
@@ -125,19 +125,6 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     uu = np.zeros(( Hp, 2 ))
     return xx, uu
 
-def eval_constraint(x1, x2, planes, D):
-
-    cost0 = planes[0]*x1[0] + planes[1]*x1[1] - planes[2] - D
-    cost1 = -planes[0] * x2[0] - planes[1] * x2[1] + planes[2] + D
-
-    return np.array([cost0,cost1])
-
-def stop_criteria(cost, th):
-
-    if np.all(cost <= th):
-        return True
-
-    return False
 
 def main():
 
@@ -147,10 +134,6 @@ def main():
 
     N = 10
     dt = 0.01
-    alpha = 10000
-    max_it = 100
-    finished = False
-    # lambdas_hist = [lambdas]
 
     # define neighbours
     n_0 = [1]
@@ -161,7 +144,6 @@ def main():
 
     maps = [Map(),Map()]
     agents = initialise_agents([x0_0,x0_1],N,dt,maps)
-    planes = np.zeros((2,10,3,3))
     states_hist = [agents]
 
     if plot:
@@ -170,64 +152,31 @@ def main():
     if plot_end:
         d = plotter_offline(maps[0])
 
-    r0 = agent(N, maps[0], dt, x0_0)
-    r1 = agent(N, maps[1], dt, x0_1)
+    r0 = agent(N, maps[0], dt, x0_0, id)
+    r1 = agent(N, maps[1], dt, x0_1, id)
 
     x_old0 = None
     x_old1 = None
     u_old0 = None
     u_old1 = None
-    lambdas_hist = []
     it = 0
 
     while(it<2):
 
         tic = time.time()
         lambdas = np.zeros((3, 3, 2, N))
-        it_OCD = 0
-        while(not finished or it_OCD == max_it):
 
-            it_OCD = + 1
-            # TODO acces the subset of lambdas of our problem
-            f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
-            f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
+        # TODO acces the subset of lambdas of our problem
+        f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
+        f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
 
+        agents[:,0,:] = xPred0[:,-2:]
+        agents[:,1,:] = xPred1[:,-2:]
 
-            cost = np.zeros((3,3,2,N))
-
-            agents[:,0,:] = xPred0[:,-2:]
-            agents[:,1,:] = xPred1[:,-2:]
-
-            planes0_aux = np.zeros((10,3,3))
-            planes1_aux = np.zeros((10,3,3))
-
-            planes0_aux[:,:,n_0] = planes0
-            planes1_aux[:,:,n_1] = planes1
-
-            planes[0,:,:,:] = planes0_aux
-            planes[1,:,:,:] = planes1_aux
-
-            for k in range(0,N):
-                for i in range(0,2):
-                    for j in range(0, 2):
-
-                        if (i != j):
-                            cost[i,j,:,k]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[i,k,:,j],0.1)
-
-            # update lambdas
-            lambdas += alpha*cost
-            lambdas[lambdas<0.0001] = 0
-            lambdas_hist.append(lambdas)
-            states_hist.append(agents)
-            finished = stop_criteria(cost,0.0001)
-
-            if not finished:
-                print("breakpoint placeholder")
-                print(xPred0)
+        states_hist.append(agents)
 
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes1)
-
 
         r0.x0 = xPred0[1,:]
         r1.x0 = xPred1[1,:]
@@ -235,7 +184,6 @@ def main():
         x_old1 = xPred1
         u_old0 = uPred0
         u_old1 = uPred1
-        finished = False
 
         print("-------------------------------------------------")
         print("it " + str(it))
