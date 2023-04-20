@@ -228,7 +228,7 @@ def GenerateColisionAvoidanceConstraints(Controller):
 
             K[i, 7] = Controller.planes[t, 0, i]
             K[i, 8] = Controller.planes[t, 1, i]
-            K[i, -1] = 1
+            K[i, -1] = -1
 
             if Controller.id < el:
 
@@ -276,7 +276,7 @@ def _buildMatIneqConst(Controller):
     bu = np.array([[0.45], # Max right Steering
                    [0.45], # Max left Steering
                    [8.0],   # Max Acceleration
-                   [3.0]])  # Max DesAcceleration
+                   [8.0]])  # Max DesAcceleration
 
 
     rep_a = [Fx] * (N) # add n times Fx to a list
@@ -321,8 +321,6 @@ def _buildMatIneqConst(Controller):
 
     return F_return, b
 
-
-
 def _buildMatCost(Controller):
     # EA: This represents to be: [(r-x)^T * Q * (r-x)] up to N+1
     # and [u^T * R * u] up to N
@@ -361,8 +359,6 @@ def _buildMatCost(Controller):
 
     return M_return, P
 
-
-
 def _buildMatEqConst(Controller, agents):
     # Buil matrices for optimization (Convention from Chapter 15.2 Borrelli, Bemporad and Morari MPC book)
     # We are going to build our optimization vector z \in \mathbb{R}^((N+1) \dot n \dot N \dot d), note that this vector
@@ -376,7 +372,7 @@ def _buildMatEqConst(Controller, agents):
     n_exp = Controller.n_exp # N horizon
     d = Controller.d # N horizon
 
-    auxG = np.eye(Controller.n_exp-1)
+    auxG = np.eye(Controller.n_exp-2)
 
     Gx = np.zeros((n_exp,n_exp ))
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG

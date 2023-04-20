@@ -14,8 +14,8 @@ from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
-plot = False
-plot_end = True
+plot = True
+plot_end = False
 
 def compute_hyper(x_ego,x_neg):
 
@@ -190,7 +190,8 @@ def main():
 
         print("-------------------------------------------------")
         print("it " + str(it))
-        print(time.time() - tic)
+        print("time" + str(time.time() - tic))
+        print("dist" + str(dist_hist[-1]))
         print("-------------------------------------------------")
 
         it += 1
