@@ -42,19 +42,19 @@ class agent():
         self.time = []
         self.status = []
 
-    def one_step(self, lambdas, agents, pose, uPred = None, xPred = None):
+    def one_step(self, agents, agents_id, pose, uPred = None, xPred = None):
 
         if (xPred is None):
             xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
-        feas, uPred, xPred, planes = self._solve(self.x0, agents, pose, lambdas, xPred, uPred)
+        feas, uPred, xPred, planes = self._solve(self.x0, agents, agents_id, pose, xPred, uPred)
 
         return feas,uPred, xPred, planes
 
-    def _solve(self, x0, agents, pose, lambdas, Xpred, uPred):
+    def _solve(self, x0, agents, agents_id, pose, Xpred, uPred):
 
         tic = time.time()
-        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, pose)
+        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, agents, agents_id, pose)
         self.time.append(time.time() - tic)
         self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes
@@ -152,8 +152,8 @@ def main():
     if plot_end:
         d = plotter_offline(maps[0])
 
-    r0 = agent(N, maps[0], dt, x0_0, id)
-    r1 = agent(N, maps[1], dt, x0_1, id)
+    r0 = agent(N, maps[0], dt, x0_0, 0)
+    r1 = agent(N, maps[1], dt, x0_1, 1)
 
     x_old0 = None
     x_old1 = None
@@ -161,14 +161,15 @@ def main():
     u_old1 = None
     it = 0
 
-    while(it<2):
+    dist_hist = []
+
+    while(it<1000):
 
         tic = time.time()
-        lambdas = np.zeros((3, 3, 2, N))
 
         # TODO acces the subset of lambdas of our problem
-        f0, uPred0, xPred0, planes0 = r0.one_step(lambdas[0,n_0,:,:], agents[:,n_0,:], agents[:,0,:], u_old0, x_old0 )
-        f1, uPred1, xPred1, planes1 = r1.one_step(lambdas[1,n_1,:,:], agents[:,n_1,:], agents[:,1,:], u_old1, x_old1)
+        f0, uPred0, xPred0, planes0 = r0.one_step(agents[:,n_0,:], [1], agents[:,0,:], u_old0, x_old0 )
+        f1, uPred1, xPred1, planes1 = r1.one_step(agents[:,n_1,:], [0], agents[:,1,:], u_old1, x_old1)
 
         agents[:,0,:] = xPred0[:,-2:]
         agents[:,1,:] = xPred1[:,-2:]
@@ -177,6 +178,8 @@ def main():
 
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes1)
+
+        dist_hist.append( np.sqrt((xPred0[0,7] - xPred1[0,7])**2 + (xPred0[0,8] - xPred1[0,8])**2) )
 
         r0.x0 = xPred0[1,:]
         r1.x0 = xPred1[1,:]
@@ -199,6 +202,7 @@ def main():
         d.plot_offline_experiment(r0)
         # d.plot_offline_experiment(r1, "ob", "-y")
         plot_performance(r0)
+        plot_distance(dist_hist)
         input("Press enter to continue...")
         # input("Press Enter to continue...")
 
@@ -213,7 +217,13 @@ def plot_performance( agent):
     plt.show()
     plt.pause(0.001)
 
+def plot_distance( distance_hist):
 
+    fig_status = plt.figure()
+    x = np.arange(0,len(distance_hist))
+    plt.scatter(x, np.array(distance_hist))
+    plt.show()
+    plt.pause(0.001)
 if __name__ == "__main__":
 
     main()

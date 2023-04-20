@@ -25,7 +25,7 @@ class PathFollowingLPV_MPC:
 
         self.n_s = 9
         self.n_agents = 1
-        self.n_exp = self.n_s + 1 # slack variable
+        self.n_exp = self.n_s + 2 # slack variables
         # Vehicle parameters:
         self.lf = 0.12
         self.lr = 0.14
@@ -36,6 +36,7 @@ class PathFollowingLPV_MPC:
         self.mu = 0.1
         self.plane_comp = hyperplane_separator(self.n_agents, N)
         self.id = id
+        self.radius = 0.3
 
         self.max_vel = 10
         self.min_vel = 0.2
@@ -70,17 +71,14 @@ class PathFollowingLPV_MPC:
 
     def _buildQ(self):
 
-        Q_list = []
 
         Q = np.zeros((self.n_exp,self.n_exp))
         Q[1,1] = 1
         Q[2,2] = 1
         Q[4,4] = 100
+        Q[-2, -2] = 1000000000
         Q[-1, -1] = 1000000000
-
-        Q_list.append(Q)
-
-        return Q_list
+        return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
         """Computes control action
@@ -90,13 +88,14 @@ class PathFollowingLPV_MPC:
             EA: uPred: set of last predicted control inputs used for updating matrix A LPV
             EA: A_L, B_L ,C_L: Set of LPV matrices
         """
-        startTimer              = datetime.datetime.now()
+
+        self.agent_list = agents_id
 
         if x_agents is None:
             self.planes = np.zeros((10,self.n_agents,3)) # TODO fix lambdas into n neighbours x H time
             x_agents = np.zeros((10,self.n_agents,2))
         else:
-            self.planes = self.plane_comp.compute_hyperplane(x_agents, pose, agents_id)
+            self.planes = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
 
         self.F, self.b = _buildMatIneqConst(self)
 
@@ -121,10 +120,7 @@ class PathFollowingLPV_MPC:
         uOld  = [self.OldSteering[0], self.OldAccelera[0]]
 
         if self.Solver == "CVX":
-            startTimer = datetime.datetime.now()
             sol = qp(M, matrix(q), F, matrix(b), G, E * matrix(x0))
-            endTimer = datetime.datetime.now(); deltaTimer = endTimer - startTimer
-            self.solverTime = deltaTimer
             if sol['status'] == 'optimal':
                 self.feasible = 1
             else:
@@ -134,7 +130,6 @@ class PathFollowingLPV_MPC:
             self.uPred = np.squeeze(np.transpose(np.reshape((np.squeeze(sol['x'])[n * (N + 1) + np.arange(d * N)]), (N, d))))
 
         else:
-            startTimer = datetime.datetime.now()
             res_cons, feasible = osqp_solve_qp(sparse.csr_matrix(M), q, sparse.csr_matrix(F),
              b, sparse.csr_matrix(G), np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) ) + np.squeeze(self.Eoa) ) # TODO fix G and np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) )
 
@@ -142,9 +137,6 @@ class PathFollowingLPV_MPC:
                 print ('QUIT...')
 
             Solution = res_cons.x
-
-            endTimer = datetime.datetime.now(); deltaTimer = endTimer - startTimer
-            self.solverTime = deltaTimer
 
             # np.reshape((Solution[:-20]), (N, 14))
             idx = np.arange(0,9)
@@ -207,7 +199,7 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
             qp_A = G
             qp_l = l
             qp_u = h
-        osqp.setup(P=P.tocsc(), q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True, max_iter=10000000)
+        osqp.setup(P=P.tocsc(), q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True, max_iter=50000)
     else:
         osqp.setup(P=P, q=q, A=None, l=None, u=None, verbose=False, polish=True)
     if initvals is not None:
@@ -223,28 +215,30 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
         feasible = 1
     return res, feasible
 
-def GenerateColisionAvoidanceConstraints(Controller, agent_list):
+def GenerateColisionAvoidanceConstraints(Controller):
 
     K_list = []
     Lim_list = []
 
     for t in range(0,Controller.N):
 
-        K = np.zeros(2*len(agent_list),Controller.self.n_exp)
+        K = np.zeros((len(Controller.agent_list),Controller.n_exp))
 
-        for i,el in enumerate(agent_list):
+        for i,el in enumerate(Controller.agent_list):
 
-            if el < Controller.id:
-                K[i,7] = Controller.planes[t, 0, el]
-                K[i,8] = Controller.planes[t, 1, el]
-                Lim_list.append(Controller.radius - self.planes[t, 2, el] )
+            K[i, 7] = Controller.planes[t, 0, i]
+            K[i, 8] = Controller.planes[t, 1, i]
+            K[i, -1] = 1
+
+            if Controller.id < el:
+
+                Lim_list.append(Controller.radius - Controller.planes[t, 2, i] )
 
             else:
-                K[i,7] = -Controller.planes[t, 0, el]
-                K[i,8] = -Controller.planes[t, 1, el]
-                Lim_list.append(self.planes[t, 2, el] - Controller.radius )
 
-        K_list.append(K)
+                Lim_list.append(Controller.planes[t, 2, i] - Controller.radius )
+
+            K_list.append(K)
 
     return K_list, Lim_list
 
@@ -264,8 +258,8 @@ def _buildMatIneqConst(Controller):
     # limit lateral error with slack variables
     Fx[2,3] = 1
     Fx[3,3] = -1
-    Fx[2,-1] = -1
-    Fx[3,-1] = -1
+    Fx[2,-2] = -1
+    Fx[3,-2] = -1
 
     #B
     bx = np.array([[-min_vel],
@@ -289,7 +283,7 @@ def _buildMatIneqConst(Controller):
     k_list, lim_list = GenerateColisionAvoidanceConstraints(Controller)
 
     for j,_ in enumerate(rep_a):
-        rep_a[j] = np.vstack(rep_a[j],k_list[j])
+        rep_a[j] = np.vstack((rep_a[j],k_list[j]))
 
     Mat = linalg.block_diag(*rep_a) # make a block diagonal where the elements of the diagonal are the matrices in the list
     '''
@@ -299,10 +293,12 @@ def _buildMatIneqConst(Controller):
 
     Fxtot = Mat
     bxtot = np.tile(np.squeeze(bx), N)
-    aux = 0
-    for idx in range(0, len(bxtot), 4):
-        bxtot = np.insert(bxtot, idx, lim_list[aux])
-        aux += 1
+
+    for idx in range(0, len(lim_list)):
+        try:
+            bxtot = np.insert(bxtot, (idx+1)*5, lim_list[idx])
+        except:
+            bxtot = np.append(bxtot,lim_list[-1])
 
     # Let's start by computing the submatrix of F relates with the input
     rep_b = [Fu] * (N)
@@ -332,12 +328,13 @@ def _buildMatCost(Controller):
     # and [u^T * R * u] up to N
 
     # I consider Q to have the proper shape (9 base states +3N  with N being the neighbours )
-    b,p_obs  = Controller._buildQ()
+    q  = Controller._buildQ()
     # I consider R to have the proper shape ( 2xN )
     R  = Controller.R
     N  = Controller.N
+    d = [q] * (N)
 
-    Mx = linalg.block_diag(*b)
+    Mx = linalg.block_diag(*d)
 
     c = [R] * (N)
 
@@ -351,7 +348,7 @@ def _buildMatCost(Controller):
     Px = np.zeros(Controller.n_exp)
     Px[6] = -1
     Px[0] = -1
-    Px_total = (np.tile(Px, N) + np.concatenate(p_obs).ravel())
+    Px_total = np.tile(Px, N)
     P= 2*np.hstack((Px_total, Pu))
 
     M = 2 * M0  # Need to multiply by two because CVX considers 1/2 in front of quadratic cost
