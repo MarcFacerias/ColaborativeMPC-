@@ -147,7 +147,7 @@ def main():
     states_hist = [agents]
 
     if plot:
-        disp = plotter(maps[0],3)
+        disp = plotter(maps[0],2)
 
     if plot_end:
         d = plotter_offline(maps[0])
