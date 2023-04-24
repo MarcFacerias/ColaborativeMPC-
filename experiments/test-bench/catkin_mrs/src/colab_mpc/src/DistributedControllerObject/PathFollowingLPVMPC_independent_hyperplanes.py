@@ -73,9 +73,11 @@ class PathFollowingLPV_MPC:
 
 
         Q = np.zeros((self.n_exp,self.n_exp))
+        Q[0,0] = -100
         Q[1,1] = 1
         Q[2,2] = 1
         Q[4,4] = 100
+        Q[6,6] = -100
         Q[-2, -2] = 1000000000
         Q[-1, -1] = 1000000000
         return Q
@@ -349,8 +351,8 @@ def _buildMatCost(Controller):
     # Maximise change on S
     Pu = np.zeros(N*Controller.d)
     Px = np.zeros(Controller.n_exp)
-    Px[6] = -1
-    Px[0] = -1
+    # Px[6] = -1
+    # Px[0] = -1
     Px_total = np.tile(Px, N)
     P= 2*np.hstack((Px_total, Pu))
 
