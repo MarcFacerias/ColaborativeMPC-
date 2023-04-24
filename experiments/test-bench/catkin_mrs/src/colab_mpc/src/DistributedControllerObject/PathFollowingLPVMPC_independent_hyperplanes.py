@@ -26,6 +26,7 @@ class PathFollowingLPV_MPC:
         self.n_s = 9
         self.n_agents = 1
         self.n_exp = self.n_s + 2 # slack variables
+
         # Vehicle parameters:
         self.lf = 0.12
         self.lr = 0.14
@@ -40,7 +41,6 @@ class PathFollowingLPV_MPC:
 
         self.max_vel = 10
         self.min_vel = 0.2
-        # self.max_vel = self.max_vel - 0.2*self.max_vel
 
         self.A    = []
         self.B    = []
@@ -199,9 +199,10 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
             qp_A = G
             qp_l = l
             qp_u = h
-        osqp.setup(P=P.tocsc(), q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True, max_iter=50000000)
+        osqp.setup(P=P.tocsc(), q=q, A=qp_A, l=qp_l, u=qp_u, verbose=False, polish=True, max_iter=500000)
     else:
         osqp.setup(P=P, q=q, A=None, l=None, u=None, verbose=False, polish=True)
+
     if initvals is not None:
         osqp.warm_start(x=initvals)
     res = osqp.solve()
@@ -294,13 +295,17 @@ def _buildMatIneqConst(Controller):
     Fxtot = Mat
     bxtot = np.tile(np.squeeze(bx), N)
 
-    for idx in range(0, len(lim_list)):
-        try:
-            bxtot = np.insert(bxtot, (idx+1)*5, lim_list[idx])
-        except:
-            bxtot = np.append(bxtot,lim_list[-1])
+    n = 5
+    bxtot = iter(bxtot)
+    res = []
 
-    # Let's start by computing the submatrix of F relates with the input
+    for x in lim_list:
+        res.extend([next(bxtot) for _ in range(n - 1)])
+        res.append(x)
+    res.extend(bxtot)
+
+    bxtot = np.array(res)
+
     rep_b = [Fu] * (N)
     Futot = linalg.block_diag(*rep_b)
     butot = np.tile(np.squeeze(bu), N)

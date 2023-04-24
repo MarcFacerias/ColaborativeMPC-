@@ -5,6 +5,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import time
 import math
+import csv
 
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
@@ -14,8 +15,8 @@ from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
-plot = True
-plot_end = False
+plot = False
+plot_end = True
 
 def compute_hyper(x_ego,x_neg):
 
@@ -27,12 +28,12 @@ def compute_hyper(x_ego,x_neg):
 class agent():
 
     #TODO: define Q and R
-    def __init__(self, N, Map, dt, x0, id, Q=None, R=None):
+    def __init__(self, N, Map, dt, x0, id, Q=np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0]), R=0.01* np.diag([1, 1])):
         self.map = Map
         self.N = N
         self.dt = dt
-        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
-        self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
+        self.Q  = Q   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
+        self.R  = R                         #[delta ; a]
         self.Controller = PathFollowingLPV_MPC(self.Q, self.R, N, dt, Map, "OSQP", id)
         self.x0 = x0
         self.states = []
@@ -72,6 +73,11 @@ class agent():
         self.u.append(uPred[0,:])
         self.planes.append(planes[0,:])
 
+    def save_to_csv(self):
+
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/vars"
+        np.savetxt(path+'/states.dat', self.states, fmt='%.5e',delimiter=' ')
+        np.savetxt(path + '/u.dat', self.u, fmt='%.5e', delimiter=' ')
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp,len(data),2))
     for id, el in enumerate(data):
@@ -139,7 +145,7 @@ def main():
     n_0 = [1]
     n_1 = [0]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.55]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
     x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     maps = [Map(),Map()]
@@ -163,13 +169,16 @@ def main():
 
     dist_hist = []
 
-    while(it<1000):
+    while(it<400):
 
         tic = time.time()
 
         # TODO acces the subset of lambdas of our problem
         f0, uPred0, xPred0, planes0 = r0.one_step(agents[:,n_0,:], [1], agents[:,0,:], u_old0, x_old0 )
         f1, uPred1, xPred1, planes1 = r1.one_step(agents[:,n_1,:], [0], agents[:,1,:], u_old1, x_old1)
+
+        if not (f0 and f1):
+            break
 
         agents[:,0,:] = xPred0[:,-2:]
         agents[:,1,:] = xPred1[:,-2:]
@@ -199,17 +208,26 @@ def main():
             disp.plot_step(xPred0[1, 7], xPred0[1, 8], xPred0[1, 5], 0)
             disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)
 
+
     if plot_end:
-        d.plot_offline_experiment(r0)
+        d.plot_offline_experiment(r0,".b")
+        d.plot_offline_experiment(r1,".r")
         # d.plot_offline_experiment(r1, "ob", "-y")
         plot_performance(r0)
         plot_distance(dist_hist)
-        input("Press enter to continue...")
+        # input("Press enter to continue...")
+        r0.save_to_csv()
+
+        figs = [plt.figure(n) for n in plt.get_fignums()]
+        idx = 0
+        for fig in figs:
+            fig.savefig("/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/figures/fig" +  str(idx), format='eps')
+            idx +=1
         # input("Press Enter to continue...")
 
 def plot_performance( agent):
 
-    fig_status = plt.figure()
+    fig_status = plt.figure(2)
     fig_status.add_subplot(2, 1, 1)
     x = np.arange(0,len(agent.status))
     plt.scatter(x, np.array(agent.status))
@@ -220,11 +238,12 @@ def plot_performance( agent):
 
 def plot_distance( distance_hist):
 
-    fig_status = plt.figure()
+    fig_status = plt.figure(3)
     x = np.arange(0,len(distance_hist))
     plt.scatter(x, np.array(distance_hist))
     plt.show()
     plt.pause(0.001)
+
 if __name__ == "__main__":
 
     main()
