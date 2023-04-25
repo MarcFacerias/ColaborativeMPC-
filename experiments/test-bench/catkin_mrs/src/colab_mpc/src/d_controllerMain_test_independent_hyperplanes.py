@@ -15,8 +15,9 @@ from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
-plot = False
+plot = True
 plot_end = True
+np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 def compute_hyper(x_ego,x_neg):
 
@@ -79,7 +80,7 @@ class agent():
         np.savetxt(path+'/states.dat', self.states, fmt='%.5e',delimiter=' ')
         np.savetxt(path + '/u.dat', self.u, fmt='%.5e', delimiter=' ')
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
-    agents = np.zeros((Hp,len(data),2))
+    agents = np.zeros((Hp+1,len(data),2))
     for id, el in enumerate(data):
 
         agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-2:]
@@ -90,30 +91,30 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     # We need a prediction of the states for the start-up proces of the controller (To instantiate the LPV variables)
     # [vx vy psidot y_e thetae theta s x y ]
 
-    Vx      = np.zeros((Hp, 1))
+    Vx      = np.zeros((Hp+1, 1))
     Vx[0]   = x0[0]
-    S       = np.zeros((Hp, 1))
+    S       = np.zeros((Hp+1, 1))
     S[0]    = 0
-    Vy      = np.zeros((Hp, 1))
+    Vy      = np.zeros((Hp+1, 1))
     Vy[0]   = x0[1]
-    W       = np.zeros((Hp, 1))
+    W       = np.zeros((Hp+1, 1))
     W[0]    = x0[2]
-    Ey      = np.zeros((Hp, 1))
+    Ey      = np.zeros((Hp+1, 1))
     Ey[0]   = x0[3]
-    Epsi    = np.zeros((Hp, 1))
+    Epsi    = np.zeros((Hp+1, 1))
     Epsi[0] = x0[4]
 
     aux = map.getGlobalPosition(S[0], Ey[0])
-    Theta = np.zeros((Hp, 1))
+    Theta = np.zeros((Hp+1, 1))
     Theta[0] = aux[2]
-    X = np.zeros((Hp, 1))
+    X = np.zeros((Hp+1, 1))
     X[0] = aux[0]
-    Y = np.zeros((Hp, 1))
+    Y = np.zeros((Hp+1, 1))
     Y[0] = aux[1]
 
     Accel   = 1.0
 
-    for i in range(0, Hp-1):
+    for i in range(0, Hp):
         Vy[i+1]      = x0[1]
         W[i+1]       = x0[2]
         Ey[i+1]      = x0[3]
@@ -122,7 +123,7 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
 
     Accel   = Accel + np.array([ (accel_rate * i) for i in range(0, Hp)])
 
-    for i in range(0, Hp-1):
+    for i in range(0, Hp):
         Vx[i+1]    = Vx[i] + Accel[i] * dt
         S[i+1]      = S[i] + Vx[i] * dt
         X[i+1], Y[i+1], Theta[i+1] = map.getGlobalPosition(S[i], Ey[i])
@@ -169,59 +170,68 @@ def main():
 
     dist_hist = []
 
-    while(it<400):
+    while(it<1000):
 
         tic = time.time()
 
         # TODO acces the subset of lambdas of our problem
         f0, uPred0, xPred0, planes0 = r0.one_step(agents[:,n_0,:], [1], agents[:,0,:], u_old0, x_old0 )
-        f1, uPred1, xPred1, planes1 = r1.one_step(agents[:,n_1,:], [0], agents[:,1,:], u_old1, x_old1)
+        # f1, uPred1, xPred1, planes1 = r1.one_step(agents[:,n_1,:], [0], agents[:,1,:], u_old1, x_old1)
 
-        if not (f0 and f1):
+        if not (f0 and 1):
             break
 
         agents[:,0,:] = xPred0[:,-2:]
-        agents[:,1,:] = xPred1[:,-2:]
+        # agents[:,1,:] = xPred1[:,-2:]
 
         states_hist.append(agents)
 
         r0.save(xPred0, uPred0, planes0)
-        r1.save(xPred1, uPred1, planes1)
+        # r1.save(xPred1, uPred1, planes1)
 
-        dist_hist.append( np.sqrt((xPred0[0,7] - xPred1[0,7])**2 + (xPred0[0,8] - xPred1[0,8])**2) )
+        # dist_hist.append( np.sqrt((xPred0[0,7] - xPred1[0,7])**2 + (xPred0[0,8] - xPred1[0,8])**2) )
 
         r0.x0 = xPred0[1,:]
-        r1.x0 = xPred1[1,:]
+        # r1.x0 = xPred1[1,:]
         x_old0 = xPred0
-        x_old1 = xPred1
+        # x_old1 = xPred1
         u_old0 = uPred0
-        u_old1 = uPred1
+        # u_old1 = uPred1
 
         print("-------------------------------------------------")
         print("it " + str(it))
         print("time" + str(time.time() - tic))
-        print("dist" + str(dist_hist[-1]))
+        # print("dist" + str(dist_hist[-1]))
         print("-------------------------------------------------")
 
+        print("-------------------------------------------------")
+        print("agent 0  ")
+        print(xPred0)
+        print("-------------------------------------------------")
+
+        # print("-------------------------------------------------")
+        # print("agent 1  ")
+        # print(xPred1)
+        # print("-------------------------------------------------")
         it += 1
         if plot :
             disp.plot_step(xPred0[1, 7], xPred0[1, 8], xPred0[1, 5], 0)
-            disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)
+            # disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)
 
 
     if plot_end:
         d.plot_offline_experiment(r0,".b")
-        d.plot_offline_experiment(r1,".r")
+        # d.plot_offline_experiment(r1,".r")
         # d.plot_offline_experiment(r1, "ob", "-y")
-        plot_performance(r0)
-        plot_distance(dist_hist)
+        # plot_performance(r0)
+        # plot_distance(dist_hist)
         # input("Press enter to continue...")
         r0.save_to_csv()
 
         figs = [plt.figure(n) for n in plt.get_fignums()]
         idx = 0
         for fig in figs:
-            fig.savefig("/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/figures/fig" +  str(idx), format='eps')
+            fig.savefig("/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/figures/fig" +  str(idx) + ".eps", format='eps')
             idx +=1
         # input("Press Enter to continue...")
 

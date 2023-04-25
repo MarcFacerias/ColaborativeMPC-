@@ -2,7 +2,7 @@ TODO esta setmana:
 
 * Testejar els plans offline, sense la part del OCD 
   * Es resol pero en algun punt el problema peta 
-  * La performance es tindria q intentar millorar
+  * La performance es tindria q intentar millorar -> using a cruise velocity a
   * Revisar la formu del cost function
 * Testejar el problema amb el solver no lineal
   * Hauria de llegir algun paper per veure quin solvers fan servir quan les constraints son quadratic

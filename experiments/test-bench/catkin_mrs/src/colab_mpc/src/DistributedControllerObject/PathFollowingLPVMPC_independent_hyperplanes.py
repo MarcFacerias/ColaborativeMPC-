@@ -25,7 +25,7 @@ class PathFollowingLPV_MPC:
 
         self.n_s = 9
         self.n_agents = 1
-        self.n_exp = self.n_s + 2 # slack variables
+        self.n_exp = self.n_s# slack variables
 
         # Vehicle parameters:
         self.lf = 0.12
@@ -41,6 +41,7 @@ class PathFollowingLPV_MPC:
 
         self.max_vel = 10
         self.min_vel = 0.2
+        self.vel_ref = np.ones(N)*8
 
         self.A    = []
         self.B    = []
@@ -73,13 +74,14 @@ class PathFollowingLPV_MPC:
 
 
         Q = np.zeros((self.n_exp,self.n_exp))
-        Q[0,0] = -100
+        Q[0,0] = 120
         Q[1,1] = 1
         Q[2,2] = 1
-        Q[4,4] = 100
-        Q[6,6] = -100
-        Q[-2, -2] = 1000000000
-        Q[-1, -1] = 1000000000
+        Q[3,3] = 150
+        Q[4,4] = 70
+        # Q[6,6] = -100
+        # Q[-2, -2] = 1000
+        # Q[-1, -1] = 1000
         return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
@@ -94,8 +96,8 @@ class PathFollowingLPV_MPC:
         self.agent_list = agents_id
 
         if x_agents is None:
-            self.planes = np.zeros((10,self.n_agents,3)) # TODO fix lambdas into n neighbours x H time
-            x_agents = np.zeros((10,self.n_agents,2))
+            self.planes = np.zeros((self.N+1,self.n_agents,3)) # TODO fix lambdas into n neighbours x H time
+            x_agents = np.zeros((self.N+1,self.n_agents,2))
         else:
             self.planes = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
 
@@ -223,7 +225,7 @@ def GenerateColisionAvoidanceConstraints(Controller):
     K_list = []
     Lim_list = []
 
-    for t in range(0,Controller.N):
+    for t in range(0,Controller.N + 1):
 
         K = np.zeros((len(Controller.agent_list),Controller.n_exp))
 
@@ -261,14 +263,14 @@ def _buildMatIneqConst(Controller):
     # limit lateral error with slack variables
     Fx[2,3] = 1
     Fx[3,3] = -1
-    Fx[2,-2] = -1
-    Fx[3,-2] = -1
+    # Fx[2,-2] = -1
+    # Fx[3,-2] = -1
 
     #B
     bx = np.array([[-min_vel],
                    [max_vel],
-                   [0.35],
-                   [0.35]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
+                   [0.65],
+                   [0.65]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
     # Builc the matrices for the input constraint in each region. In the region i we want Fx[i]x <= bx[b]
     Fu = np.array([[1., 0.],
@@ -282,7 +284,7 @@ def _buildMatIneqConst(Controller):
                    [8.0]])  # Max DesAcceleration
 
 
-    rep_a = [Fx] * (N) # add n times Fx to a list
+    rep_a = [Fx] * (N+1) # add n times Fx to a list
     k_list, lim_list = GenerateColisionAvoidanceConstraints(Controller)
 
     for j,_ in enumerate(rep_a):
@@ -295,7 +297,7 @@ def _buildMatIneqConst(Controller):
     '''
 
     Fxtot = Mat
-    bxtot = np.tile(np.squeeze(bx), N)
+    bxtot = np.tile(np.squeeze(bx), N+1)
 
     n = 5
     bxtot = iter(bxtot)
@@ -337,7 +339,7 @@ def _buildMatCost(Controller):
     # I consider R to have the proper shape ( 2xN )
     R  = Controller.R
     N  = Controller.N
-    d = [q] * (N)
+    d = [q] * (N+1)
 
     Mx = linalg.block_diag(*d)
 
@@ -352,7 +354,7 @@ def _buildMatCost(Controller):
     Pu = np.zeros(N*Controller.d)
     Px = np.zeros(Controller.n_exp)
     # Px[6] = -1
-    # Px[0] = -1
+    Px[0] = -7.5*100
     Px_total = np.tile(Px, N)
     P= 2*np.hstack((Px_total, Pu))
 
@@ -379,11 +381,11 @@ def _buildMatEqConst(Controller, agents):
     n_exp = Controller.n_exp # N horizon
     d = Controller.d # N horizon
 
-    auxG = np.eye(Controller.n_exp-2)
+    auxG = np.eye(Controller.n_exp)
 
     Gx = np.zeros((n_exp,n_exp ))
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG
-    Gx = linalg.block_diag(*[Gx]*(N))
+    Gx = linalg.block_diag(*[Gx]*(N+1))
 
     Gu = np.zeros(((n_exp) * (N), d * (N)))
 
@@ -398,7 +400,7 @@ def _buildMatEqConst(Controller, agents):
     # TODO ADD agent initial state
 
 
-    for i in range(1, N): # TODO: there's redundancy in this loops
+    for i in range(1, N+1): # TODO: there's redundancy in this loops
         Gx[i * (n_exp):i * (n_exp)+Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i]
         Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i]
 
