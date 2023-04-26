@@ -77,7 +77,7 @@ class PathFollowingLPV_MPC:
         Q[0,0] = 120
         Q[1,1] = 1
         Q[2,2] = 1
-        Q[3,3] = 150
+        Q[3,3] = 1500
         Q[4,4] = 70
         # Q[6,6] = -100
         # Q[-2, -2] = 1000
@@ -144,11 +144,11 @@ class PathFollowingLPV_MPC:
 
             # np.reshape((Solution[:-20]), (N, 14))
             idx = np.arange(0,9)
-            for i in range(1,N):
+            for i in range(1,N+1):
                 aux = np.arange(0,9) + i*self.n_exp
                 idx = np.hstack((idx,aux))
 
-            self.xPred = np.reshape((Solution[idx]), (N, self.n_s))
+            self.xPred = np.reshape((Solution[idx]), (N+1, self.n_s))
             self.uPred = np.reshape((Solution[self.n_exp * (N) + np.arange(d * N)]), (N, d))
 
         return feasible, Solution, self.planes
@@ -217,6 +217,7 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
         print("OSQP exited with status '%s'" % res.info.status)
     feasible = 0
     if res.info.status_val == 1 or res.info.status_val == 2 or  res.info.status_val == -2:
+        print("OSQP exited with status '%s'" % res.info.status)               
         feasible = 1
     return res, feasible
 
@@ -269,8 +270,8 @@ def _buildMatIneqConst(Controller):
     #B
     bx = np.array([[-min_vel],
                    [max_vel],
-                   [0.65],
-                   [0.65]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
+                   [0.50],
+                   [0.50]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
     # Builc the matrices for the input constraint in each region. In the region i we want Fx[i]x <= bx[b]
     Fu = np.array([[1., 0.],
@@ -355,7 +356,7 @@ def _buildMatCost(Controller):
     Px = np.zeros(Controller.n_exp)
     # Px[6] = -1
     Px[0] = -7.5*100
-    Px_total = np.tile(Px, N)
+    Px_total = np.tile(Px, N+1)
     P= 2*np.hstack((Px_total, Pu))
 
     M = 2 * M0  # Need to multiply by two because CVX considers 1/2 in front of quadratic cost
@@ -387,22 +388,22 @@ def _buildMatEqConst(Controller, agents):
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG
     Gx = linalg.block_diag(*[Gx]*(N+1))
 
-    Gu = np.zeros(((n_exp) * (N), d * (N)))
+    Gu = np.zeros(((n_exp) * (N+1), d * (N)))
 
-    E = np.zeros(((n_exp) * (N), Controller.n_s))
+    E = np.zeros(((n_exp) * (N+1), Controller.n_s))
     E[:Controller.n_s,:Controller.n_s] = np.eye(Controller.n_s)
 
-    Eu = np.zeros(((n_exp) * (N), d))
+    Eu = np.zeros(((n_exp) * (N+1), d))
 
-    Eoa = np.zeros(((n_exp) * (N), 1))
-    L = np.zeros(((n_exp) * (N), 1)) # I guess L represents previous inputs? whatever rn is 0s
+    Eoa = np.zeros(((n_exp) * (N+1), 1))
+    L = np.zeros(((n_exp) * (N+1), 1)) # I guess L represents previous inputs? whatever rn is 0s
 
     # TODO ADD agent initial state
 
 
     for i in range(1, N+1): # TODO: there's redundancy in this loops
-        Gx[i * (n_exp):i * (n_exp)+Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i]
-        Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i]
+        Gx[i * (n_exp):i * (n_exp)+Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i-1]
+        Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i-1]
 
     G = np.hstack((Gx, Gu))
 

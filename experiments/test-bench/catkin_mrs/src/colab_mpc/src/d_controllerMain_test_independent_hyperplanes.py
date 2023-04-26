@@ -16,7 +16,7 @@ from trackInitialization import Map, wrap
 from plot_vehicle import *
 
 plot = True
-plot_end = True
+plot_end = False
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 def compute_hyper(x_ego,x_neg):
@@ -146,7 +146,7 @@ def main():
     n_0 = [1]
     n_1 = [0]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [1.3, -0.16, 0.00, 0.35, 0, 0.0, 0, 0.0, 1.35]  # [vx vy psidot y_e thetae theta s x y]
     x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     maps = [Map(),Map()]
@@ -207,6 +207,8 @@ def main():
         print("-------------------------------------------------")
         print("agent 0  ")
         print(xPred0)
+        print("-------------------------------------------------")
+        print(uPred0)
         print("-------------------------------------------------")
 
         # print("-------------------------------------------------")
