@@ -25,7 +25,8 @@ class PathFollowingLPV_MPC:
 
         self.n_s = 9
         self.n_agents = 1
-        self.n_exp = self.n_s# slack variables
+        self.slack = 2
+        self.n_exp = self.n_s + self.slack# slack variables
 
         # Vehicle parameters:
         self.lf = 0.12
@@ -80,8 +81,9 @@ class PathFollowingLPV_MPC:
         Q[3,3] = 1500
         Q[4,4] = 70
         # Q[6,6] = -100
-        # Q[-2, -2] = 1000
-        # Q[-1, -1] = 1000
+        # TODO Update this with the slack variable count
+        Q[-2, -2] = 100000000
+        Q[-1, -1] = 100000000
         return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
@@ -149,7 +151,7 @@ class PathFollowingLPV_MPC:
                 idx = np.hstack((idx,aux))
 
             self.xPred = np.reshape((Solution[idx]), (N+1, self.n_s))
-            self.uPred = np.reshape((Solution[self.n_exp * (N) + np.arange(d * N)]), (N, d))
+            self.uPred = np.reshape((Solution[self.n_exp * (N+1) + np.arange(d * N)]), (N, d))
 
         return feasible, Solution, self.planes
 
@@ -264,14 +266,14 @@ def _buildMatIneqConst(Controller):
     # limit lateral error with slack variables
     Fx[2,3] = 1
     Fx[3,3] = -1
-    # Fx[2,-2] = -1
-    # Fx[3,-2] = -1
+    Fx[2,-2] = 1
+    Fx[3,-2] = 1
 
     #B
     bx = np.array([[-min_vel],
                    [max_vel],
-                   [0.50],
-                   [0.50]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
+                   [0.60],
+                   [0.60]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
     # Builc the matrices for the input constraint in each region. In the region i we want Fx[i]x <= bx[b]
     Fu = np.array([[1., 0.],
@@ -355,7 +357,7 @@ def _buildMatCost(Controller):
     Pu = np.zeros(N*Controller.d)
     Px = np.zeros(Controller.n_exp)
     # Px[6] = -1
-    Px[0] = -7.5*100
+    Px[0] = -6*100
     Px_total = np.tile(Px, N+1)
     P= 2*np.hstack((Px_total, Pu))
 
@@ -382,7 +384,7 @@ def _buildMatEqConst(Controller, agents):
     n_exp = Controller.n_exp # N horizon
     d = Controller.d # N horizon
 
-    auxG = np.eye(Controller.n_exp)
+    auxG = np.eye(Controller.n_exp-Controller.slack)
 
     Gx = np.zeros((n_exp,n_exp ))
     Gx[:auxG.shape[0],:auxG.shape[0]] = auxG

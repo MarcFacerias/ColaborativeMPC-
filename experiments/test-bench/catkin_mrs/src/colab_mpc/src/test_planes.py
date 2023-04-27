@@ -24,7 +24,7 @@ def plot_hyperplanes(planes, pointX, pointY):
     plt.ion()
     plt.clf()
     plt.xlim([-1.3, 1.3])
-    plt.ylim([-1.3, 1.3])
+    plt.ylim([-2, 2])
     ego = pointX
     neighbour = pointY
 
@@ -67,10 +67,14 @@ def generate_point_pairs(radius = 1, number = 6):
     angles = np.asarray([0, np.pi,np.pi/2, -np.pi/2 ])
     y = radius * np.sin(angles)
     x = radius * np.cos(angles)
+
+    y = [1,1.45]
+    x = [0,0]
     return np.asarray([x,y]).T
 
 def compute_hyperplane(agent_X0, agent_X1):
     a =  agent_X0 - agent_X1
+    a = a/np.sqrt(a[0]**2 + a[1]**2)
     b = 0.5 * a@(agent_X0 + agent_X1).T
     return a,b
 

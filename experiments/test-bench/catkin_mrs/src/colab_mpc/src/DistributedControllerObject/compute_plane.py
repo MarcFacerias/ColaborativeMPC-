@@ -50,6 +50,7 @@ class hyperplane_separator():
                 x_neg = agents[h,n,:]
 
                 a =  x_neg - x_ego
+                a = a / np.sqrt(a[0] ** 2 + a[1] ** 2) #normalise
                 b = - 0.5 * a@(x_ego + x_neg).T
 
                 if ego_id < agents_id[n]:

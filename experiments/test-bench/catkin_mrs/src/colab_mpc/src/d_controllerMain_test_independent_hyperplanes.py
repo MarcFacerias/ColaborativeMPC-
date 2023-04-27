@@ -49,9 +49,9 @@ class agent():
         if (xPred is None):
             xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
-        feas, uPred, xPred, planes = self._solve(self.x0, agents, agents_id, pose, xPred, uPred)
+        feas, uPred, xPred, planes, raw = self._solve(self.x0, agents, agents_id, pose, xPred, uPred)
 
-        return feas,uPred, xPred, planes
+        return feas,uPred, xPred, planes, raw
 
     def _solve(self, x0, agents, agents_id, pose, Xpred, uPred):
 
@@ -59,7 +59,7 @@ class agent():
         feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, agents, agents_id, pose)
         self.time.append(time.time() - tic)
         self.status.append(feas)
-        return feas, self.Controller.uPred, self.Controller.xPred, planes
+        return feas, self.Controller.uPred, self.Controller.xPred, planes, Solution
 
     def plot_experiment(self):
 
@@ -146,7 +146,7 @@ def main():
     n_0 = [1]
     n_1 = [0]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.35, 0, 0.0, 0, 0.0, 1.35]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
     x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     maps = [Map(),Map()]
@@ -175,33 +175,38 @@ def main():
         tic = time.time()
 
         # TODO acces the subset of lambdas of our problem
-        f0, uPred0, xPred0, planes0 = r0.one_step(agents[:,n_0,:], [1], agents[:,0,:], u_old0, x_old0 )
-        # f1, uPred1, xPred1, planes1 = r1.one_step(agents[:,n_1,:], [0], agents[:,1,:], u_old1, x_old1)
+        f0, uPred0, xPred0, planes0, raw0 = r0.one_step(agents[:,n_0,:], [1], agents[:,0,:], u_old0, x_old0)
+        f1, uPred1, xPred1, planes1, raw1 = r1.one_step(agents[:,n_1,:], [0], agents[:,1,:], u_old1, x_old1)
 
         if not (f0 and 1):
             break
 
         agents[:,0,:] = xPred0[:,-2:]
-        # agents[:,1,:] = xPred1[:,-2:]
+        agents[:,1,:] = xPred1[:,-2:]
 
         states_hist.append(agents)
 
         r0.save(xPred0, uPred0, planes0)
-        # r1.save(xPred1, uPred1, planes1)
+        r1.save(xPred1, uPred1, planes1)
 
-        # dist_hist.append( np.sqrt((xPred0[0,7] - xPred1[0,7])**2 + (xPred0[0,8] - xPred1[0,8])**2) )
+        dist_hist.append( np.sqrt((xPred0[0,7] - xPred1[0,7])**2 + (xPred0[0,8] - xPred1[0,8])**2) )
 
         r0.x0 = xPred0[1,:]
-        # r1.x0 = xPred1[1,:]
+        r1.x0 = xPred1[1,:]
         x_old0 = xPred0
-        # x_old1 = xPred1
+        x_old1 = xPred1
         u_old0 = uPred0
-        # u_old1 = uPred1
+        u_old1 = uPred1
+        raw_old0 = raw0
+        raw_old1 = raw1
+
+        if dist_hist[-1] < 0.2:
+            print("placeholder")
 
         print("-------------------------------------------------")
         print("it " + str(it))
         print("time" + str(time.time() - tic))
-        # print("dist" + str(dist_hist[-1]))
+        print("dist" + str(dist_hist[-1]))
         print("-------------------------------------------------")
 
         print("-------------------------------------------------")
@@ -218,7 +223,7 @@ def main():
         it += 1
         if plot :
             disp.plot_step(xPred0[1, 7], xPred0[1, 8], xPred0[1, 5], 0)
-            # disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)
+            disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)
 
 
     if plot_end:
