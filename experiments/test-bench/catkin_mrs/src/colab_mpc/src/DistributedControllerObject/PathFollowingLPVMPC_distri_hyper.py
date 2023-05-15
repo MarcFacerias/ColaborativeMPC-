@@ -273,7 +273,7 @@ def GenerateColisionAvoidanceConstraints(Controller):
             K[i, idx] = -Controller.planes[t, 0, el]
             K[i, idx] = -Controller.planes[t, 1, el]
 
-            Lim_list.append([- self.planes[t, 2, el] + Controller.radius,self.planes[t, 1, el] + Controller.radius])
+            Lim_list.append([- Controller.planes[t, 2, el] + Controller.radius,Controller.planes[t, 1, el] + Controller.radius])
 
         K_list.append(K)
 

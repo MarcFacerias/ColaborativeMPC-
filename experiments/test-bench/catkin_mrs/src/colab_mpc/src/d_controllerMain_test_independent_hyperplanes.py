@@ -15,8 +15,8 @@ from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
-plot = True
-plot_end = False
+plot = False
+plot_end = True
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 def compute_hyper(x_ego,x_neg):
@@ -139,7 +139,7 @@ def main():
 #########################################################
     # set constants
 
-    N = 10
+    N = 25
     dt = 0.01
 
     # define neighbours
@@ -170,7 +170,7 @@ def main():
 
     dist_hist = []
 
-    while(it<1000):
+    while(it<15000):
 
         tic = time.time()
 
@@ -203,18 +203,18 @@ def main():
         if dist_hist[-1] < 0.2:
             print("placeholder")
 
-        print("-------------------------------------------------")
-        print("it " + str(it))
-        print("time" + str(time.time() - tic))
-        print("dist" + str(dist_hist[-1]))
-        print("-------------------------------------------------")
-
-        print("-------------------------------------------------")
-        print("agent 0  ")
-        print(xPred0)
-        print("-------------------------------------------------")
-        print(uPred0)
-        print("-------------------------------------------------")
+        # print("-------------------------------------------------")
+        # print("it " + str(it))
+        # print("time" + str(time.time() - tic))
+        # print("dist" + str(dist_hist[-1]))
+        # print("-------------------------------------------------")
+        #
+        # print("-------------------------------------------------")
+        # print("agent 0  ")
+        # print(xPred0)
+        # print("-------------------------------------------------")
+        # print(uPred0)
+        # print("-------------------------------------------------")
 
         # print("-------------------------------------------------")
         # print("agent 1  ")
@@ -228,17 +228,17 @@ def main():
 
     if plot_end:
         d.plot_offline_experiment(r0,".b")
-        # d.plot_offline_experiment(r1,".r")
+        d.plot_offline_experiment(r1,".r")
         # d.plot_offline_experiment(r1, "ob", "-y")
-        # plot_performance(r0)
-        # plot_distance(dist_hist)
+        plot_performance(r0)
+        plot_distance(dist_hist, 0.6)
         # input("Press enter to continue...")
-        r0.save_to_csv()
+        # r0.save_to_csv()
 
         figs = [plt.figure(n) for n in plt.get_fignums()]
         idx = 0
         for fig in figs:
-            fig.savefig("/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/figures/fig" +  str(idx) + ".eps", format='eps')
+            fig.savefig("/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/figures/fig" +  str(idx) + ".jpg", format='jpg')
             idx +=1
         # input("Press Enter to continue...")
 
@@ -253,11 +253,12 @@ def plot_performance( agent):
     plt.show()
     plt.pause(0.001)
 
-def plot_distance( distance_hist):
+def plot_distance( distance_hist, th):
 
     fig_status = plt.figure(3)
     x = np.arange(0,len(distance_hist))
     plt.scatter(x, np.array(distance_hist))
+    plt.plot(x, th*np.ones(len(distance_hist)), "-r")
     plt.show()
     plt.pause(0.001)
 
