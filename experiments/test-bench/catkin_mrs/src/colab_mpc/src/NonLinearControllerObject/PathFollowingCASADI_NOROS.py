@@ -3,25 +3,25 @@ import time
 from casadi import *
 import numpy as np
 from utilities import Curvature, GBELLMF
+from compute_plane import hyperplane_separator
 
-# TODO Arreglar els idx per a fer que es pugui fer la decomposicio
+# TODO Arreglar els idx per a fer que es pugui fer la decomposicio amb mes vehicles
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-class PathFollowingLPV_MPC:
+class PathFollowingNL_MPC:
     """Create the Path Following LMPC controller with LTV model
     Attributes:
         solve: given x0 computes the control action
     """
-    def __init__(self, Q, R, dR, N, vt, dt, map):
+    def __init__(self, Q, R, N, dt, map, id):
 
         # Vehicle parameters:
         self.n_s = 9
-        self.n_agents = 1
         self.n_neighbours = 1
         self.slack = 2
         self.n_exp = self.n_s + self.slack# slack variables
-        self.dth = 0.5
+        self.dth = 0.1
         self.lf = 0.12
         self.lr = 0.14
         self.m  = 2.250
@@ -29,6 +29,9 @@ class PathFollowingLPV_MPC:
         self.Cf = 60.0
         self.Cr = 60.0
         self.mu = 0.1
+        self.id = id
+        self.plane_comp = hyperplane_separator(self.n_neighbours, N)
+
 
         self.g  = 9.81
 
@@ -36,9 +39,12 @@ class PathFollowingLPV_MPC:
         self.opti = casadi.Opti()
         self.x = self.opti.variable(self.n_exp*(N+1)) # x11, ... , x1N, s11, ... xTN
         self.u = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
-        self.planes = self.opti.variable(2 * (N+1) * self.n_neighbours)  # x11, ... , x1N, s11, ... xTN
 
-        self.cx = 0
+        self.planes = self.opti.variable(
+            3 * (N + 1) * self.n_neighbours)  # theta111, theta121 ... , theta11N, theta12N
+
+        self.planes_fixed = np.zeros(((N+1),self.n_neighbours,3))
+        self.states_fixed = np.zeros(((N+1), self.n_neighbours, 3))
 
         self.A    = []
         self.B    = []
@@ -46,52 +52,66 @@ class PathFollowingLPV_MPC:
         self.N    = N
         self.n    = Q.shape[0]
         self.d    = R.shape[0]
-        self.vt   = vt
         self.Q    = Q
         self.R    = R
-        self.dR   = dR              # Slew rate
         self.LinPoints = np.zeros((self.N+2,self.n))
         self.dt = dt                # Sample time 33 ms
         self.map = map              # Used for getting the road curvature
 
         self.first_it = 1
 
+        self.min_vel = 6
+        self.min_vel = -6
+
     def cost(self):
 
         J = 0
         for j in range (1,self.N+1):
             mod = j * self.n_exp
+            mod_u = (j-1) * 2
             J += 120*self.x[0+mod]**2 + self.x[1+mod]**2 + self.x[2+mod]**2 +\
                  1500*self.x[3+mod]**2 + 70*self.x[4+mod]**2 + 100000000*(self.x[9+mod]**2 + self.x[10+mod]**2)\
-                 + self.u[0+(mod-self.n_exp)]**2 + self.x[1+mod-self.n_exp]**2 - 600*self.x[0+mod]
+                 + self.u[0+(mod_u)]**2 + self.x[1+mod_u]**2 - 600*self.x[0+mod]
 
             for i, el in enumerate(self.agent_list):
-                # TODO: do indexing
                 if self.id < el:
-                    J+= self.lambdas[i,0,j]*(-(self.planes[i]*x[i] + self.planes[i]*x[i]  + self.planes[i] - self.dth ) + self.cx)
+                    J+= self.lambdas[i,j-1]*(-(self.planes_fixed[j,0,i]*self.states_fixed[j,0,i]+ self.planes_fixed[j,1,i]*self.states_fixed[j,i,1] + self.planes_fixed[j,2,i] - self.dth ) + self.states_fixed[j,i,2] == 0)
         return J
 
     def ineq_constraints(self):
 
         for j in range(1, self.N + 1):
             mod = j * self.n_exp
-            self.opti.subject_to(self.min_vel <= self.x[0+mod] <=self.max_vel)
-            self.opti.subject_to(-0.60 <= self.x[0+mod] + self.x[10+mod] <=0.60)
+            mod_u = (j-1) * 2
 
-            self.opti.subject_to(-0.45 <= self.u[0+mod] <= 0.45)
-            self.opti.subject_to(-8.0 <= self.u[1+mod] <= 8.0)
+            self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod],self.max_vel))
+            self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.x[10+mod], 0.60))
+
+            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u], 0.45))
+            self.opti.subject_to(self.opti.bounded(-8.00,self.u[1+mod_u], 8.0))
 
             #planes
             for i,el in enumerate(self.agent_list):
-                # TODO: fix this index/loop
-                planes_idx = 0
+
+                planes_idx = (j-1)*3*self.n_neighbours + 3*i
+
+
                 if self.id < el:
-                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[10+mod] + self.planes[planes_idx+1]*self.x[11+mod] + self.planes[planes_idx+2] <= 0.5)
-                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[mod + 11 + i] + self.planes[planes_idx+1]*self.x[mod + 11 + i +1] + self.planes[planes_idx+2] >= 0.5)
-                    self.opti.subject_to( sqrt(self.planes[planes_idx+0]**2 + self.planes[planes_idx+1]**2) == 1.0)
+                    #TODO: Repasar aquesta constraint
+                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] <= self.dth)
+                    # self.opti.subject_to( norm_2([self.planes[planes_idx+0]**2,self.planes[planes_idx+1]]) == 1.0)
+                    self.opti.subject_to(sqrt(self.planes[planes_idx + 0]**2 + self.planes[planes_idx + 1]**2) == 1.0)
+
+                    # test all 3 constraints in the same problem
+                    # self.opti.subject_to(self.planes[planes_idx+0] * self.states_fixed[j, 0, i] + self.planes[planes_idx+1] *
+                    #  self.states_fixed[j, i, 1] + self.planes[planes_idx+2] >= 0.5)
+                #
+                else:
+                    self.opti.subject_to( (-self.planes_fixed[j, 0, i]*self.x[7+mod] - self.planes_fixed[j, 1, i]*self.x[8+mod] - self.planes_fixed[j, 2, i] + self.dth) + self.slack_eq[j+i] == 0.0)
 
 
-    def eq_constraints(self,states, agents):
+
+    def eq_constraints(self,states):
         # model constants
         lf = self.lf
         lr = self.lr
@@ -102,14 +122,7 @@ class PathFollowingLPV_MPC:
         mu = self.mu
 
         # set initial states
-        for i in range(0, 9):
-
-            self.opti.subject_to(
-                self.x[i] == states[0,i]
-            )
-
-        # set neighbouring vehicles states
-        for i in range(0, 9):
+        for i in range(0, self.n_exp-2):
 
             self.opti.subject_to(
                 self.x[i] == states[0,i]
@@ -119,20 +132,21 @@ class PathFollowingLPV_MPC:
         for j in range(1, self.N + 1):
             mod = j * self.n_exp
             mod_prev = (j-1) * self.n_exp
+            mod_u    = (j-1) * 2
             s = states[j,6]
 
             cur = Curvature(s, self.map)
 
-            A12 = (np.sin(self.u[0+mod_prev]) * Cf) / (m * self.x[0+mod_prev])
-            A13 = (np.sin(self.u[0+mod_prev]) * Cf * lf) / (m * self.x[0+mod_prev]) + self.x[1+mod_prev]
+            A12 = (np.sin(self.u[0+mod_u]) * Cf) / (m * self.x[0+mod_prev])
+            A13 = (np.sin(self.u[0+mod_u]) * Cf * lf) / (m * self.x[0+mod_prev]) + self.x[1+mod_prev]
 
-            A22 = -(Cr + Cf * np.cos(self.u[0+mod_prev])) / (m * self.x[0+mod_prev])
-            A23 = -(lf * Cf * np.cos(self.u[0+mod_prev]) - lr * Cr) / (m * self.x[0+mod_prev]) - self.x[1+mod_prev]
+            A22 = -(Cr + Cf * np.cos(self.u[0+mod_u])) / (m * self.x[0+mod_prev])
+            A23 = -(lf * Cf * np.cos(self.u[0+mod_u]) - lr * Cr) / (m * self.x[0+mod_prev]) - self.x[1+mod_prev]
 
-            A32 = -(lf * Cf * np.cos(self.u[0+mod_prev]) - lr * Cr) / (I * self.x[0+mod_prev])
-            A33 = -(lf * lf * Cf * np.cos(self.u[0+mod_prev]) + lr * lr * Cr) / (I * self.x[0+mod_prev])
+            A32 = -(lf * Cf * np.cos(self.u[0+mod_u]) - lr * Cr) / (I * self.x[0+mod_prev])
+            A33 = -(lf * lf * Cf * np.cos(self.u[0+mod_u]) + lr * lr * Cr) / (I * self.x[0+mod_prev])
 
-            B11 = -(np.sin(self.u[0+mod_prev]) * Cf) / m
+            B11 = -(np.sin(self.u[0+mod_u]) * Cf) / m
             B12 = 1
 
             A11 = -mu
@@ -152,22 +166,22 @@ class PathFollowingLPV_MPC:
             A91 = np.sin(self.x[5+mod_prev])
             A92 = np.cos(self.x[5+mod_prev])
 
-            B21 = (np.cos(self.u[0]) * Cf) / m
-            B31 = (lf * Cf * np.cos(self.u[0+mod_prev])) / I
+            B21 = (np.cos(self.u[0+ mod_u]) * Cf) / m
+            B31 = (lf * Cf * np.cos(self.u[0+mod_u])) / I
 
             # vx
             self.opti.subject_to(
-                self.x[0+mod] == self.x[0+mod_prev] + (A11*self.x[0+mod_prev] + A12*self.x[1+mod_prev] + A13*self.x[2+mod_prev] + B11*self.u[0+mod_prev] + B12*self.u[1+mod_prev])*self.dt
+                self.x[0+mod] == self.x[0+mod_prev] + (A11*self.x[0+mod_prev] + A12*self.x[1+mod_prev] + A13*self.x[2+mod_prev] + B11*self.u[0+mod_u] + B12*self.u[1+mod_u])*self.dt
             )
 
             # vy
             self.opti.subject_to(
-                self.x[1+mod] == self.x[1+mod_prev] + (A22*self.x[1+mod_prev] + A23*self.x[2+mod_prev] + B21*self.u[0+mod_prev])*self.dt
+                self.x[1+mod] == self.x[1+mod_prev] + (A22*self.x[1+mod_prev] + A23*self.x[2+mod_u] + B21*self.u[0+mod_u])*self.dt
             )
 
             # wz
             self.opti.subject_to(
-                self.x[2+mod] == self.x[2+mod_prev] + (A32*self.x[1+mod_prev] + A33*self.x[2+mod_prev] + B31*self.u[0+mod_prev])*self.dt
+                self.x[2+mod] == self.x[2+mod_prev] + (A32*self.x[1+mod_prev] + A33*self.x[2+mod_u] + B31*self.u[0+mod_u])*self.dt
             )
 
             # ey
@@ -207,7 +221,7 @@ class PathFollowingLPV_MPC:
             )
 
 
-    def solve(self, x0, Last_xPredicted, uPred, lambdas, x_agents, agents_id, pose):
+    def solve(self, x0 = None, Last_xPredicted = None, uPred = None, lambdas = None, x_agents = None, planes_fixed = None, agents_id = None, pose = None):
         """Computes control action
         Arguments:
             x0: current state position
@@ -217,21 +231,101 @@ class PathFollowingLPV_MPC:
         """
         startTimer              = time.time()
 
+        # self.opti.set_initial(self.planes, Last_xPredicted.flatten())
+        if not Last_xPredicted is None:
+            self.opti.set_initial(self.x,Last_xPredicted.flatten())
+
         if lambdas is None:
-            self.lambdas = np.zeros((self.n_agents, 1, self.N)) # TODO fix lambdas into n neighbours x H time
+            self.lambdas = np.zeros((self.n_neighbours, self.N+1))
 
         else:
             self.lambdas = lambdas
 
-        self.A, self.B, self.C = _EstimateABC(self, Last_xPredicted, uPred)
+        if x_agents is None:
+            x_agents = np.zeros((10,self.n_neighbours,2))
+
+        if planes_fixed is None:
+            self.planes_fixed = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
+
+        self.agent_list = np.asarray(agents_id)
+        aux = (self.agent_list < self.id).sum()
+
+        if not aux == 0:
+            self.slack_eq = self.opti.variable(aux * (self.N+1))
+            self.opti.subject_to(self.slack_eq > 0)
+
+        self.opti.set_initial(self.planes, self.planes_fixed.flatten()) #TODO: for more than 2 robots we'll need to fix this optimisation
+
+
+        tic = time.time()
         J = self.cost()
+        self.opti.minimize(J)
+        setting_time_cost = time.time() - tic
+
+        tic = time.time()
+        self.A, self.B, self.C = _EstimateABC(self, x0, uPred)
+        setting_time_ABC = time.time() - tic
+
+        tic = time.time()
         self.ineq_constraints()
-        self.eq_constraints(pose,x_agents)
+        setting_time_ineq = time.time() - tic
+
+        tic = time.time()
+        self.eq_constraints(x0)
+        setting_time_eq = time.time() - tic
+
+        tic = time.time()
         p_opts = {"expand": True}
         s_opts = {"max_iter": 100}
         self.opti.solver("ipopt", p_opts,
                     s_opts)
-        self.solverTime = startTimer - time.time()
+        self.settingTime = time.time() - startTimer
+
+        sol = self.opti.solve()
+        opti_time = time.time() - tic
+
+        idx = np.arange(0, 9)
+        d = 2
+        for i in range(1, self.N + 1):
+            aux = np.arange(0, 9) + i * self.n_exp
+            idx = np.hstack((idx, aux))
+
+        self.xPred = np.reshape((sol.value(self.x))[idx], (self.N + 1, self.n_s))
+        self.uPred = np.reshape(sol.value(self.u), (self.N, d))
+
+
+        try:
+            planes = np.reshape(sol.value(self.planes), (self.N+1, -1, 3))
+
+        except:
+            planes = None
+
+        try:
+            lsack = np.reshape(sol.value(self.slack_eq), (self.N+1, -1))
+
+        except:
+            lsack = None
+
+        self.solverTime = time.time() - startTimer
+
+        print("---------------------------------------------")
+        print("totalTime")
+        print(self.solverTime)
+        print("ABC")
+        print(setting_time_ABC)
+        print("Ineq constraint")
+        print(setting_time_ineq)
+        print("Eq constraint")
+        print(setting_time_eq)
+        print("setting_time_cost")
+        print(setting_time_cost)
+        print("opti_time")
+        print(opti_time)
+        print("---------------------------------------------")
+
+        self.opti.subject_to()
+        #TODO: check how to retrieve feasibility conditions
+        return True, sol.value(self.x), planes, lsack
 
 
 def _EstimateABC(Controller, states, u):
