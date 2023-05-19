@@ -166,7 +166,7 @@ def main():
 
     maps = [Map(),Map()]
     agents = initialise_agents([x0_0,x0_1],N,dt,maps)
-    planes = np.zeros((11,3,3,3))
+    planes = np.zeros((N,3,3,3))
     states_hist = [agents]
 
     if plot:
@@ -182,8 +182,7 @@ def main():
     x_old1 = None
     u_old0 = None
     u_old1 = None
-    planes0 = None
-    planes1 = None
+    planes_old = None
     old_solution0 = None
     old_solution1 = None
     lambdas_hist = []
@@ -192,14 +191,14 @@ def main():
     while(it<10):
 
         tic = time.time()
-        lambdas = np.zeros((2, 2, N))
+        lambdas = np.ones((2, 2, N))
         it_OCD = 0
         while(not finished or it_OCD == max_it):
 
             it_OCD = + 1
             # TODO acces the subset of lambdas of our problem
-            f0, uPred0, xPred0, planes0, lsack0, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], [1], agents[:,0,:], u_old0, old_solution0, planes0)
-            f1, uPred1, xPred1, planes1, lsack0, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], [0], agents[:,1,:], u_old1, old_solution1, planes1)
+            f0, uPred0, xPred0, planes0, _, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], [1], agents[:,0,:], u_old0, old_solution0, planes_old)
+            f1, uPred1, xPred1, planes1, lsack0, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], [0], agents[:,1,:], u_old1, old_solution1, planes_old)
 
             # TODO Update plans between iterations(first time we have diferent values for the plans and then the optimisation problem doesn't match)
 
@@ -226,13 +225,15 @@ def main():
 
             # update lambdas
             lambdas += alpha*cost
-            lambdas[lambdas<0.0001] = 0
+            # lambdas[lambdas<0.0001] = 0
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
-            finished = stop_criteria(cost,0.0001)
+            finished = stop_criteria(cost,0.01)
 
-            if not finished:
+            if finished:
                 print("breakpoint placeholder")
+
+            planes_old = planes0
 
         # r0.save(xPred0, uPred0, planes0)
         # r1.save(xPred1, uPred1, planes1)

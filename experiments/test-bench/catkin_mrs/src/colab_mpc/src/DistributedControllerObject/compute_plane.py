@@ -40,9 +40,9 @@ class hyperplane_separator():
 
     def compute_hyperplane(self, agents, pose, ego_id, agents_id):
         # Case with only 1 neighbour
-        placeholder = np.zeros(((self.horizon+1, 3, self.n_agents)))
+        placeholder = np.zeros(((self.horizon, 3, self.n_agents)))
 
-        for h in range(0,self.horizon+1):
+        for h in range(0,self.horizon):
 
             for n in range(0, self.n_agents):
 
