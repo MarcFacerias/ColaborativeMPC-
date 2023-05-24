@@ -44,6 +44,7 @@ class agent():
         self.output_opti = []
         self.time = []
         self.status = []
+        self.slack = []
 
     def one_step(self,x0, lambdas, agents, agents_id, pose, uPred = None, xPred = None, planes_fixed= None):
 
@@ -61,6 +62,7 @@ class agent():
 
         tic = time.time()
         feas, Solution, planes, lsack = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, pose)
+        self.slack = self.Controller.slack
         self.time.append(time.time() - tic)
         self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes, lsack, Solution
@@ -82,7 +84,8 @@ def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp+1,len(data),2))
     for id, el in enumerate(data):
 
-        agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-4:-2]
+        # agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-4:-2] # with slack
+        agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-2:] # without slack
 
     return agents
 
@@ -127,7 +130,7 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
         S[i+1]      = S[i] + Vx[i] * dt
         X[i+1], Y[i+1], Theta[i+1] = map.getGlobalPosition(S[i], Ey[i])
 
-    xx  = np.hstack([ Vx, Vy, W,Ey, Epsi, Theta ,S ,X,Y, np.zeros((Hp+1, 1)), np.zeros((Hp+1, 1))]) # [vx vy psidot y_e thetae theta s x y slack1 slack2]
+    xx  = np.hstack([ Vx, Vy, W,Ey, Epsi, Theta ,S ,X,Y]) # [vx vy psidot y_e thetae theta s x y slack1 slack2]
     uu = np.zeros(( Hp, 2 ))
     return xx, uu
 
@@ -144,6 +147,16 @@ def stop_criteria(cost, th):
 
     return False
 
+def convergence(current,old):
+    # ([xPred0, xPred1, uPred0, uPred1]
+    #  [x_old0_OCD, x_old1_OCD, u_old0_OCD, u_old1_OCD]
+    are_close = True
+    for i, _ in enumerate(current):
+        are_close = are_close and np.allclose(current[i], old[i])
+
+    return are_close
+
+
 def main():
 
 #########################################################
@@ -152,7 +165,7 @@ def main():
 
     N = 10
     dt = 0.01
-    alpha = 10000
+    alpha = 0.1
     max_it = 100
     finished = False
     # lambdas_hist = [lambdas]
@@ -161,7 +174,7 @@ def main():
     n_0 = [1]
     n_1 = [0]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.55]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.4]  # [vx vy psidot y_e thetae theta s x y]
     x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     maps = [Map(),Map()]
@@ -191,11 +204,11 @@ def main():
     while(it<10):
 
         tic = time.time()
-        lambdas = np.ones((2, 2, N))
+        lambdas = np.zeros((2, 2, N))
         it_OCD = 0
-        while(not finished or it_OCD == max_it):
+        while(not finished or it_OCD == max_it or it_OCD == 1) :
 
-            it_OCD = + 1
+            it_OCD += 1
             # TODO acces the subset of lambdas of our problem
             f0, uPred0, xPred0, planes0, _, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], [1], agents[:,0,:], u_old0, old_solution0, planes_old)
             f1, uPred1, xPred1, planes1, lsack0, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], [0], agents[:,1,:], u_old1, old_solution1, planes_old)
@@ -216,19 +229,27 @@ def main():
             planes[:,0,1,:] = planes0.squeeze()
             planes[:,1,0,:] = planes0.squeeze()
 
-            for k in range(0,N):
+            for k in range(1,N):
                 for i in range(0,2):
                     for j in range(0, 2):
 
                         if (i != j):
-                            cost[i,j,k]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k,i,j,:],0.5,lsack0[k])
+                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k,i,j,:],0.5,r0.slack[0,k])
 
             # update lambdas
             lambdas += alpha*cost
             # lambdas[lambdas<0.0001] = 0
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
-            finished = stop_criteria(cost,0.01)
+            # finished = stop_criteria(cost[0,n_0,:],0.01)
+            if not it_OCD == 1:
+                finished = convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD])
+
+            x_old0_OCD = xPred0
+            x_old1_OCD = xPred1
+            u_old0_OCD = uPred0
+            u_old1_OCD = uPred1
+            print(lambdas[0,n_0,:])
 
             if finished:
                 print("breakpoint placeholder")
