@@ -63,10 +63,11 @@ class agent():
     def _solve(self, x0, agents, agents_id, pose, lambdas, Xpred, uPred ,planes_fixed):
 
         tic = time.time()
-        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, pose)
+        feas, Solution, planes, lsack = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, pose)
+        self.slack = self.Controller.slack
         self.time.append(time.time() - tic)
         self.status.append(feas)
-        return feas, self.Controller.uPred, self.Controller.xPred, planes, 0, Solution
+        return feas, self.Controller.uPred, self.Controller.xPred, planes, lsack, Solution
 
     def plot_experiment(self):
 
@@ -158,8 +159,8 @@ def main():
 
     N = 10
     dt = 0.01
-    alpha = 0.15
-    max_it = 750
+    alpha = -0.1
+    max_it = 50
     finished = False
     # lambdas_hist = [lambdas]
 
@@ -216,12 +217,12 @@ def main():
             planes[:,0,1,:] = planes0.squeeze()
             planes[:,1,0,:] = planes0.squeeze()
 
-            for k in range(1,N+1):
+            for k in range(1,N):
                 for i in range(0,2):
                     for j in range(0, 2):
 
-                        if (i != j) and i<j:
-                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k-1,i,j,:],0.5,0)
+                        if (i != j):
+                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k,i,j,:],0.5,0)
 
             # update lambdas
             lambdas += alpha*cost
@@ -229,17 +230,13 @@ def main():
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
             if not it_OCD == 1:
-                finished = np.all((cost)<=0.015) or np.allclose(cost,cost_old,atol=0.001) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
+                finished = convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and np.all(cost<0)
 
-            # x_old0_OCD = xPred0
-            # x_old1_OCD = xPred1
-            # u_old0_OCD = uPred0
-            # u_old1_OCD = uPred1
-            cost_old = cost
-
-            print("------------------------------------")
-            print(cost)
-            print("------------------------------------")
+            x_old0_OCD = xPred0
+            x_old1_OCD = xPred1
+            u_old0_OCD = uPred0
+            u_old1_OCD = uPred1
+            print(it_OCD)
 
             if finished:
                 print("breakpoint placeholder with " + str(it_OCD))
@@ -279,7 +276,7 @@ def main():
 
     if plot_end:
         d.plot_offline_experiment(r0)
-        d.plot_offline_experiment(r1, "ob", "-y")
+        # d.plot_offline_experiment(r1, "ob", "-y")
         plot_performance(r0)
         input("Press enter to continue...")
         # input("Press Enter to continue...")
