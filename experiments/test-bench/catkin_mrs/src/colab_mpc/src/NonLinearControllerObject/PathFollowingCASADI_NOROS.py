@@ -21,7 +21,7 @@ class PathFollowingNL_MPC:
         self.n_neighbours = 1
         self.n_slack = 0
         self.n_exp = self.n_s + self.n_slack# slack variables
-        self.dth = 0.5
+        self.dth = 0.3
         self.lf = 0.12
         self.lr = 0.14
         self.m  = 2.250

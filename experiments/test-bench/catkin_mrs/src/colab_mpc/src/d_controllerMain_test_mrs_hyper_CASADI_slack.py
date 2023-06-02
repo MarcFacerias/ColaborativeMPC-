@@ -1,10 +1,8 @@
 
 import sys
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import time
-import math
 
 sys.path.append(sys.path[0]+'/NonLinearControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
@@ -138,6 +136,7 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
 
 def eval_constraint(x1, x2, planes, D, lsack):
 
+    #
     cost1 = -planes[0] * x2[0] - planes[1] * x2[1] - planes[2] + D + lsack
 
     return np.array(cost1)
@@ -159,7 +158,7 @@ def main():
 
     N = 10
     dt = 0.01
-    alpha = -0.1
+    alpha = 0.15
     max_it = 50
     finished = False
     # lambdas_hist = [lambdas]
@@ -168,8 +167,8 @@ def main():
     n_0 = [1]
     n_1 = [0]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
-    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.2, 1.5]  # [vx vy psidot y_e thetae theta s x y]
+    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.2, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     maps = [Map(),Map()]
     agents = initialise_agents([x0_0,x0_1],N,dt,maps)
@@ -217,12 +216,12 @@ def main():
             planes[:,0,1,:] = planes0.squeeze()
             planes[:,1,0,:] = planes0.squeeze()
 
-            for k in range(1,N):
+            for k in range(1,N+1):
                 for i in range(0,2):
                     for j in range(0, 2):
 
-                        if (i != j):
-                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k,i,j,:],0.5,0)
+                        if (i != j) and i<j:
+                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k-1,i,j,:],0.5,0)
 
             # update lambdas
             lambdas += alpha*cost
@@ -230,13 +229,18 @@ def main():
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
             if not it_OCD == 1:
-                finished = convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and np.all(cost<0)
+                # when considering slack we will have an equality constraint so should be fine
+                finished = np.all((cost)==0.0) or np.allclose(cost,cost_old,atol=0.001) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
 
-            x_old0_OCD = xPred0
-            x_old1_OCD = xPred1
-            u_old0_OCD = uPred0
-            u_old1_OCD = uPred1
-            print(it_OCD)
+            # x_old0_OCD = xPred0
+            # x_old1_OCD = xPred1
+            # u_old0_OCD = uPred0
+            # u_old1_OCD = uPred1
+            cost_old = cost
+
+            # print("------------------------------------")
+            # print(cost)
+            # print("------------------------------------")
 
             if finished:
                 print("breakpoint placeholder with " + str(it_OCD))

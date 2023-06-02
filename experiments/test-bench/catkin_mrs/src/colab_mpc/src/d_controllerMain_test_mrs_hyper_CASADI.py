@@ -1,17 +1,15 @@
 
 import sys
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import time
-import math
 
 sys.path.append(sys.path[0]+'/NonLinearControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 
-from PathFollowingCASADI_NOROS import PathFollowingNL_MPC
+from PathFollowingCASADI_param_NOROS import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -159,7 +157,7 @@ def main():
     N = 10
     dt = 0.01
     alpha = 0.15
-    max_it = 750
+    max_it = 10
     finished = False
     # lambdas_hist = [lambdas]
 
@@ -167,8 +165,8 @@ def main():
     n_0 = [1]
     n_1 = [0]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
-    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.2, 1.5]  # [vx vy psidot y_e thetae theta s x y]
+    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.2, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     maps = [Map(),Map()]
     agents = initialise_agents([x0_0,x0_1],N,dt,maps)
@@ -237,9 +235,9 @@ def main():
             # u_old1_OCD = uPred1
             cost_old = cost
 
-            print("------------------------------------")
-            print(cost)
-            print("------------------------------------")
+            # print("------------------------------------")
+            # print(cost)
+            # print("------------------------------------")
 
             if finished:
                 print("breakpoint placeholder with " + str(it_OCD))
@@ -268,8 +266,8 @@ def main():
         print("-------------------------------------------------")
         print("it " + str(it))
         print(time.time() - tic)
-        # print(xPred0)
-        # print(xPred1)
+        print(xPred0[1,:])
+        print(xPred1[1,:])
         print("-------------------------------------------------")
 
         it += 1
