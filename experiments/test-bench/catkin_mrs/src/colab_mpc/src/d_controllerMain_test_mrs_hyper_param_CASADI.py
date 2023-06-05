@@ -9,7 +9,7 @@ sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 
-from PathFollowingCASADI_NOROS import PathFollowingNL_MPC
+from PathFollowingCASADI_param_NOROS import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -157,7 +157,7 @@ def main():
     N = 10
     dt = 0.01
     alpha = 0.15
-    max_it = 10
+    max_it = 100
     finished = False
     # lambdas_hist = [lambdas]
 
@@ -219,7 +219,7 @@ def main():
                     for j in range(0, 2):
 
                         if (i != j) and i<j:
-                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k-1,i,j,:],0.15,0)
+                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k-1,i,j,:],0.5,0)
 
             # update lambdas
             lambdas += alpha*cost
@@ -229,10 +229,10 @@ def main():
             if not it_OCD == 1:
                 finished = np.all((cost)<=0.015) or np.allclose(cost,cost_old,atol=0.001) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
 
-            # x_old0_OCD = xPred0
-            # x_old1_OCD = xPred1
-            # u_old0_OCD = uPred0
-            # u_old1_OCD = uPred1
+            x_old0 = xPred0
+            x_old1 = xPred1
+            u_old0 = uPred0
+            u_old1 = uPred1
             cost_old = cost
 
             # print("------------------------------------")
@@ -241,12 +241,6 @@ def main():
 
             if finished:
                 print("breakpoint placeholder with " + str(it_OCD))
-                print("-------------------------------------------------")
-                print("it " + str(it))
-                print(time.time() - tic)
-                print(xPred0[1, :])
-                print(xPred1[1, :])
-                print("-------------------------------------------------")
 
             if it_OCD > 100:
                 print("max it reached")
@@ -260,10 +254,11 @@ def main():
 
         r0.x0 = xPred0[1,:]
         r1.x0 = xPred1[1,:]
-        x_old0 = xPred0
-        x_old1 = xPred1
+        x_old0 = xPred0[1:,:]
+        x_old1 = xPred1[1:,:]
         u_old0 = uPred0
         u_old1 = uPred1
+
         old_solution0 = Solution0
         old_solution1 = Solution1
 

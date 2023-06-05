@@ -21,7 +21,7 @@ class PathFollowingNL_MPC:
         self.n_neighbours = 1
         self.n_slack = 0
         self.n_exp = self.n_s + self.n_slack# slack variables
-        self.dth = 0.3
+        self.dth = 0.2
         self.lf = 0.12
         self.lr = 0.14
         self.m  = 2.250
@@ -41,7 +41,7 @@ class PathFollowingNL_MPC:
         self.u = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.slack_agent = self.opti.variable(N+1)  # x11, ... , x1N, s11, ... xTN
         self.planes_fixed = np.zeros(((N),self.n_neighbours,3))
-        self.states_fixed = np.zeros(((N+1), self.n_neighbours, 3))
+        self.states_fixed = np.zeros(((N), self.n_neighbours, 3))
 
         self.A    = []
         self.B    = []
@@ -83,7 +83,7 @@ class PathFollowingNL_MPC:
             for i, el in enumerate(self.agent_list):
                 planes_idx = (j - 1) * 3 * self.n_neighbours + 3 * i
                 if self.id < el:
-                    J+= self.lambdas[i,j-1]*(-(self.planes[planes_idx+0]*self.states_fixed[j-1,0,i]+ self.planes[planes_idx+1]*self.states_param[i][j-1,1] +self.planes[planes_idx+2]- self.dth ) + self.states_param[i][j-1,2] ) + self.planes[planes_idx+2]**2
+                    J+= self.lambdas[i,j-1]*(-(self.planes[planes_idx+0]*self.states_param[i][j-1,0]+ self.planes[planes_idx+1]*self.states_param[i][j-1,1] +self.planes[planes_idx+2]- self.dth ) ) + self.planes[planes_idx+2]**2
 
         return J
 
@@ -107,15 +107,15 @@ class PathFollowingNL_MPC:
 
                 if self.id < el:
                     #TODO: Repasar aquesta constraint
-                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] <= self.dth)
+                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] <= self.dth/2)
                     # self.opti.subject_to( norm_2([self.planes[planes_idx+0]**2,self.planes[planes_idx+1]]) == 1.0)
                     self.opti.subject_to((self.planes[planes_idx + 0]**2 + self.planes[planes_idx + 1]**2) == 1.0)
 
                 else:
-                    self.flag_lambdas = True
-                    cts = (-self.planes_fixed[j-1,0, i]*self.x[7+mod] - self.planes_param[i][j-1,1]*self.x[8+mod] - self.planes_param[i][j-1,2] + self.dth) <= 0.0
-                    self.planes_constraints.append(cts)
-                    self.opti.subject_to( self.planes_constraints[-1] )
+                    # self.flag_lambdas = True
+                    # cts = (-self.planes_param[i][j-1,0]*self.x[7+mod] - self.planes_param[i][j-1,1]*self.x[8+mod] - self.planes_param[i][j-1,2] + self.dth/2) <= 0.0
+                    # self.planes_constraints.append(cts)
+                    self.opti.subject_to((-self.planes_param[i][j-1,0]*self.x[7+mod] - self.planes_param[i][j-1,1]*self.x[8+mod] - self.planes_param[i][j-1,2] + self.dth/2) <= 0.0)
 
 
 
@@ -231,6 +231,9 @@ class PathFollowingNL_MPC:
         # set_planes fixed
 
         for j in range (0,self.N):
+
+            self.opti.set_value(self.cur[j], Curvature(states[j, 6], self.map))
+
             for i, el in enumerate(self.agent_list):
 
                 self.opti.set_value(self.planes_param[i][j,0], self.planes_fixed[j,0,i])
@@ -240,12 +243,14 @@ class PathFollowingNL_MPC:
                 self.opti.set_value(self.states_param[i][j,0], self.states_fixed[j,i,0])
                 self.opti.set_value(self.states_param[i][j,1], self.states_fixed[j,i,1])
 
+
+
         for i, el in enumerate(self.agent_list):
             self.opti.set_value(self.states_param[i][-1, 0], self.states_fixed[-1, i, 0])
             self.opti.set_value(self.states_param[i][-1, 1], self.states_fixed[-1, i, 1])
 
         for i in range(0, self.n_exp-self.n_slack):
-            self.opti.set_value(self.cur[i] ,states[i])
+            self.opti.set_value(self.initial_states[i] ,states[0,i])
 
 
 
@@ -265,8 +270,11 @@ class PathFollowingNL_MPC:
             # print("ID " +str(self.id))
             # print(Last_xPredicted)
 
+        if not uPred is None:
+            self.opti.set_initial(self.u,uPred.flatten())
+
         if lambdas is None:
-            self.lambdas = np.zeros((self.n_neighbours, self.N+1))
+            self.lambdas = np.ones((self.n_neighbours, self.N+1))
 
         else:
             self.lambdas = lambdas
@@ -312,12 +320,9 @@ class PathFollowingNL_MPC:
             J = self.cost()
             self.opti.minimize(J)
             setting_time_cost = time.time() - tic
-
             self.initialised = True
 
-        else:
-            print("TODO Initialise parameters")
-        # Set constraints
+        self.update_parameters(x0)
 
         # tic = time.time()
         p_opts = {"ipopt.print_level":0, "ipopt.sb":"yes", "print_time":0}

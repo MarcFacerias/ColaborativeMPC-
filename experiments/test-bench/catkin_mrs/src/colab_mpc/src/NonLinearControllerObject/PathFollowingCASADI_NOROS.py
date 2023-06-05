@@ -6,7 +6,7 @@ from utilities import Curvature, GBELLMF
 from compute_plane import hyperplane_separator
 
 # TODO Arreglar els idx per a fer que es pugui fer la decomposicio amb mes vehicles
-
+# TODO WARNING INFEASIBLE PROBLEM
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 class PathFollowingNL_MPC:
@@ -76,7 +76,7 @@ class PathFollowingNL_MPC:
             for i, el in enumerate(self.agent_list):
                 planes_idx = (j - 1) * 3 * self.n_neighbours + 3 * i
                 if self.id < el:
-                    J+= self.lambdas[i,j-1]*(-(self.planes[planes_idx+0]*self.states_fixed[j-1,0,i]+ self.planes[planes_idx+1]*self.states_fixed[j-1,i,1] +self.planes[planes_idx+2]- self.dth ) + self.states_fixed[j-1,i,2] ) + self.planes[planes_idx+2]**2
+                    J+= self.lambdas[i,j-1]*(-(self.planes[planes_idx+0]*self.states_fixed[j-1,0,i]+ self.planes[planes_idx+1]*self.states_fixed[j-1,i,1] +self.planes[planes_idx+2]- self.dth )) + self.planes[planes_idx+2]**2
         return J
 
     def ineq_constraints(self):
@@ -99,15 +99,16 @@ class PathFollowingNL_MPC:
 
                 if self.id < el:
                     #TODO: Repasar aquesta constraint
-                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] <= self.dth)
+                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] <= self.dth/2)
                     # self.opti.subject_to( norm_2([self.planes[planes_idx+0]**2,self.planes[planes_idx+1]]) == 1.0)
                     self.opti.subject_to((self.planes[planes_idx + 0]**2 + self.planes[planes_idx + 1]**2) == 1.0)
 
                 else:
-                    self.flag_lambdas = True
-                    cts = (-self.planes_fixed[j-1,0, i]*self.x[7+mod] - self.planes_fixed[j-1,1,i]*self.x[8+mod] - self.planes_fixed[j-1,2, i] + self.dth) <= 0.0
-                    self.planes_constraints.append(cts)
-                    self.opti.subject_to( self.planes_constraints[-1] )
+                    # self.flag_lambdas = True
+                    # cts = (-self.planes_fixed[j-1,0, i]*self.x[7+mod] - self.planes_fixed[j-1,1,i]*self.x[8+mod] - self.planes_fixed[j-1,2, i] + self.dth) <= 0.0
+                    self.opti.subject_to((-self.planes_fixed[j-1,0, i]*self.x[7+mod] - self.planes_fixed[j-1,1,i]*self.x[8+mod] - self.planes_fixed[j-1,2, i] + self.dth/2) <= 0.0)
+                    # self.planes_constraints.append(cts)
+                    # self.opti.subject_to( self.planes_constraints[-1] )
 
 
 
@@ -238,7 +239,7 @@ class PathFollowingNL_MPC:
             # print(Last_xPredicted)
 
         if lambdas is None:
-            self.lambdas = np.zeros((self.n_neighbours, self.N+1))
+            self.lambdas = np.ones((self.n_neighbours, self.N+1))
 
         else:
             self.lambdas = lambdas
@@ -303,14 +304,15 @@ class PathFollowingNL_MPC:
                 for cts in self.planes_constraints:
                     lambdas.append(sol.value(self.opti.dual(cts)))
 
-        except:
-            # print("not solved")
+        except Exception as e:
+            print(e)
+
             x = self.opti.debug.value(self.x)
             u = self.opti.debug.value(self.u)
             try:
                 planes = np.reshape(self.opti.debug.value(self.planes), (self.N, 3, -1))
 
-            except:
+            except :
                 planes = None
 
         if self.flag_lambdas:
