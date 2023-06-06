@@ -76,7 +76,7 @@ class PathFollowingNL_MPC:
             for i, el in enumerate(self.agent_list):
                 planes_idx = (j - 1) * 3 * self.n_neighbours + 3 * i
                 if self.id < el:
-                    J+= self.lambdas[i,j-1]*(-(self.planes[planes_idx+0]*self.states_fixed[j-1,0,i]+ self.planes[planes_idx+1]*self.states_fixed[j-1,i,1] +self.planes[planes_idx+2]- self.dth )) + self.planes[planes_idx+2]**2
+                    J+= self.lambdas[i,j-1]*(-(self.planes[planes_idx+0]*self.states_fixed[j-1,0,i]+ self.planes[planes_idx+1]*self.states_fixed[j-1,i,1] +self.planes[planes_idx+2]- self.dth/2 ))
         return J
 
     def ineq_constraints(self):

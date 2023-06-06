@@ -17,8 +17,8 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 # TODO: implement this suggestion https://groups.google.com/g/casadi-users/c/1B2kTOF--SI
 # TODO: Add quality of life changes to the planes
-plot = False
-plot_end = True
+plot = True
+plot_end = False
 
 def compute_hyper(x_ego,x_neg):
 
@@ -157,7 +157,7 @@ def main():
     N = 10
     dt = 0.01
     alpha = 0.15
-    max_it = 10
+    max_it = 300
     finished = False
     # lambdas_hist = [lambdas]
 
@@ -235,18 +235,22 @@ def main():
             # u_old1_OCD = uPred1
             cost_old = cost
 
-            # print("------------------------------------")
-            # print(cost)
-            # print("------------------------------------")
+            print("-------------------------------------------------")
+            print("it " + str(it))
+            print(time.time() - tic)
+            print(xPred0[1, :])
+            print(xPred1[1, :])
+            print(planes0[0, :,0])
+            print("-------------------------------------------------")
 
             if finished:
                 print("breakpoint placeholder with " + str(it_OCD))
-                print("-------------------------------------------------")
-                print("it " + str(it))
-                print(time.time() - tic)
-                print(xPred0[1, :])
-                print(xPred1[1, :])
-                print("-------------------------------------------------")
+                # print("-------------------------------------------------")
+                # print("it " + str(it))
+                # print(time.time() - tic)
+                # print(xPred0[1, :])
+                # print(xPred1[1, :])
+                # print("-------------------------------------------------")
 
             if it_OCD > 100:
                 print("max it reached")

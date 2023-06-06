@@ -83,7 +83,7 @@ class PathFollowingNL_MPC:
             for i, el in enumerate(self.agent_list):
                 planes_idx = (j - 1) * 3 * self.n_neighbours + 3 * i
                 if self.id < el:
-                    J+= self.lambdas[i,j-1]*(-(self.planes[planes_idx+0]*self.states_param[i][j-1,0]+ self.planes[planes_idx+1]*self.states_param[i][j-1,1] +self.planes[planes_idx+2]- self.dth ) ) + self.planes[planes_idx+2]**2
+                    J+= self.lambdas[i,j-1]*(-(self.planes[planes_idx+0]*self.states_param[i][j-1,0]+ self.planes[planes_idx+1]*self.states_param[i][j-1,1] +self.planes[planes_idx+2]- self.dth/2 ) )
 
         return J
 
@@ -142,38 +142,43 @@ class PathFollowingNL_MPC:
             mod_prev = (j-1) * self.n_exp
             mod_u    = (j-1) * 2
 
-
+            # vx check
+            A11 = -mu
             A12 = (np.sin(self.u[0+mod_u]) * Cf) / (m * self.x[0+mod_prev])
             A13 = (np.sin(self.u[0+mod_u]) * Cf * lf) / (m * self.x[0+mod_prev]) + self.x[1+mod_prev]
-
-            A22 = -(Cr + Cf * np.cos(self.u[0+mod_u])) / (m * self.x[0+mod_prev])
-            A23 = -(lf * Cf * np.cos(self.u[0+mod_u]) - lr * Cr) / (m * self.x[0+mod_prev]) - self.x[1+mod_prev]
-
-            A32 = -(lf * Cf * np.cos(self.u[0+mod_u]) - lr * Cr) / (I * self.x[0+mod_prev])
-            A33 = -(lf * lf * Cf * np.cos(self.u[0+mod_u]) + lr * lr * Cr) / (I * self.x[0+mod_prev])
-
             B11 = -(np.sin(self.u[0+mod_u]) * Cf) / m
             B12 = 1
 
-            A11 = -mu
+            # vy check
+            A22 = -(Cr + Cf * np.cos(self.u[0+mod_u])) / (m * self.x[0+mod_prev])
+            A23 = -(lf * Cf * np.cos(self.u[0+mod_u]) - lr * Cr) / (m * self.x[0+mod_prev]) - self.x[0+mod_prev]
+            B21 = (np.cos(self.u[0 + mod_u]) * Cf) / m
 
-            A51 = (1 / (1 - self.x[1+mod_prev] * self.cur[j-1])) * (-self.cur[j-1])
-            A52 = (1 / (1 - self.x[0+mod_prev] * self.cur[j-1])) * (np.sin( self.x[4+mod_prev]) * self.cur[j-1])
+            # wz check
+            A32 = -(lf * Cf * np.cos(self.u[0+mod_u]) - lr * Cr) / (I * self.x[0+mod_prev])
+            A33 = -(lf * lf * Cf * np.cos(self.u[0+mod_u]) + lr * lr * Cr) / (I * self.x[0+mod_prev])
+            B31 = (lf * Cf * np.cos(self.u[0 + mod_u])) / I
 
-            A61 = np.cos( self.x[4+mod_prev]) / (1 - self.x[1+mod_prev] * self.cur[j-1])
-            A62 = -np.sin( self.x[4+mod_prev]) / (1 - self.x[1+mod_prev] * self.cur[j-1])
+            # ey check
+            A41 = 1
+            A44 = self.x[0+mod_prev]
 
-            A7 = 1
-            A8 = self.x[0+mod_prev]
+            # epsi check
+            A51 = (1 / (1 - self.x[3+mod_prev] * self.cur[j-1])) * (-self.cur[j-1])
+            A52 = (1 / (1 - self.x[3+mod_prev] * self.cur[j-1])) * (np.sin( self.x[4+mod_prev]) * self.cur[j-1])
 
+            # s check
+            A61 = np.cos( self.x[4+mod_prev]) / (1 - self.x[3+mod_prev] * self.cur[j-1])
+            A62 = -np.sin( self.x[4+mod_prev]) / (1 - self.x[3+mod_prev] * self.cur[j-1])
+
+            # x
             A81 = np.cos(self.x[5+mod_prev])
             A82 = -np.sin(self.x[5+mod_prev])
 
+            # y
             A91 = np.sin(self.x[5+mod_prev])
             A92 = np.cos(self.x[5+mod_prev])
 
-            B21 = (np.cos(self.u[0+ mod_u]) * Cf) / m
-            B31 = (lf * Cf * np.cos(self.u[0+mod_u])) / I
 
             # vx
             self.opti.subject_to(
@@ -193,13 +198,13 @@ class PathFollowingNL_MPC:
             # ey
 
             self.opti.subject_to(
-                self.x[3+mod] == self.x[3+mod_prev] + (A7*self.x[1+mod_prev] + A8*self.x[4+mod_prev])*self.dt
+                self.x[3+mod] == self.x[3+mod_prev] + (A41*self.x[1+mod_prev] + A44*self.x[4+mod_prev])*self.dt
             )
 
             # epsi
 
             self.opti.subject_to(
-                self.x[4+mod] == self.x[4+mod_prev] + (A51 * self.x[0+mod_prev] + A52 * self.x[1+mod_prev])*self.dt
+                self.x[4+mod] == self.x[4+mod_prev] + (A51 * self.x[0+mod_prev] + A52 * self.x[1+mod_prev] + self.x[2+mod_prev])*self.dt
             )
 
             # theta
@@ -295,10 +300,10 @@ class PathFollowingNL_MPC:
         if not self.initialised:
 
             for i in range(0, len(self.agent_list)):
-                placeholder = self.opti.parameter(self.N, 3)
-                self.planes_param.append(placeholder)
-                placeholder = self.opti.parameter(self.N+1, 3)
-                self.states_param.append(placeholder)
+                placeholder_planes = self.opti.parameter(self.N, 3)
+                self.planes_param.append(placeholder_planes)
+                placeholder_states = self.opti.parameter(self.N, 2)
+                self.states_param.append(placeholder_states)
 
             if aux == 0:
                 self.planes = self.opti.variable(
@@ -347,7 +352,8 @@ class PathFollowingNL_MPC:
                 for cts in self.planes_constraints:
                     lambdas.append(sol.value(self.opti.dual(cts)))
 
-        except:
+        except Exception as e:
+            print(e)
             # print("not solved")
             x = self.opti.debug.value(self.x)
             u = self.opti.debug.value(self.u)
