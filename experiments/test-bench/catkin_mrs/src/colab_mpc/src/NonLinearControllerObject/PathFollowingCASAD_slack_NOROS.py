@@ -19,7 +19,7 @@ class PathFollowingNL_MPC:
         # Vehicle parameters:
         self.n_s = 9
         self.n_neighbours = 1
-        self.n_slack = 0
+        self.n_slack = 1
         self.n_exp = self.n_s + self.n_slack# slack variables
         self.dth = 0.5
         self.lf = 0.12

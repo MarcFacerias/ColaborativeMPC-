@@ -14,14 +14,14 @@ class PathFollowingNL_MPC:
     Attributes:
         solve: given x0 computes the control action
     """
-    def __init__(self, Q, R, N, dt, map, id):
+    def __init__(self, Q, R, N, dt, map, id, dth):
 
         # Vehicle parameters:
         self.n_s = 9
         self.n_neighbours = 1
         self.n_slack = 0
         self.n_exp = self.n_s + self.n_slack# slack variables
-        self.dth = 0.2
+        self.dth = dth
         self.lf = 0.12
         self.lr = 0.14
         self.m  = 2.250
@@ -64,10 +64,45 @@ class PathFollowingNL_MPC:
 
         # parameters
         self.initial_states = self.opti.parameter(self.n_exp - self.n_slack)
-        self.cur = self.opti.parameter(self.N)
+        self.lambdas = self.opti.parameter(self.n_neighbours, self.N)
 
         self.planes_param = []
         self.states_param = []
+
+        # LPV placeholders
+        self.A12 = self.opti.parameter(self.N)
+        self.A13 = self.opti.parameter(self.N)
+        self.B11 = self.opti.parameter(self.N)
+
+        # vy check
+        self.A22 = self.opti.parameter(self.N)
+        self.A23 = self.opti.parameter(self.N)
+        self.B21 = self.opti.parameter(self.N)
+
+        # wz check
+        self.A32 = self.opti.parameter(self.N)
+        self.A33 = self.opti.parameter(self.N)
+        self.B31 = self.opti.parameter(self.N)
+
+        # ey check
+        self.A44 = self.opti.parameter(self.N)
+
+        # epsi check
+        self.A51 = self.opti.parameter(self.N)
+        self.A52 = self.opti.parameter(self.N)
+
+        # s check
+        self.A61 = self.opti.parameter(self.N)
+        self.A62 = self.opti.parameter(self.N)
+
+        # x
+        self.A81 = self.opti.parameter(self.N)
+        self.A82 = self.opti.parameter(self.N)
+
+        # y
+        self.A91 = self.opti.parameter(self.N)
+        self.A92 = self.opti.parameter(self.N)
+
 
     def cost(self):
 
@@ -92,7 +127,6 @@ class PathFollowingNL_MPC:
         for j in range(1, self.N + 1):
             mod = j * self.n_exp
             mod_u = (j-1) * 2
-            mod_planes = (j - 1) * self.n_neighbours
 
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod],self.max_vel))
             self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.slack_agent[j], 0.60))
@@ -107,7 +141,7 @@ class PathFollowingNL_MPC:
 
                 if self.id < el:
                     #TODO: Repasar aquesta constraint
-                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] <= self.dth)
+                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] <= self.dth/2)
                     # self.opti.subject_to( norm_2([self.planes[planes_idx+0]**2,self.planes[planes_idx+1]]) == 1.0)
                     self.opti.subject_to((self.planes[planes_idx + 0]**2 + self.planes[planes_idx + 1]**2) == 1.0)
 
@@ -115,19 +149,11 @@ class PathFollowingNL_MPC:
                     # self.flag_lambdas = True
                     # cts = (-self.planes_param[i][j-1,0]*self.x[7+mod] - self.planes_param[i][j-1,1]*self.x[8+mod] - self.planes_param[i][j-1,2] + self.dth/2) <= 0.0
                     # self.planes_constraints.append(cts)
-                    self.opti.subject_to((-self.planes_param[i][j-1,0]*self.x[7+mod] - self.planes_param[i][j-1,1]*self.x[8+mod] - self.planes_param[i][j-1,2] + self.dth) <= 0.0)
+                    self.opti.subject_to((-self.planes_param[i][j-1,0]*self.x[7+mod] - self.planes_param[i][j-1,1]*self.x[8+mod] - self.planes_param[i][j-1,2] + self.dth/2) <= 0.0)
 
 
 
-    def eq_constraints(self,states):
-        # model constants
-        lf = self.lf
-        lr = self.lr
-        m  = self.m
-        I  = self.I
-        Cf = self.Cf
-        Cr = self.Cr
-        mu = self.mu
+    def eq_constraints(self):
 
         # set initial states
         for i in range(0, self.n_exp-self.n_slack):
@@ -142,69 +168,31 @@ class PathFollowingNL_MPC:
             mod_prev = (j-1) * self.n_exp
             mod_u    = (j-1) * 2
 
-            # vx check
-            A11 = -mu
-            A12 = (np.sin(self.u[0+mod_u]) * Cf) / (m * self.x[0+mod_prev])
-            A13 = (np.sin(self.u[0+mod_u]) * Cf * lf) / (m * self.x[0+mod_prev]) + self.x[1+mod_prev]
-            B11 = -(np.sin(self.u[0+mod_u]) * Cf) / m
-            B12 = 1
-
-            # vy check
-            A22 = -(Cr + Cf * np.cos(self.u[0+mod_u])) / (m * self.x[0+mod_prev])
-            A23 = -(lf * Cf * np.cos(self.u[0+mod_u]) - lr * Cr) / (m * self.x[0+mod_prev]) - self.x[0+mod_prev]
-            B21 = (np.cos(self.u[0 + mod_u]) * Cf) / m
-
-            # wz check
-            A32 = -(lf * Cf * np.cos(self.u[0+mod_u]) - lr * Cr) / (I * self.x[0+mod_prev])
-            A33 = -(lf * lf * Cf * np.cos(self.u[0+mod_u]) + lr * lr * Cr) / (I * self.x[0+mod_prev])
-            B31 = (lf * Cf * np.cos(self.u[0 + mod_u])) / I
-
-            # ey check
-            A41 = 1
-            A44 = self.x[0+mod_prev]
-
-            # epsi check
-            A51 = (1 / (1 - self.x[3+mod_prev] * self.cur[j-1])) * (-self.cur[j-1])
-            A52 = (1 / (1 - self.x[3+mod_prev] * self.cur[j-1])) * (np.sin( self.x[4+mod_prev]) * self.cur[j-1])
-
-            # s check
-            A61 = np.cos( self.x[4+mod_prev]) / (1 - self.x[3+mod_prev] * self.cur[j-1])
-            A62 = -np.sin( self.x[4+mod_prev]) / (1 - self.x[3+mod_prev] * self.cur[j-1])
-
-            # x
-            A81 = np.cos(self.x[5+mod_prev])
-            A82 = -np.sin(self.x[5+mod_prev])
-
-            # y
-            A91 = np.sin(self.x[5+mod_prev])
-            A92 = np.cos(self.x[5+mod_prev])
-
-
             # vx
             self.opti.subject_to(
-                self.x[0+mod] == self.x[0+mod_prev] + (A11*self.x[0+mod_prev] + A12*self.x[1+mod_prev] + A13*self.x[2+mod_prev] + B11*self.u[0+mod_u] + B12*self.u[1+mod_u])*self.dt
+                self.x[0+mod] == self.x[0+mod_prev] + (-self.mu*self.x[0+mod_prev] + self.A12[j-1]*self.x[1+mod_prev] + self.A13[j-1]*self.x[2+mod_prev] + self.B11[j-1]*self.u[0+mod_u] + self.u[1+mod_u])*self.dt
             )
 
             # vy
             self.opti.subject_to(
-                self.x[1+mod] == self.x[1+mod_prev] + (A22*self.x[1+mod_prev] + A23*self.x[2+mod_u] + B21*self.u[0+mod_u])*self.dt
+                self.x[1+mod] == self.x[1+mod_prev] + (self.A22[j-1]*self.x[1+mod_prev] + self.A23[j-1]*self.x[2+mod_u] + self.B21[j-1]*self.u[0+mod_u])*self.dt
             )
 
             # wz
             self.opti.subject_to(
-                self.x[2+mod] == self.x[2+mod_prev] + (A32*self.x[1+mod_prev] + A33*self.x[2+mod_u] + B31*self.u[0+mod_u])*self.dt
+                self.x[2+mod] == self.x[2+mod_prev] + (self.A32[j-1]*self.x[1+mod_prev] + self.A33[j-1]*self.x[2+mod_u] + self.B31[j-1]*self.u[0+mod_u])*self.dt
             )
 
             # ey
 
             self.opti.subject_to(
-                self.x[3+mod] == self.x[3+mod_prev] + (A41*self.x[1+mod_prev] + A44*self.x[4+mod_prev])*self.dt
+                self.x[3+mod] == self.x[3+mod_prev] + (self.x[1+mod_prev] + self.A44[j-1]*self.x[4+mod_prev])*self.dt
             )
 
             # epsi
 
             self.opti.subject_to(
-                self.x[4+mod] == self.x[4+mod_prev] + (A51 * self.x[0+mod_prev] + A52 * self.x[1+mod_prev] + self.x[2+mod_prev])*self.dt
+                self.x[4+mod] == self.x[4+mod_prev] + (self.A51[j-1] * self.x[0+mod_prev] + self.A52[j-1] * self.x[1+mod_prev] + self.x[2+mod_prev])*self.dt
             )
 
             # theta
@@ -216,28 +204,64 @@ class PathFollowingNL_MPC:
             # s
 
             self.opti.subject_to(
-                self.x[6+mod] == self.x[6+mod_prev] + (A61*self.x[0+mod_prev] + A62*self.x[1+mod_prev])*self.dt
+                self.x[6+mod] == self.x[6+mod_prev] + (self.A61[j-1]*self.x[0+mod_prev] + self.A62[j-1]*self.x[1+mod_prev])*self.dt
             )
 
             # x
 
             self.opti.subject_to(
-                self.x[7+mod] == self.x[7+mod_prev] + (A81*self.x[0+mod_prev] + A82*self.x[1+mod_prev])*self.dt
+                self.x[7+mod] == self.x[7+mod_prev] + (self.A81[j-1]*self.x[0+mod_prev] + self.A82[j-1]*self.x[1+mod_prev])*self.dt
             )
 
             # y
 
             self.opti.subject_to(
-                self.x[8+mod] == self.x[8+mod_prev] + (A91 * self.x[0+mod_prev] + A92 * self.x[1+mod_prev])*self.dt
+                self.x[8+mod] == self.x[8+mod_prev] + (self.A91[j-1] * self.x[0+mod_prev] + self.A92[j-1] * self.x[1+mod_prev])*self.dt
             )
 
-    def update_parameters(self,states):
+    def update_parameters(self,states,u):
 
         # set_planes fixed
 
         for j in range (0,self.N):
 
-            self.opti.set_value(self.cur[j], Curvature(states[j, 6], self.map))
+            vx = states[j, 0]
+            vy = states[j, 1]
+            ey = states[j, 3]
+            epsi = states[j, 4]
+            theta = states[j, 5]
+            s = states[j, 6]
+
+            cur = Curvature(s, self.map)
+            delta = u[j, 0]  # EA: steering angle at K-1
+
+            self.opti.set_value(self.A12[j], (np.sin(delta) * self.Cf) / (self.m * vx))
+            self.opti.set_value(self.A13[j], (np.sin(delta) * self.Cf * self.lf) / (self.m * vx) + vy)
+
+            self.opti.set_value(self.A22[j], -(self.Cr + self.Cf * np.cos(delta)) / (self.m * vx))
+            self.opti.set_value(self.A23[j], -(self.lf * self.Cf * np.cos(delta) - self.lr * self.Cr) / (self.m * vx) - vx)
+
+            self.opti.set_value(self.A32[j], -(self.lf * self.Cf * np.cos(delta) - self.lr * self.Cr) / (self.I * vx))
+            self.opti.set_value(self.A33[j], -(self.lf * self.lf * self.Cf * np.cos(delta) + self.lr * self.lr * self.Cr) / (self.I * vx))
+
+            self.opti.set_value(self.B11[j], -(np.sin(delta) * self.Cf) / self.m)
+
+            self.opti.set_value(self.A51[j], (1 / (1 - ey * cur)) * (-cur))
+            self.opti.set_value(self.A52[j], (1 / (1 - ey * cur)) * (np.sin(epsi) * cur))
+
+            self.opti.set_value(self.A61[j], np.cos(epsi) / (1 - ey * cur))
+            self.opti.set_value(self.A62[j], -np.sin(epsi) / (1 - ey * cur))
+
+            self.opti.set_value(self.A44[j], vx)
+
+            self.opti.set_value(self.A81[j], np.cos(theta))
+            self.opti.set_value(self.A82[j], -np.sin(theta))
+
+            self.opti.set_value(self.A91[j], np.sin(theta))
+            self.opti.set_value(self.A92[j], np.cos(theta))
+
+            self.opti.set_value(self.B21[j], (np.cos(delta) * self.Cf) / self.m)
+            self.opti.set_value(self.B31[j], (self.lf * self.Cf * np.cos(delta)) / self.I)
 
             for i, el in enumerate(self.agent_list):
 
@@ -269,30 +293,6 @@ class PathFollowingNL_MPC:
         """
         startTimer              = time.time()
 
-        # self.opti.set_initial(self.planes, Last_xPredicted.flatten())
-        if not Last_xPredicted is None:
-            self.opti.set_initial(self.x,Last_xPredicted.flatten())
-            # print("ID " +str(self.id))
-            # print(Last_xPredicted)
-
-        if not uPred is None:
-            self.opti.set_initial(self.u,uPred.flatten())
-
-        if lambdas is None:
-            self.lambdas = np.ones((self.n_neighbours, self.N+1))
-
-        else:
-            self.lambdas = lambdas
-
-        if x_agents is None:
-            x_agents = np.zeros((10,self.n_neighbours,2))
-
-        if planes_fixed is None:
-            self.planes_fixed = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
-
-        else:
-            self.planes_fixed = planes_fixed
-
         self.agent_list = np.asarray(agents_id)
         aux = (self.agent_list < self.id).sum()
 
@@ -310,24 +310,41 @@ class PathFollowingNL_MPC:
                     3 * (self.N) * self.n_neighbours)  # theta111, theta121 ... , theta11N, theta12N
                 self.opti.set_initial(self.planes, self.planes_fixed.flatten()) #TODO: for more than 2 robots we'll need to fix this optimisation
 
-            tic = time.time()
-            setting_time_ABC = time.time() - tic
-
-            tic = time.time()
             self.ineq_constraints()
-            setting_time_ineq = time.time() - tic
-
-            tic = time.time()
-            self.eq_constraints(x0)
-            setting_time_eq = time.time() - tic
-
-            tic = time.time()
+            self.eq_constraints()
             J = self.cost()
             self.opti.minimize(J)
-            setting_time_cost = time.time() - tic
             self.initialised = True
 
-        self.update_parameters(x0)
+        # self.opti.set_initial(self.planes, Last_xPredicted.flatten())
+        if not Last_xPredicted is None:
+            self.opti.set_initial(self.x,Last_xPredicted.flatten())
+
+        if not uPred is None:
+            self.opti.set_initial(self.u,uPred.flatten())
+
+        if lambdas is None:
+            self.opti.set_value(self.lambdas,np.ones((self.n_neighbours, self.N+1)))
+
+        else:
+            self.opti.set_value(self.lambdas,lambdas)
+
+            if self.id == 0:
+                print(lambdas)
+
+        if x_agents is None:
+            x_agents = np.zeros((10,self.n_neighbours,2))
+
+        if planes_fixed is None:
+            self.planes_fixed = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
+
+        else:
+            self.planes_fixed = planes_fixed
+
+        if aux == 0:
+            self.opti.set_initial(self.planes,
+                                  self.planes_fixed.flatten())  # TODO: for more than 2 robots we'll need to fix this optimisation
+        self.update_parameters(x0,uPred)
 
         # tic = time.time()
         p_opts = {"ipopt.print_level":0, "ipopt.sb":"yes", "print_time":0}

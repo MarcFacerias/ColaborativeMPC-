@@ -9,7 +9,7 @@ sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 
-from PathFollowingCASADI_param_NOROS import PathFollowingNL_MPC
+from PathFollowingCASADI_param_LPV_NOROS import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -17,7 +17,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 # TODO: implement this suggestion https://groups.google.com/g/casadi-users/c/1B2kTOF--SI
 # TODO: Add quality of life changes to the planes
-plot = True
+plot = False
 plot_end = False
 
 def compute_hyper(x_ego,x_neg):
@@ -30,13 +30,13 @@ def compute_hyper(x_ego,x_neg):
 class agent():
 
     #TODO: define Q and R
-    def __init__(self, N, Map, dt, x0, id, Q=None, R=None):
+    def __init__(self, N, Map, dt, x0, id, dth, Q=None, R=None):
         self.map = Map
         self.N = N
         self.dt = dt
         self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
         self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
-        self.Controller = PathFollowingNL_MPC(self.Q, self.R, N, dt, Map, id)
+        self.Controller = PathFollowingNL_MPC(self.Q, self.R, N, dt, Map, id, dth)
         self.x0 = x0
         self.states = []
         self.u = []
@@ -156,9 +156,10 @@ def main():
 
     N = 10
     dt = 0.01
-    alpha = 0.15
+    alpha = 10
     max_it = 500
     finished = False
+    dth = 0.3
     # lambdas_hist = [lambdas]
 
     # define neighbours
@@ -179,8 +180,8 @@ def main():
     if plot_end:
         d = plotter_offline(maps[0])
 
-    r0 = agent(N, maps[0], dt, x0_0, 0)
-    r1 = agent(N, maps[1], dt, x0_1, 1)
+    r0 = agent(N, maps[0], dt, x0_0, 0,dth)
+    r1 = agent(N, maps[1], dt, x0_1, 1,dth)
 
     x_old0 = None
     x_old1 = None
@@ -226,29 +227,34 @@ def main():
                     for j in range(0, 2):
 
                         if (i != j) and i<j:
-                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k-1,i,j,:],0.15,0)
+                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k-1,i,j,:],dth,0)
 
             # update lambdas
+            cost[cost < 0.0001] = 0
             lambdas += alpha*cost
-            # lambdas[lambdas<0.0001] = 0
+
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
             if not it_OCD == 1:
-                finished = np.all((cost)<=0.015) or np.allclose(cost,cost_old,atol=0.001) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
+                finished = np.all((cost)<=0.015) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
 
+            # np.allclose(x_old0, xPred0)
+            # np.allclose(x_old1, xPred1)
+            # np.allclose(planes_old, planes0)
             x_old0 = xPred0
             x_old1 = xPred1
             u_old0 = uPred0
             u_old1 = uPred1
-            cost_old = cost
+            planes_old = planes0
 
-            # print("-------------------------------------------------")
-            # print("it " + str(it))
-            # print(time.time() - tic)
-            # print(xPred0[1, :])
-            # print(xPred1[1, :])
-            # print(planes0[0, :,0])
-            # print("-------------------------------------------------")
+            print("-------------------------------------------------")
+            print("it " + str(it))
+            print(time.time() - tic)
+            print(xPred0[1, :])
+            print(xPred1[1, :])
+
+            print(planes0[0, :,0])
+            print("-------------------------------------------------")
 
             if finished:
                 print("breakpoint placeholder with " + str(it_OCD))
@@ -257,7 +263,7 @@ def main():
                 print("max it reached")
                 finished = True
 
-            planes_old = planes0
+
 
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes0)
@@ -280,6 +286,8 @@ def main():
         print(time.time() - tic)
         print(xPred0[1,:])
         print(xPred1[1,:])
+        print(planes0[0,:,0])
+        print(np.sqrt( (xPred0[1,7] - xPred1[1,7])**2 + (xPred0[1,8] - xPred1[1,8])**2 ))
         print("-------------------------------------------------")
 
         it += 1
