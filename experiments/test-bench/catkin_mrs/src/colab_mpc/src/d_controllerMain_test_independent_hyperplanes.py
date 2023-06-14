@@ -4,8 +4,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import time
-import math
-import csv
+import os
 
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
@@ -41,7 +40,7 @@ class agent():
         self.u = []
         self.planes = []
         self.output_opti = []
-        self.time = []
+        self.time_op = []
         self.status = []
 
     def one_step(self, agents, agents_id, pose, uPred = None, xPred = None):
@@ -57,7 +56,7 @@ class agent():
 
         tic = time.time()
         feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, agents, agents_id, pose)
-        self.time.append(time.time() - tic)
+        self.time_op.append(time.time() - tic)
         self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes, Solution
 
@@ -77,8 +76,23 @@ class agent():
     def save_to_csv(self):
 
         path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/vars"
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
         np.savetxt(path+'/states.dat', self.states, fmt='%.5e',delimiter=' ')
         np.savetxt(path + '/u.dat', self.u, fmt='%.5e', delimiter=' ')
+        np.savetxt(path + '/time.dat', self.time_op, fmt='%.5e', delimiter=' ')
+
+    def save_var_to_csv(self,var, name):
+
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/vars"
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
+        np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
+
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp+1,len(data),2))
     for id, el in enumerate(data):
@@ -197,29 +211,11 @@ def main():
         x_old1 = xPred1
         u_old0 = uPred0
         u_old1 = uPred1
-        raw_old0 = raw0
-        raw_old1 = raw1
+
 
         if dist_hist[-1] < 0.2:
             print("placeholder")
 
-        # print("-------------------------------------------------")
-        # print("it " + str(it))
-        # print("time" + str(time.time() - tic))
-        # print("dist" + str(dist_hist[-1]))
-        # print("-------------------------------------------------")
-        #
-        # print("-------------------------------------------------")
-        # print("agent 0  ")
-        # print(xPred0)
-        # print("-------------------------------------------------")
-        # print(uPred0)
-        # print("-------------------------------------------------")
-
-        # print("-------------------------------------------------")
-        # print("agent 1  ")
-        # print(xPred1)
-        # print("-------------------------------------------------")
         it += 1
         if plot :
             disp.plot_step(xPred0[1, 7], xPred0[1, 8], xPred0[1, 5], 0)
@@ -227,29 +223,23 @@ def main():
 
 
     if plot_end:
-        d.plot_offline_experiment(r0,".b")
-        d.plot_offline_experiment(r1,".r")
-        # d.plot_offline_experiment(r1, "ob", "-y")
+        d.plot_offline_experiment(r0)
+        d.plot_offline_experiment(r1, "ob", "-y")
         plot_performance(r0)
-        plot_distance(dist_hist, 0.6)
-        # input("Press enter to continue...")
-        # r0.save_to_csv()
-
-        figs = [plt.figure(n) for n in plt.get_fignums()]
-        idx = 0
-        for fig in figs:
-            fig.savefig("/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/figures/fig" +  str(idx) + ".jpg", format='jpg')
-            idx +=1
-        # input("Press Enter to continue...")
+        r0.save_to_csv()
+        r0.save_to_csv()
+        r1.save_to_csv()
+        r0.save_var_to_csv(time_OCD, "time_OCD")
+        input("Press enter to continue...")
 
 def plot_performance( agent):
 
-    fig_status = plt.figure(2)
+    fig_status = plt.figure()
     fig_status.add_subplot(2, 1, 1)
     x = np.arange(0,len(agent.status))
     plt.scatter(x, np.array(agent.status))
     fig_status.add_subplot(2, 1, 2)
-    plt.scatter(x, np.array(agent.time))
+    plt.scatter(x, np.array(agent.time_op))
     plt.show()
     plt.pause(0.001)
 

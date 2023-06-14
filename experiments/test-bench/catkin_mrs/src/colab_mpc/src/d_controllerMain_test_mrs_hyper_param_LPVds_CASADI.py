@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
 
 sys.path.append(sys.path[0]+'/NonLinearControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
@@ -19,7 +20,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 # TODO: Add quality of life changes to the planes
 plot = False
 plot_end = True
-it_conv = 5
+it_conv = 1
 
 def compute_hyper(x_ego,x_neg):
 
@@ -43,11 +44,12 @@ class agent():
         self.u = []
         self.planes = []
         self.output_opti = []
-        self.time = []
+        self.time_op = []
         self.status = []
         self.slack = []
         self.data_opti = []
         self.data_share = []
+        self.id = id
 
     def one_step(self,x0, lambdas, agents, agents_id, pose, uPred = None, xPred = None, planes_fixed = None, slack = None):
 
@@ -65,7 +67,7 @@ class agent():
 
         tic = time.time()
         feas, Solution, planes, slack, self.data_opti = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, pose, slack, self.data_share)
-        self.time.append(time.time() - tic)
+        self.time_op.append(time.time() - tic)
         self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes, slack, Solution
 
@@ -82,10 +84,23 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/"
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/dist/" + str(self.id)
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
         np.savetxt(path+'/states.dat', self.states, fmt='%.5e',delimiter=' ')
         np.savetxt(path + '/u.dat', self.u, fmt='%.5e', delimiter=' ')
-        np.savetxt(path + '/u.dat', self.time, fmt='%.5e', delimiter=' ')
+        np.savetxt(path + '/time.dat', self.time_op, fmt='%.5e', delimiter=' ')
+
+    def save_var_to_csv(self,var, name):
+
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/dist/"
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
+        np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
 
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp+1,len(data),2))
@@ -95,7 +110,7 @@ def initialise_agents(data,Hp,dt,map, accel_rate=0):
         # agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-4:-2] # with slack
         aux = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)
         agents[:,id,:] = aux[0][:,-2:] # without slack
-        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp+1*len(data)-1,2)),np.zeros(Hp+1*len(data)-1)]
+        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp+1*len(data)-1,4)),np.zeros(Hp+1*len(data)-1)]
     return agents, data_holder
 
 def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
@@ -168,17 +183,18 @@ def main():
     N = 10
     dt = 0.01
     alpha = 0.1
-    max_it = 500
+    max_it = 150
     finished = False
     finished_ph = False
     dth = 0.3
+    time_OCD = []
 
     # define neighbours
     n_0 = [1]
     n_1 = [0]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
-    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
+    x0_1 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     maps = [Map(),Map()]
     agents,data = initialise_agents([x0_0,x0_1],N,dt,maps)
@@ -206,12 +222,13 @@ def main():
     old_solution1 = None
     cost_old = np.zeros((2, 2, N))
     lambdas_hist = []
+    cost_hist = []
     it = 0
 
     while(it<max_it):
 
         tic = time.time()
-        lambdas = np.ones((2, 2, N))
+        lambdas = np.zeros((2, 2, N))
         it_OCD = 0
         itc = 0
 
@@ -292,7 +309,8 @@ def main():
         old_solution1 = Solution1
 
         finished = False
-
+        time_OCD.append(time.time() - tic)
+        cost_hist.append(r0.Controller._cost)
         print("-------------------------------------------------")
         print("it " + str(it))
         print("length " + str(it_OCD))
@@ -312,6 +330,11 @@ def main():
         d.plot_offline_experiment(r0)
         d.plot_offline_experiment(r1, "ob", "-y")
         plot_performance(r0)
+        r0.save_to_csv()
+        r0.save_to_csv()
+        r1.save_to_csv()
+        r0.save_var_to_csv(time_OCD, "time_OCD")
+        r0.save_var_to_csv(cost_hist, "cost_hist2")
         input("Press enter to continue...")
         # input("Press Enter to continue...")
 
@@ -322,7 +345,7 @@ def plot_performance( agent):
     x = np.arange(0,len(agent.status))
     plt.scatter(x, np.array(agent.status))
     fig_status.add_subplot(2, 1, 2)
-    plt.scatter(x, np.array(agent.time))
+    plt.scatter(x, np.array(agent.time_op))
     plt.show()
     plt.pause(0.001)
 

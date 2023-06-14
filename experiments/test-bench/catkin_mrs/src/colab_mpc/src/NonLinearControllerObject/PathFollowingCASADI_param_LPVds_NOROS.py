@@ -9,6 +9,10 @@ from compute_plane import hyperplane_separator
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
+# constants
+model_slack = 100
+control_slack = 1
+obs_slack = 1000000
 class PathFollowingNL_MPC:
     """Create the Path Following LMPC controller with LTV model
     Attributes:
@@ -28,7 +32,7 @@ class PathFollowingNL_MPC:
         self.I  = 0.06
         self.Cf = 60.0
         self.Cr = 60.0
-        self.mu = 0.1
+        self.mu = 0.0
         self.id = id
         self.plane_comp = hyperplane_separator(self.n_neighbours, N)
         self.initialised = False
@@ -40,7 +44,7 @@ class PathFollowingNL_MPC:
         self.x = self.opti.variable(self.n_exp*(N+1)) # x11, ... , x1N, s11, ... xTN
         self.u  = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.du = self.opti.variable(2 * (N))
-        self.slack_agent = self.opti.variable(N+1,2)  # x11, ... , x1N, s11, ... xTN
+        self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
         self.states_fixed = np.zeros(((N), self.n_neighbours, 3))
 
         self.A    = []
@@ -60,6 +64,7 @@ class PathFollowingNL_MPC:
 
         self.min_vel = 6
         self.min_vel = -6
+        self._cost = 0
 
         # parameters
         self.initial_states = self.opti.parameter(self.n_exp - self.n_slack)
@@ -116,7 +121,7 @@ class PathFollowingNL_MPC:
 
             J += 120*self.x[0+mod]**2 + self.x[1+mod]**2 + self.x[2+mod]**2 +\
                  1500*self.x[3+mod]**2 + 70*self.x[4+mod]**2 \
-                 + 1000*self.du[0+(mod_u)]**2 + 1000*self.du[1+mod_u]**2 - 600*self.x[0+mod] + 10000000*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)
+                 + 1000*self.du[0+(mod_u)]**2 + 1000*self.du[1+mod_u]**2 - 600*self.x[0+mod] + model_slack*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)**2 + control_slack*(self.slack_agent[j,2]**2 + self.slack_agent[j,3]**2)
 
             for i, el in enumerate(self.agent_list):
 
@@ -124,15 +129,15 @@ class PathFollowingNL_MPC:
 
                 J += 120 * self.states_param[i][0 + mod] ** 2 + self.states_param[i][1 + mod] ** 2 + self.states_param[i][2 + mod] ** 2 + \
                      1500 * self.states_param[i][3 + mod] ** 2 + 70 * self.states_param[i][4 + mod] ** 2 \
-                     + 1000*self.u_param[i][0 + (mod_u)] ** 2 + 1000*self.u_param[i][1 + mod_u] ** 2 - 600 * self.states_param[i][0 + mod] + 100 * (
-                     self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1] ** 2)
+                     + 1000*self.u_param[i][0 + (mod_u)] ** 2 + 1000*self.u_param[i][1 + mod_u] ** 2 - 600 * self.states_param[i][0 + mod] + model_slack * (
+                     self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1]**2) +control_slack*(self.s_agent_param[i][j,2]**2 + self.s_agent_param[i][j,3] ** 2)
 
                 if self.id < el:
-                    J+= self.lambdas[i,j-1]*(self.param_slack_dis[i][slack_idx] + self.dth - sqrt((self.x[7+mod] - self.pose_param[i][j-1,0])**2 + (self.x[8+mod] +\
-                         - self.pose_param[i][j-1,1])**2)) + 1000000000*(self.param_slack_dis[i][slack_idx]**2)
+                    J+= self.lambdas[i,j-1]*(self.param_slack_dis[i][slack_idx] + self.dth - sqrt((self.x[7+mod] - self.pose_param[i][j-1,0])**2 + (self.x[8+mod]
+                         - self.pose_param[i][j-1,1])**2)) + obs_slack*(self.param_slack_dis[i][slack_idx]**2)
 
                 else:
-                    J += 1000000000 * (self.slack_dis[slack_idx] ** 2)
+                    J += obs_slack * (self.slack_dis[slack_idx] ** 2)
 
         return J
 
@@ -145,11 +150,8 @@ class PathFollowingNL_MPC:
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
             self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.slack_agent[j,1], 0.60))
 
-            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u], 0.45))
-            self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u], 8.0))
-
-            if not self.id == 0:
-                self.opti.subject_to(self.opti.bounded(-8.00,self.u[1+mod_u], 9.0))
+            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u] + self.slack_agent[j,2], 0.45))
+            self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
 
             if j < self.N:
 
@@ -314,7 +316,7 @@ class PathFollowingNL_MPC:
                 placeholder_u = self.opti.parameter(2 * (self.N))
                 self.u_param.append(placeholder_u)
 
-                placeholder_sa = self.opti.parameter((self.N+1),2)
+                placeholder_sa = self.opti.parameter((self.N+1),4)
                 self.s_agent_param.append(placeholder_sa)
 
                 placeholder_sp = self.opti.parameter((self.N+1) * self.n_neighbours)
@@ -376,7 +378,6 @@ class PathFollowingNL_MPC:
                     s_opts)
         tic = time.time()
 
-        # self.opti.solver("cplex")
         self.settingTime = time.time() - startTimer
 
         try:
@@ -385,7 +386,7 @@ class PathFollowingNL_MPC:
             x = sol.value(self.x)
             u = sol.value(self.u)
             du = sol.value(self.du)
-
+            self._cost = sol.stats()['iterations']['obj'][-1]
             # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
             try:
@@ -404,7 +405,7 @@ class PathFollowingNL_MPC:
             x = self.opti.debug.value(self.x)
             u = self.opti.debug.value(self.u)
             du = self.opti.debug.value(self.du)
-
+            self._cost = self.opti.debug.stats()['iterations']['obj'][-1]
             try:
                 self.slack = self.opti.debug.value(self.slack_dis)
             except:

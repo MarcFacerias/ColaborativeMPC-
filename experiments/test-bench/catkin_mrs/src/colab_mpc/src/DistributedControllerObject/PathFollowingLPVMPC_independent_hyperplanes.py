@@ -226,24 +226,27 @@ def GenerateColisionAvoidanceConstraints(Controller):
 
     K_list = []
     Lim_list = []
+    K = np.zeros((len(Controller.agent_list), Controller.n_exp))
+    K_list.append(K)
+    Lim_list.append(0)
 
-    for t in range(0,Controller.N + 1):
+    for t in range(1,Controller.N + 1):
 
         K = np.zeros((len(Controller.agent_list),Controller.n_exp))
 
         for i,el in enumerate(Controller.agent_list):
 
             if Controller.id < el:
-                K[i, 7] = Controller.planes[t, 0, i]
-                K[i, 8] = Controller.planes[t, 1, i]
+                K[i, 7] = Controller.planes[t-1, 0, i]
+                K[i, 8] = Controller.planes[t-1, 1, i]
                 K[i, -1] = -1
-                Lim_list.append(Controller.radius - Controller.planes[t, 2, i] )
+                Lim_list.append(- Controller.radius/2 - Controller.planes[t-1, 2, i] )
 
             else:
-                K[i, 7] = - Controller.planes[t, 0, i]
-                K[i, 8] = - Controller.planes[t, 1, i]
+                K[i, 7] = - Controller.planes[t-1, 0, i]
+                K[i, 8] = - Controller.planes[t-1, 1, i]
                 K[i, -1] = -1
-                Lim_list.append(Controller.planes[t, 2, i] - Controller.radius )
+                Lim_list.append(Controller.planes[t-1, 2, i] - Controller.radius/2 )
 
             K_list.append(K)
 

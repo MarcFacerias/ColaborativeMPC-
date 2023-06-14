@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
 
 sys.path.append(sys.path[0]+'/NonLinearControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
@@ -48,6 +49,7 @@ class agent():
         self.slack = []
         self.data_opti = []
         self.data_share = []
+        self.id = id
 
     def one_step(self,x0, lambdas, agents, agents_id, pose, uPred = None, xPred = None, planes_fixed = None, slack = None):
 
@@ -84,10 +86,23 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/"
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/" + str(self.id)
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
         np.savetxt(path+'/states.dat', self.states, fmt='%.5e',delimiter=' ')
         np.savetxt(path + '/u.dat', self.u, fmt='%.5e', delimiter=' ')
-        np.savetxt(path + '/u.dat', self.time, fmt='%.5e', delimiter=' ')
+        np.savetxt(path + '/time.dat', self.time, fmt='%.5e', delimiter=' ')
+
+    def save_var_to_csv(self,var, name):
+
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/"
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
+        np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
 
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp+1,len(data),2))
@@ -161,12 +176,12 @@ def main():
 
     N = 10
     dt = 0.01
-    alpha = 0.01
-    max_it = 500
+    alpha = 0.1
+    max_it = 250
     finished = False
     finished_ph = False
     dth = 0.3
-    # lambdas_hist = [lambdas]
+    time_OCD = []
 
     # define neighbours
     n_0 = [1]
@@ -291,6 +306,7 @@ def main():
         old_solution1 = Solution1
 
         finished = False
+        time_OCD.append(time.time() - tic)
 
         print("-------------------------------------------------")
         print("it " + str(it))
@@ -311,6 +327,10 @@ def main():
         d.plot_offline_experiment(r0)
         d.plot_offline_experiment(r1, "ob", "-y")
         plot_performance(r0)
+        r0.save_to_csv()
+        r0.save_to_csv()
+        r1.save_to_csv()
+        r0.save_var_to_csv(time_OCD, "time_OCD")
         input("Press enter to continue...")
         # input("Press Enter to continue...")
 
