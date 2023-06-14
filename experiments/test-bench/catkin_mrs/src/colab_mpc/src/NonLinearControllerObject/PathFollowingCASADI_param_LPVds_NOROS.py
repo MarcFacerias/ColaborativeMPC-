@@ -5,7 +5,7 @@ import numpy as np
 from utilities import Curvature, GBELLMF
 from compute_plane import hyperplane_separator
 
-# TODO Arreglar els idx per a fer que es pugui fer la decomposicio amb mes vehicles
+# TODO Arreglar el cost funcion
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
@@ -22,7 +22,7 @@ class PathFollowingNL_MPC:
 
         # Vehicle parameters:
         self.n_s = 9
-        self.n_neighbours = 1
+        self.n_neighbours = 3 #TODO: automate this line
         self.n_slack = 0
         self.n_exp = self.n_s + self.n_slack# slack variables
         self.dth = dth
@@ -125,7 +125,7 @@ class PathFollowingNL_MPC:
 
             for i, el in enumerate(self.agent_list):
 
-                slack_idx = (j - 1) * self.n_neighbours + i
+                slack_idx = (j - 1) * self.aux + i
 
                 J += 120 * self.states_param[i][0 + mod] ** 2 + self.states_param[i][1 + mod] ** 2 + self.states_param[i][2 + mod] ** 2 + \
                      1500 * self.states_param[i][3 + mod] ** 2 + 70 * self.states_param[i][4 + mod] ** 2 \
@@ -160,7 +160,7 @@ class PathFollowingNL_MPC:
 
             #planes
             for i,el in enumerate(self.agent_list):
-                slack_idx = (j - 1) * self.n_neighbours + i
+                slack_idx = (j - 1) * self.aux + i
                 if self.id > el:
                     #TODO: Repasar aquesta constraint
                     self.opti.subject_to( sqrt((self.x[7+mod] - self.pose_param[i][j-1,0])**2 + (self.x[8+mod] - self.pose_param[i][j-1,1])**2) + self.slack_dis[slack_idx] > self.dth )
@@ -300,7 +300,7 @@ class PathFollowingNL_MPC:
         startTimer              = time.time()
 
         self.agent_list = np.asarray(agents_id)
-        aux = (self.agent_list > self.id).sum()
+        self.aux = (self.agent_list < self.id).sum()
 
         # TODO: make an array of parameters mimiquing the 3 index
         if not self.initialised:
@@ -316,15 +316,15 @@ class PathFollowingNL_MPC:
                 placeholder_u = self.opti.parameter(2 * (self.N))
                 self.u_param.append(placeholder_u)
 
-                placeholder_sa = self.opti.parameter((self.N+1),4)
+                placeholder_sa = self.opti.parameter(self.N+1,4) #we have 4 slack variables
                 self.s_agent_param.append(placeholder_sa)
 
                 placeholder_sp = self.opti.parameter((self.N+1) * self.n_neighbours)
                 self.param_slack_dis.append(placeholder_sp)
 
             # TODO: for more than 2 robots we'll need to fix this if s
-            if aux == 0: 
-                self.slack_dis = self.opti.variable((self.N + 1) * self.n_neighbours)  # x11, ... , x1N, s11, ... xTN
+            if self.aux != 0:
+                self.slack_dis = self.opti.variable((self.N + 1) * self.aux)  # x11, ... , x1N, s11, ... xTN
 
             self.ineq_constraints()
             self.eq_constraints()
@@ -405,7 +405,7 @@ class PathFollowingNL_MPC:
             x = self.opti.debug.value(self.x)
             u = self.opti.debug.value(self.u)
             du = self.opti.debug.value(self.du)
-            self._cost = self.opti.debug.stats()['iterations']['obj'][-1]
+            # self._cost = self.opti.debug.stats()['iterations']['obj'][-1]
             try:
                 self.slack = self.opti.debug.value(self.slack_dis)
             except:
