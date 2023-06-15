@@ -130,7 +130,7 @@ ylabel("it")
 plot(time_OCD)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% OCD Time  
+% distance  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 figure()
@@ -138,7 +138,7 @@ sgtitle("distance")
 xlabel("seconds")
 ylabel("it")
 hold on 
-plot(sqrt((states_0(:,8) - states_1(:,8)).^2 +  (states_0(:,8) - states_0(:,9)).^2))
+plot(sqrt((states_0(:,8) - states_1(:,8)).^2 +  (states_0(:,9) - states_0(:,9)).^2))
 plot(0.3*ones(size(states_0,1)))
 hold off 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -130,11 +130,11 @@ class PathFollowingNL_MPC:
                 J += 120 * self.states_param[i][0 + mod] ** 2 + self.states_param[i][1 + mod] ** 2 + self.states_param[i][2 + mod] ** 2 + \
                      1500 * self.states_param[i][3 + mod] ** 2 + 70 * self.states_param[i][4 + mod] ** 2 \
                      + 1000*self.u_param[i][0 + (mod_u)] ** 2 + 1000*self.u_param[i][1 + mod_u] ** 2 - 600 * self.states_param[i][0 + mod] + model_slack * (
-                     self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1]**2) +control_slack*(self.s_agent_param[i][j,2]**2 + self.s_agent_param[i][j,3] ** 2)
+                     self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1]**2) + control_slack*(self.s_agent_param[i][j,2]**2 + self.s_agent_param[i][j,3] ** 2)
 
                 if self.id < el:
-                    J+= self.lambdas[i,j-1]*(self.param_slack_dis[i][slack_idx] + self.dth - sqrt((self.x[7+mod] - self.pose_param[i][j-1,0])**2 + (self.x[8+mod]
-                         - self.pose_param[i][j-1,1])**2)) + obs_slack*(self.param_slack_dis[i][slack_idx]**2)
+                    J+= self.lambdas[i,j-1]*(self.param_slack_dis[i][j-1,self.id] + self.dth - sqrt((self.x[7+mod] - self.pose_param[i][j-1,0])**2 + (self.x[8+mod]
+                         - self.pose_param[i][j-1,1])**2)) + obs_slack*(self.param_slack_dis[i][j-1,self.id]**2)
 
                 else:
                     J += obs_slack * (self.slack_dis[slack_idx] ** 2)
@@ -319,12 +319,12 @@ class PathFollowingNL_MPC:
                 placeholder_sa = self.opti.parameter(self.N+1,4) #we have 4 slack variables
                 self.s_agent_param.append(placeholder_sa)
 
-                placeholder_sp = self.opti.parameter((self.N+1) * self.n_neighbours)
+                placeholder_sp = self.opti.parameter((self.N), (self.n_neighbours+1))
                 self.param_slack_dis.append(placeholder_sp)
 
             # TODO: for more than 2 robots we'll need to fix this if s
             if self.aux != 0:
-                self.slack_dis = self.opti.variable((self.N + 1) * self.aux)  # x11, ... , x1N, s11, ... xTN
+                self.slack_dis = self.opti.variable((self.N) * self.aux)  # x11, ... , x1N, s11, ... xTN
 
             self.ineq_constraints()
             self.eq_constraints()
@@ -394,10 +394,9 @@ class PathFollowingNL_MPC:
             except:
                 slack_agent = None
 
-            try:
-                self.slack = sol.value(self.slack_dis)
-            except:
-                self.slack = 0
+            if not self.aux == 0:
+                self._slack = sol.value(self.slack_dis)
+
 
         except Exception as e:
             print(e)
@@ -406,10 +405,6 @@ class PathFollowingNL_MPC:
             u = self.opti.debug.value(self.u)
             du = self.opti.debug.value(self.du)
             # self._cost = self.opti.debug.stats()['iterations']['obj'][-1]
-            try:
-                self.slack = self.opti.debug.value(self.slack_dis)
-            except:
-                self.slack = 0
 
             # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -417,6 +412,11 @@ class PathFollowingNL_MPC:
                 slack_agent = self.opti.debug.value(self.slack_agent)
             except:
                 slack_agent = None
+
+            # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+            if not self.aux == 0:
+                self._slack = self.opti.debug.value(self.slack_dis)
 
         idx = np.arange(0, 9)
         d = 2
@@ -429,7 +429,12 @@ class PathFollowingNL_MPC:
 
         self.solverTime = time.time() - startTimer
 
-        data = [x,du,slack_agent,self.slack]
+        slack = np.zeros(((self.N),(self.n_neighbours+1)))
+
+        if not self.aux == 0:
+            slack[:,0:(self.id)] = self._slack.reshape((self.N, -1))
+
+        data = [x,du,slack_agent,slack]
 
         #TODO: check how to retrieve feasibility conditions
         return status, x, 0, slack, data

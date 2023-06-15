@@ -18,9 +18,8 @@ class PathFollowingNL_MPC:
 
         # Vehicle parameters:
         self.n_s = 9
-        self.n_neighbours = 1
-        self.n_slack = 0
-        self.n_exp = self.n_s + self.n_slack# slack variables
+        self.n_neighbours = 3
+        self.n_exp = self.n_s # slack variables
         self.dth = dth
         self.lf = 0.12
         self.lr = 0.14
@@ -28,7 +27,7 @@ class PathFollowingNL_MPC:
         self.I  = 0.06
         self.Cf = 60.0
         self.Cr = 60.0
-        self.mu = 0.1
+        self.mu = 0.0
         self.id = id
         self.plane_comp = hyperplane_separator(self.n_neighbours, N)
         self.initialised = False
@@ -40,8 +39,7 @@ class PathFollowingNL_MPC:
         self.x = self.opti.variable(self.n_exp*(N+1)) # x11, ... , x1N, s11, ... xTN
         self.u  = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.du = self.opti.variable(2 * (N))
-        self.slack_agent = self.opti.variable(N+1,2)  # x11, ... , x1N, s11, ... xTN
-        self.planes_fixed = np.zeros(((N),self.n_neighbours,3))
+        self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
         self.states_fixed = np.zeros(((N), self.n_neighbours, 3))
 
         self.A    = []
@@ -64,7 +62,7 @@ class PathFollowingNL_MPC:
         self.min_vel = -6
 
         # parameters
-        self.initial_states = self.opti.parameter(self.n_exp - self.n_slack)
+        self.initial_states = self.opti.parameter(self.n_exp )
         self.lambdas = self.opti.parameter(self.n_neighbours, self.N)
 
         self.planes_param = []
@@ -72,7 +70,8 @@ class PathFollowingNL_MPC:
         self.u_param = []
         self.states_param = []
         self.s_agent_param = []
-        self.slack_params = []
+        self.slack_params_master = []
+        self.slack_params_slave = []
 
         # LPV placeholders
         self.A12 = self.opti.parameter(self.N)
@@ -119,23 +118,28 @@ class PathFollowingNL_MPC:
             J += 120*self.x[0+mod]**2 + self.x[1+mod]**2 + self.x[2+mod]**2 +\
                  1500*self.x[3+mod]**2 + 70*self.x[4+mod]**2 \
                  + 1000*self.du[0+(mod_u)]**2 + 1000*self.du[1+mod_u]**2 - 600*self.x[0+mod] + 10000000*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)
+            it_s = 0
+            it_m = 0
 
             for i, el in enumerate(self.agent_list):
 
-                planes_idx = (j - 1) * 3 * self.n_neighbours + 3 * i
-                slack_idx = (j - 1) * self.n_neighbours + i
+                planes_idx = (j - 1) * 3 * self.aux + 3 * it_m
 
                 J += 120 * self.states_param[i][0 + mod] ** 2 + self.states_param[i][1 + mod] ** 2 + self.states_param[i][2 + mod] ** 2 + \
                      1500 * self.states_param[i][3 + mod] ** 2 + 70 * self.states_param[i][4 + mod] ** 2 \
                      + 1000*self.u_param[i][0 + (mod_u)] ** 2 + 1000*self.u_param[i][1 + mod_u] ** 2 - 600 * self.states_param[i][0 + mod] + 100 * (
-                     self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1] ** 2) + 1000000000*(self.slack_params[i][slack_idx]**2)
+                     self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1] ** 2) + 1000000000*(self.slack_params_master[i][j-1,self.id]**2) + 1000000000*(self.slack_params_slave[i][j-1,self.id]**2)
 
                 if self.id < el:
-                    J+= self.lambdas[i,j-1]*(-(self.slack_params[i][slack_idx] + self.planes[planes_idx+0]*self.pose_param[i][j-1,0] +
+
+                    J+= self.lambdas[i,j-1]*(-(self.slack_params_slave[i][j-1,self.id] + self.planes[planes_idx+0]*self.pose_param[i][j-1,0] +
                         self.planes[planes_idx+1]*self.pose_param[i][j-1,1] + self.planes[planes_idx+2] - self.dth/2 ) ) +\
-                        1000000000 * (self.slack_planes_master[slack_idx] ** 2)
+                        1000000000 * (self.slack_planes_master[j-1,it_m] ** 2)
+                    it_m += 1
                 else:
-                    J += 1000000000*(self.slack_planes_slave[slack_idx]**2)
+
+                    J += 1000000000*(self.slack_planes_slave[j-1,it_s]**2)
+                    it_s += 1
 
         return J
 
@@ -148,11 +152,8 @@ class PathFollowingNL_MPC:
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
             self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.slack_agent[j,1], 0.60))
 
-            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u], 0.45))
-            self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u], 8.0))
-
-            if not self.id == 0:
-                self.opti.subject_to(self.opti.bounded(-8.00,self.u[1+mod_u], 9.0))
+            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u] + self.slack_agent[j,2], 0.45))
+            self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
 
             if j < self.N:
 
@@ -160,26 +161,27 @@ class PathFollowingNL_MPC:
                 self.opti.subject_to(self.u[1+mod_u +2] == self.u[1+mod_u] + self.du[1+mod_u])
 
             #planes
+            it_s = 0
+            it_m = 0
             for i,el in enumerate(self.agent_list):
 
-                planes_idx = (j-1)*3*self.n_neighbours + 3*i
-                slack_idx = (j - 1) * self.n_neighbours + i
+                planes_idx = (j-1)*3*self.aux + 3*it_m
 
                 if self.id < el:
+
                     #TODO: Repasar aquesta constraint
-                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] + self.slack_planes_master[slack_idx] < -self.dth/2 )
+                    self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] + self.slack_planes_master[j-1,it_m] < -self.dth/2 )
                     self.opti.subject_to((self.planes[planes_idx + 0]**2 + self.planes[planes_idx + 1]**2) == 1.0)
-                    # self.opti.subject_to(self.slack_planes_master[slack_idx] == 0.0)
+                    it_m += 1
 
                 else:
 
-                    self.opti.subject_to((self.slack_planes_slave[slack_idx] + self.planes_param[i][j-1,0]*self.x[7+mod] + self.planes_param[i][j-1,1]*self.x[8+mod] + self.planes_param[i][j-1,2]) > self.dth/2)
-                    # self.opti.subject_to(self.slack_planes_slave[slack_idx] == 0.0)
-
+                    self.opti.subject_to((self.slack_planes_slave[j-1,it_s] + self.planes_param[i][j-1,0]*self.x[7+mod] + self.planes_param[i][j-1,1]*self.x[8+mod] + self.planes_param[i][j-1,2]) > self.dth/2)
+                    it_s += 1
     def eq_constraints(self):
 
         # set initial states
-        for i in range(0, self.n_exp-self.n_slack):
+        for i in range(0, self.n_exp):
 
             self.opti.subject_to(
                 self.x[i] == self.initial_states[i]
@@ -299,7 +301,7 @@ class PathFollowingNL_MPC:
             self.opti.set_value(self.pose_param[i][-1, 0], self.states_fixed[-1, i, 0])
             self.opti.set_value(self.pose_param[i][-1, 1], self.states_fixed[-1, i, 1])
 
-        for i in range(0, self.n_exp-self.n_slack):
+        for i in range(0, self.n_exp):
             self.opti.set_value(self.initial_states[i] ,states[0,i])
 
 
@@ -315,7 +317,7 @@ class PathFollowingNL_MPC:
         startTimer              = time.time()
 
         self.agent_list = np.asarray(agents_id)
-        aux = (self.agent_list < self.id).sum()
+        self.aux = (self.id < self.agent_list).sum()
 
         # TODO: make an array of parameters mimiquing the 3 index
         if not self.initialised:
@@ -333,21 +335,27 @@ class PathFollowingNL_MPC:
                 placeholder_u = self.opti.parameter(2 * (self.N))
                 self.u_param.append(placeholder_u)
 
-                placeholder_sa = self.opti.parameter((self.N+1),2)
+                placeholder_sa = self.opti.parameter(self.N+1,4) #we have 4 slack variables
                 self.s_agent_param.append(placeholder_sa)
 
-                placeholder_sp = self.opti.parameter((self.N+1) * self.n_neighbours)
-                self.slack_params.append(placeholder_sp)
+                placeholder_spm = self.opti.parameter((self.N), (self.n_neighbours+1))
+                self.slack_params_master.append(placeholder_spm)
+
+                placeholder_sps = self.opti.parameter((self.N), (self.n_neighbours+1))
+                self.slack_params_slave.append(placeholder_sps)
 
             # TODO: for more than 2 robots we'll need to fix this if s
-            if aux == 0:
+
+            if self.aux!= 0:
                 self.planes = self.opti.variable(
-                    3 * (self.N) * self.n_neighbours)  # theta111, theta121 ... , theta11N, theta12N
-                self.slack_planes_master = self.opti.variable((self.N + 1) * self.n_neighbours)  # x11, ... , x1N, s11, ... xTN
+                        3 * (self.N) * self.aux)  # theta111, theta121 ... , theta11N, theta12N
 
+                self.planes_fixed = np.zeros(((self.N), self.aux, 3))
 
-            else:
-                self.slack_planes_slave = self.opti.variable((self.N + 1) * self.n_neighbours)  # x11, ... , x1N, s11, ... xTN
+                self.slack_planes_master = self.opti.variable((self.N ) , self.aux)  # x11, ... , x1N, s11, ... xTN
+
+            if self.aux != self.n_neighbours:
+                self.slack_planes_slave = self.opti.variable((self.N ) , (self.n_neighbours-self.aux))  # x11, ... , x1N, s11, ... xTN
 
             self.ineq_constraints()
             self.eq_constraints()
@@ -382,12 +390,13 @@ class PathFollowingNL_MPC:
             self.opti.set_value(self.states_param[i], agent[0])
             self.opti.set_value(self.u_param[i], agent[1])
             self.opti.set_value(self.s_agent_param[i], agent[2])
-            self.opti.set_value(self.slack_params[i], agent[3])
+            self.opti.set_value(self.slack_params_master[i], agent[3])
+            self.opti.set_value(self.slack_params_slave[i], agent[4])
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         if x_agents is None:
-            x_agents = np.zeros((10,self.n_neighbours,3))
+            x_agents = np.zeros((10,self.n_neighbours,2))
 
         self.states_fixed = x_agents
 
@@ -403,12 +412,12 @@ class PathFollowingNL_MPC:
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         try:
-            self.opti.set_initial(self.slack_planes_master, self.slack)
+            self.opti.set_initial(self.slack_planes_master, self.slack_planes_master_old)
         except:
             pass
 
         try:
-            self.opti.set_initial(self.slack_planes_slave, self.planes_fixed)
+            self.opti.set_initial(self.slack_planes_slave, self.slack_planes_slave_old)
         except:
             pass
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -442,10 +451,12 @@ class PathFollowingNL_MPC:
 
             # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-            try:
-                self.slack = sol.value(self.slack_planes_slave)
-            except:
-                self.slack = sol.value(self.slack_planes_master)
+            if self.aux != 0:
+                self.slack_planes_master_old = sol.value(self.slack_planes_master)
+
+
+            if self.aux != self.n_neighbours:
+                self.slack_planes_slave_old = sol.value(self.slack_planes_slave)
 
             # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -468,10 +479,11 @@ class PathFollowingNL_MPC:
 
             # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-            try:
-                self.slack = self.opti.debug.value(self.slack_planes_slave)
-            except:
-                self.slack = self.opti.debug.value(self.slack_planes_master)
+            if self.aux != self.n_neighbours:
+                self.slack_planes_slave_old = self.opti.debug.value(self.slack_planes_slave)
+
+            if self.aux != 0:
+                self.slack_planes_master_old = self.opti.debug.value(self.slack_planes_master)
 
             # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -479,13 +491,6 @@ class PathFollowingNL_MPC:
                 slack_agent = self.opti.debug.value(self.slack_agent)
             except:
                 slack_agent = None
-
-        if self.flag_lambdas:
-            lambdas = []
-            for cts in self.planes_constraints:
-                lambdas.append(self.opti.debug.value(self.opti.dual(cts)))
-            self.flag_lambdas = False
-            self.planes_constraints = []
 
         idx = np.arange(0, 9)
         d = 2
@@ -498,7 +503,29 @@ class PathFollowingNL_MPC:
 
         self.solverTime = time.time() - startTimer
 
-        data = [x,du,slack_agent,self.slack]
+        spm_data = np.zeros(((self.N),(self.n_neighbours+1)))
+        sps_data = np.zeros(((self.N),(self.n_neighbours+1)))
+        planes_std = np.zeros((self.N, 3, self.n_neighbours+1))
 
-        #TODO: check how to retrieve feasibility conditions
-        return status, x, planes, slack, data
+        tst = (self.id < self.agent_list)
+        idx_master = np.where(tst == True)[0]
+        idx_slave  = np.where(tst == False)[0]
+
+        if self.aux != 0:
+
+            planes_std[:, :, idx_master] = planes
+
+            try:
+                spm_data[:,idx_master] = self.slack_planes_master_old
+            except ValueError:
+                spm_data[:, idx_master] = self.slack_planes_master_old[:,np.newaxis]
+
+        if self.aux != self.n_neighbours:
+            try:
+                spm_data[:,idx_slave] = self.slack_planes_slave_old
+            except ValueError:
+                spm_data[:, idx_slave] = self.slack_planes_slave_old[:,np.newaxis]
+
+        data = [x,du,slack_agent,spm_data,sps_data]
+
+        return status, x, planes_std, slack, data
