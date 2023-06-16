@@ -321,6 +321,7 @@ def _buildMatIneqConst(Controller):
     Dummy1 = np.hstack((Fxtot, np.zeros((rFxtot, cFutot))))
     Dummy2 = np.hstack((np.zeros((rFutot, cFxtot)), Futot))
     F = np.vstack((Dummy1, Dummy2))
+    F = np.hstack((F,np.zeros((np.shape(F)[0], cFutot))))
     b = np.hstack((bxtot, butot))
 
     if Controller.Solver == "CVX":
@@ -347,17 +348,19 @@ def _buildMatCost(Controller):
     c = [R] * (N)
 
     Mu = linalg.block_diag(*c)
+    Mdu = linalg.block_diag(*c)
 
     # This is without slack lane:
-    M0 = linalg.block_diag(Mx, Mu)
+    M0 = linalg.block_diag(Mx, Mu, Mdu)
 
     # Maximise change on S
     Pu = np.zeros(N*Controller.d)
+    Pdu = np.zeros(N * Controller.d)
     Px = np.zeros(Controller.n_exp)
     # Px[6] = -1
     Px[0] = -6*100
     Px_total = np.tile(Px, N+1)
-    P= 2*np.hstack((Px_total, Pu))
+    P= 2*np.hstack((Px_total, Pu, Pdu))
 
     M = 2 * M0  # Need to multiply by two because CVX considers 1/2 in front of quadratic cost
 
@@ -389,6 +392,8 @@ def _buildMatEqConst(Controller, agents):
     Gx = linalg.block_diag(*[Gx]*(N+1))
 
     Gu = np.zeros(((n_exp) * (N+1), d * (N)))
+    Gdu_aux = np.zeros(((n_exp) * (N+1), d * (N)))
+    Gdu     = np.zeros((d * (N), n_exp * (N+1) + d * (N)))
 
     E = np.zeros(((n_exp) * (N+1), Controller.n_s))
     E[:Controller.n_s,:Controller.n_s] = np.eye(Controller.n_s)
@@ -402,11 +407,13 @@ def _buildMatEqConst(Controller, agents):
 
 
     for i in range(1, N+1): # TODO: there's redundancy in this loops
-        Gx[i * (n_exp):i * (n_exp)+Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i-1]
+        Gx[i * (n_exp):i * (n_exp) + Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i-1]
         Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i-1]
+        Gdu[i * Controller.d:i * Controller.d + 1,  n_exp * (N+1) + (i - 1) * Controller.d : n_exp * (N+1) + (i - 1) * Controller.d +1] = np.ones((2,2))
+        Gdu[i * Controller.d:i * Controller.d + 1,  n_exp * (N+1) + Controller.d * (N) + (i - 1) * Controller.d : (N+1) + Controller.d * (N) + (i - 1) * Controller.d +1] = np.ones((2,2))
 
-    G = np.hstack((Gx, Gu))
-
+    G = np.hstack((Gx, Gu, Gdu_aux))
+    G = np.vstack((G, Gdu))
     return G, E, L, Eu, Eoa
 
 def _EstimateABC(Controller,states, u):
