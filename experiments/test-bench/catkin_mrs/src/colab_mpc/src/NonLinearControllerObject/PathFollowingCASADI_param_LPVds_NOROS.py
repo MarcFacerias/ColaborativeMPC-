@@ -33,6 +33,7 @@ class PathFollowingNL_MPC:
         self.Cf = 60.0
         self.Cr = 60.0
         self.mu = 0.0
+        self.vx_ref = 6
         self.id = id
         self.plane_comp = hyperplane_separator(self.n_neighbours, N)
         self.initialised = False
@@ -119,17 +120,17 @@ class PathFollowingNL_MPC:
             mod = j * self.n_exp
             mod_u = (j-1) * 2
 
-            J += 120*self.x[0+mod]**2 + self.x[1+mod]**2 + self.x[2+mod]**2 +\
-                 1500*self.x[3+mod]**2 + 70*self.x[4+mod]**2 \
-                 + 1000*self.du[0+(mod_u)]**2 + 1000*self.du[1+mod_u]**2 - 600*self.x[0+mod] + model_slack*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)**2 + control_slack*(self.slack_agent[j,2]**2 + self.slack_agent[j,3]**2)
+            J += self.Q[0,0]*(self.x[0+mod]**2 - self.vx_ref*self.x[0+mod]) + self.Q[1,1]*self.x[1+mod]**2 + self.Q[2,2]*self.x[2+mod]**2 +\
+                 self.Q[3,3]*self.x[3+mod]**2 + self.Q[4,4]*self.x[4+mod]**2 + self.Q[5,5]*self.x[5+mod]**2 + self.Q[6,6]*self.x[6+mod]**2 + self.Q[7,7]*self.x[7+mod]**2 \
+                 + self.Q[8,8]*self.x[8+mod]**2 + self.Q[0,0]*self.du[0+(mod_u)]**2 + self.Q[1,1]*self.du[1+mod_u]**2 + model_slack*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)**2 + control_slack*(self.slack_agent[j,2]**2 + self.slack_agent[j,3]**2)
 
             for i, el in enumerate(self.agent_list):
 
                 slack_idx = (j - 1) * self.aux + i
 
-                J += 120 * self.states_param[i][0 + mod] ** 2 + self.states_param[i][1 + mod] ** 2 + self.states_param[i][2 + mod] ** 2 + \
-                     1500 * self.states_param[i][3 + mod] ** 2 + 70 * self.states_param[i][4 + mod] ** 2 \
-                     + 1000*self.u_param[i][0 + (mod_u)] ** 2 + 1000*self.u_param[i][1 + mod_u] ** 2 - 600 * self.states_param[i][0 + mod] + model_slack * (
+                J += self.Q[0,0] * (self.states_param[i][0 + mod] ** 2 - self.vx_ref*self.states_param[i][0 + mod])+ self.Q[1,1] * self.states_param[i][1 + mod] ** 2 + self.Q[2,2] * self.states_param[i][2 + mod] ** 2 + \
+                     self.Q[3,3] * self.states_param[i][3 + mod] ** 2 + self.Q[4,4] * self.states_param[i][4 + mod] ** 2 + self.Q[5,5] * self.states_param[i][5 + mod] ** 2 + self.Q[6,6] * self.states_param[i][6 + mod] ** 2 + \
+                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.Q[0,0]*self.u_param[i][0 + (mod_u)] ** 2 + self.Q[1,1]*self.u_param[i][1 + mod_u] ** 2  + model_slack * (
                      self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1]**2) + control_slack*(self.s_agent_param[i][j,2]**2 + self.s_agent_param[i][j,3] ** 2)
 
                 if self.id < el:

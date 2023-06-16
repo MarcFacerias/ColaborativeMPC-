@@ -183,7 +183,7 @@ def main():
     N = 10
     dt = 0.01
     alpha = 0.25
-    max_it = 150
+    max_it = 550
     finished = False
     finished_ph = False
     dth = 0.25
@@ -309,7 +309,7 @@ def main():
             elif itc >= it_conv:
                 finished = True
 
-            if it_OCD > 20:
+            if it_OCD > 40:
                 print("max it reached")
                 finished = True
 

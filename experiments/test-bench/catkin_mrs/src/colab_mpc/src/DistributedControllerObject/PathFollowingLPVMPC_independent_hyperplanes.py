@@ -24,7 +24,7 @@ class PathFollowingLPV_MPC:
     def __init__(self, Q, R, N, dt, map, Solver, id):
 
         self.n_s = 9
-        self.n_agents = 1
+        self.n_agents = 3 #TODO: remove this constant
         self.slack = 2
         self.n_exp = self.n_s + self.slack# slack variables
 
@@ -74,12 +74,8 @@ class PathFollowingLPV_MPC:
     def _buildQ(self):
 
         Q = np.zeros((self.n_exp,self.n_exp))
-        Q[0,0] = 120
-        Q[1,1] = 1
-        Q[2,2] = 1
-        Q[3,3] = 1500
-        Q[4,4] = 70
-        # Q[6,6] = -100
+        Q[0:self.n, 0: self.n] = self.Q
+
         # TODO Update this with the slack variable count
         Q[-2, -2] = 100000000
         Q[-1, -1] = 100000000
@@ -228,7 +224,7 @@ def GenerateColisionAvoidanceConstraints(Controller):
     Lim_list = []
     K = np.zeros((len(Controller.agent_list), Controller.n_exp))
     K_list.append(K)
-    Lim_list.append(0)
+    Lim_list.extend(np.zeros(len(Controller.agent_list)))
 
     for t in range(1,Controller.N + 1):
 
@@ -248,7 +244,7 @@ def GenerateColisionAvoidanceConstraints(Controller):
                 K[i, -1] = -1
                 Lim_list.append(Controller.planes[t-1, 2, i] - Controller.radius/2 )
 
-            K_list.append(K)
+        K_list.append(K)
 
     return K_list, Lim_list
 
@@ -293,7 +289,7 @@ def _buildMatIneqConst(Controller):
     k_list, lim_list = GenerateColisionAvoidanceConstraints(Controller)
 
     for j,_ in enumerate(rep_a):
-        rep_a[j] = np.vstack((rep_a[j],k_list[j]))
+        rep_a[j] = np.vstack((rep_a[j],np.vstack(k_list[j])))
 
     Mat = linalg.block_diag(*rep_a) # make a block diagonal where the elements of the diagonal are the matrices in the list
     '''
@@ -308,9 +304,9 @@ def _buildMatIneqConst(Controller):
     bxtot = iter(bxtot)
     res = []
 
-    for x in lim_list:
+    for idx in range(0,len(lim_list),Controller.n_agents):
         res.extend([next(bxtot) for _ in range(n - 1)])
-        res.append(x)
+        res += lim_list[idx:idx+Controller.n_agents]
     res.extend(bxtot)
 
     bxtot = np.array(res)
