@@ -3,7 +3,6 @@ from scipy import linalg, sparse
 from cvxopt.solvers import qp
 from cvxopt import spmatrix, matrix, solvers
 from utilities import Curvature, GBELLMF
-import datetime
 import numpy as np
 from numpy import hstack, inf, ones
 from scipy.sparse import vstack
@@ -76,7 +75,6 @@ class PathFollowingLPV_MPC:
         Q = np.zeros((self.n_exp,self.n_exp))
         Q[0:self.n, 0: self.n] = self.Q
 
-        # TODO Update this with the slack variable count
         Q[-self.slack:, -self.slack:] = 100000000*np.ones((self.slack,self.slack))
         return Q
 
@@ -131,21 +129,20 @@ class PathFollowingLPV_MPC:
 
         else:
             res_cons, feasible = osqp_solve_qp(sparse.csr_matrix(M), q, sparse.csr_matrix(F),
-             b, sparse.csr_matrix(G), np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) ) + np.squeeze(self.Eoa) ) # TODO fix G and np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) )
+             b, sparse.csr_matrix(G), np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) ) + np.squeeze(self.Eoa) )
 
             if feasible == 0:
                 print ('QUIT...')
 
             Solution = res_cons.x
 
-            # np.reshape((Solution[:-20]), (N, 14))
-            idx = np.arange(0,9)
+            idx = np.arange(0,self.n_s)
             for i in range(1,N+1):
-                aux = np.arange(0,9) + i*self.n_exp
+                aux = np.arange(0,self.n_s) + i*self.n_exp
                 idx = np.hstack((idx,aux))
 
             self.xPred = np.reshape((Solution[idx]), (N+1, self.n_s))
-            self.uPred = np.reshape((Solution[self.n_exp * (N+1) + np.arange(d * N)]), (N, d))
+            self.uPred = np.reshape((Solution[self.n_exp * (N+1) + np.arange(d * N)]), (N, d)) # TODO: fix this with new variable structure
 
         return feasible, Solution, self.planes
 
@@ -187,7 +184,6 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
     <https://github.com/oxfordcontrol/osqp/issues/10>`_ in your solutions.
     """
 
-    # TODO: Add the fixed values as equality constraints + add the initial states
     osqp = OSQP()
     if G is not None:
         l = -inf * ones(len(h))
@@ -213,7 +209,6 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
         print("OSQP exited with status '%s'" % res.info.status)
     feasible = 0
     if res.info.status_val == 1 or res.info.status_val == 2 or  res.info.status_val == -2:
-        # print("OSQP exited with status '%s'" % res.info.status)
         feasible = 1
     return res, feasible
 
