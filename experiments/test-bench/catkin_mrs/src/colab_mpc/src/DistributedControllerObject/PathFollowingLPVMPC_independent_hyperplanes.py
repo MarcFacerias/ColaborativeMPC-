@@ -25,8 +25,8 @@ class PathFollowingLPV_MPC:
 
         self.n_s = 9
         self.n_agents = 3 #TODO: remove this constant
-        self.slack = 2
-        self.n_exp = self.n_s + self.slack# slack variables
+        self.slack = 3 #TODO: add du slack variable
+        self.n_exp = self.n_s + self.slack
 
         # Vehicle parameters:
         self.lf = 0.12
@@ -77,8 +77,7 @@ class PathFollowingLPV_MPC:
         Q[0:self.n, 0: self.n] = self.Q
 
         # TODO Update this with the slack variable count
-        Q[-2, -2] = 100000000
-        Q[-1, -1] = 100000000
+        Q[-self.slack:, -self.slack:] = 100000000*np.ones((self.slack,self.slack))
         return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
@@ -260,6 +259,8 @@ def _buildMatIneqConst(Controller):
 
     Fx[0,0] = -1
     Fx[1,0] = 1
+    Fx[0,-3] = -1
+    Fx[1,-3] = 1
 
     # limit lateral error with slack variables
     Fx[2,3] = 1
