@@ -36,7 +36,7 @@ class agent():
         self.map = Map
         self.N = N
         self.dt = dt
-        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
+        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0,0,0,0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
         self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
         self.Controller = PathFollowingNL_MPC(self.Q, self.R, N, dt, Map, id, dth)
         self.x0 = x0
