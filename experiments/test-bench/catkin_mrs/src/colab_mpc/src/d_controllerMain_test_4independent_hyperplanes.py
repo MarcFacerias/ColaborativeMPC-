@@ -28,7 +28,7 @@ def compute_hyper(x_ego,x_neg):
 class agent():
 
     #TODO: define Q and R
-    def __init__(self, N, Map, dt, x0, id, Q=np.diag([120.0, 1.0, 1.0, 70.0, 1500.0, 0,0,0,0]), R=0.01* np.diag([1, 1])):
+    def __init__(self, N, Map, dt, x0, id, Q=np.diag([120.0, 1.0, 1.0, 70.0, 1500.0, 0,0,0,0]), R=0.1* np.diag([0.1, 1])):
         self.map = Map
         self.N = N
         self.dt = dt
@@ -196,7 +196,7 @@ def main():
 
     dist_hist = []
 
-    while(it<580):
+    while(it<550):
 
         tic = time.time()
 
@@ -207,7 +207,8 @@ def main():
         f3, uPred3, xPred3, planes3, raw3 = r3.one_step(agents[:,n_3,:], n_3, agents[:,3,:], u_old3, x_old3)
         if not (f0 and 1):
             break
-
+        print(uPred0[0,:])
+        print(xPred0[0,:])
         agents[:, 0, :] = xPred0[:, -2:]
         agents[:, 1, :] = xPred1[:, -2:]
         agents[:, 2, :] = xPred2[:, -2:]

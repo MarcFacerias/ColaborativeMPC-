@@ -38,6 +38,7 @@ class PathFollowingNL_MPC:
         self.plane_comp = hyperplane_separator(self.n_neighbours, N)
         self.initialised = False
 
+
         self.g  = 9.81
 
         self.max_vel = 10
@@ -47,6 +48,10 @@ class PathFollowingNL_MPC:
         self.du = self.opti.variable(2 * (N))
         self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
         self.states_fixed = np.zeros(((N), self.n_neighbours, 3))
+        self.ey_ub = self.opti.parameter()
+        self.ey_lb = self.opti.parameter()
+        self.opti.set_value(self.ey_ub, 0.45)
+        self.opti.set_value(self.ey_lb, -0.45)
 
         self.A    = []
         self.B    = []
@@ -151,7 +156,7 @@ class PathFollowingNL_MPC:
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
             self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.slack_agent[j,1], 0.60))
 
-            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u] + self.slack_agent[j,2], 0.45))
+            self.opti.subject_to(self.opti.bounded(self.ey_lb,self.u[0+mod_u] + self.slack_agent[j,2], self.ey_ub))
             self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
 
             if j < self.N:

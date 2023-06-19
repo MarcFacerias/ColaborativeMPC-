@@ -60,8 +60,6 @@ class PathFollowingLPV_MPC:
 
         self.OldAccelera = [0.0]*int(1)
 
-        self.OldPredicted = [0.0]
-
         self.Solver = Solver
 
         self.G = []
@@ -75,7 +73,7 @@ class PathFollowingLPV_MPC:
         Q = np.zeros((self.n_exp,self.n_exp))
         Q[0:self.n, 0: self.n] = self.Q
 
-        Q[-self.slack:, -self.slack:] = 100000000*np.ones((self.slack,self.slack))
+        Q[-self.slack:, -self.slack:] = 100000*np.ones((self.slack,self.slack))
         return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
@@ -129,7 +127,9 @@ class PathFollowingLPV_MPC:
 
         else:
             res_cons, feasible = osqp_solve_qp(sparse.csr_matrix(M), q, sparse.csr_matrix(F),
-             b, sparse.csr_matrix(G), np.add( np.dot(E,x0) ,L[:,0],np.dot(Eu,uOld) ) + np.squeeze(self.Eoa) )
+             b, sparse.csr_matrix(G), np.add(np.dot(E,x0), np.dot(Eu,uOld)))
+
+            # osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None)
 
             if feasible == 0:
                 print ('QUIT...')
@@ -143,7 +143,9 @@ class PathFollowingLPV_MPC:
 
             self.xPred = np.reshape((Solution[idx]), (N+1, self.n_s))
             self.uPred = np.reshape((Solution[self.n_exp * (N+1) + np.arange(d * N)]), (N, d)) # TODO: fix this with new variable structure
-
+            self.OldSteering = [self.uPred[1,0]]
+            self.OldAccelera = [self.uPred[1,1]]
+            # self.uPred - np.reshape((Solution[self.n_exp * (N + 1) + d * N + np.arange(d * N)]), (N, d))
         return feasible, Solution, self.planes
 
 
@@ -389,15 +391,16 @@ def _buildMatEqConst(Controller, agents):
 
     Gu = np.zeros(((n_exp) * (N+1), d * (N)))
     Gdu_aux = np.zeros(((n_exp) * (N+1), d * (N)))
-    Gdu     = np.zeros((d * (N), n_exp * (N+1) + d * (N)))
+    Gdu     = np.zeros((d * (N), n_exp * (N+1) + 2*d * (N)))
 
-    E = np.zeros(((n_exp) * (N+1), Controller.n_s))
+    E = np.zeros(((n_exp ) * (N+1) + N*Controller.d , Controller.n_s))
     E[:Controller.n_s,:Controller.n_s] = np.eye(Controller.n_s)
 
-    Eu = np.zeros(((n_exp) * (N+1), d))
+    Eu = np.zeros(((n_exp) * (N+1) + N*Controller.d , d))
+    Eu[(n_exp) * (N+1) : (n_exp) * (N+1) + Controller.d, :] = np.eye(2)
 
-    Eoa = np.zeros(((n_exp) * (N+1), 1))
-    L = np.zeros(((n_exp) * (N+1), 1)) # I guess L represents previous inputs? whatever rn is 0s
+    Eoa = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1))
+    L = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1)) # I guess L represents previous inputs? whatever rn is 0s
 
     # TODO ADD agent initial state
 
@@ -405,8 +408,13 @@ def _buildMatEqConst(Controller, agents):
     for i in range(1, N+1): # TODO: there's redundancy in this loops
         Gx[i * (n_exp):i * (n_exp) + Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i-1]
         Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i-1]
-        Gdu[i * Controller.d:i * Controller.d + 1,  n_exp * (N+1) + (i - 1) * Controller.d : n_exp * (N+1) + (i - 1) * Controller.d +1] = np.ones((2,2))
-        Gdu[i * Controller.d:i * Controller.d + 1,  n_exp * (N+1) + Controller.d * (N) + (i - 1) * Controller.d : (N+1) + Controller.d * (N) + (i - 1) * Controller.d +1] = np.ones((2,2))
+
+    Gdu[0: Controller.d, n_exp * (N + 1) : n_exp * (N + 1) + Controller.d] = np.eye(2)
+
+    for i in range(1, N ):
+        Gdu[ i * Controller.d: i * Controller.d + Controller.d,  n_exp * (N+1) + (i - 1) * Controller.d : n_exp * (N+1) + (i - 1) * Controller.d + Controller.d] = np.eye(2)
+        Gdu[ i * Controller.d: i * Controller.d + Controller.d,  n_exp * (N+1) + i * Controller.d : n_exp * (N+1) + i * Controller.d + Controller.d] = -np.eye(2)
+        Gdu[ i * Controller.d: i * Controller.d + Controller.d,  n_exp * (N+1) + Controller.d * (N) + (i - 1) * Controller.d :  n_exp * (N+1) + Controller.d * (N) + (i - 1) * Controller.d + Controller.d] = np.eye(2)
 
     G = np.hstack((Gx, Gu, Gdu_aux))
     G = np.vstack((G, Gdu))
