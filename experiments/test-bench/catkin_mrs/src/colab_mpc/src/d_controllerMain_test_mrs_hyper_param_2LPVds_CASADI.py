@@ -18,8 +18,8 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 # TODO: implement this suggestion https://groups.google.com/g/casadi-users/c/1B2kTOF--SI
 # TODO: Add quality of life changes to the planes
-plot = False
-plot_end = True
+plot = True
+plot_end = False
 it_conv = 1
 n_agents =  2
 

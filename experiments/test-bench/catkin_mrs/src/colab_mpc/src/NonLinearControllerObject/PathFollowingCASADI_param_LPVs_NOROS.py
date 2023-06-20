@@ -38,8 +38,8 @@ class PathFollowingNL_MPC:
         self.u  = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.du = self.opti.variable(2 * (N))
         self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
-        self.ey_ub = self.opti.parameter(N+1)
-        self.ey_lb = self.opti.parameter(N+1)
+        self.ey_ub = self.opti.parameter(N)
+        self.ey_lb = self.opti.parameter(N)
 
 
         self.A    = []
@@ -149,9 +149,9 @@ class PathFollowingNL_MPC:
             mod_u = (j-1) * 2
 
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
-            self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.slack_agent[j,1], 0.60))
+            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1], self.x[4+mod] + self.slack_agent[j,1], self.ey_ub[j-1]))
 
-            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1],self.u[0+mod_u] + self.slack_agent[j,2], self.ey_ub[j-1]))
+            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u] + self.slack_agent[j,2], 0.45))
             self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
 
             if j < self.N:
@@ -245,9 +245,14 @@ class PathFollowingNL_MPC:
     def update_parameters(self,states,u):
 
         # set_planes fixed
-        ey = get_ey(states[:, 6], self.map) # asume one limit for the whole horizon TODO: Fix this
-        self.opti.set_value(self.ey_ub, ey)
-        self.opti.set_value(self.ey_lb, ey)
+        ey = get_ey(states[:, 6], self.map) # asume one limit for the whole horizon
+
+        try:
+            self.opti.set_value(self.ey_ub, ey)
+            self.opti.set_value(self.ey_lb, -ey)
+        except:
+            self.opti.set_value(self.ey_ub, ey[1:])
+            self.opti.set_value(self.ey_lb, -ey[1:])
 
         for j in range (0,self.N):
 

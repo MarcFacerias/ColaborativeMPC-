@@ -23,7 +23,6 @@ class PathFollowingLPV_MPC:
     def __init__(self, Q, R, N, dt, map, Solver, id):
 
         self.n_s = 9
-        self.n_agents = 1 #TODO: remove this constant
         self.slack = 3 #TODO: add du slack variable
         self.n_exp = self.n_s + self.slack
 
@@ -35,7 +34,7 @@ class PathFollowingLPV_MPC:
         self.Cf = 60.0
         self.Cr = 60.0
         self.mu = 0.1
-        self.plane_comp = hyperplane_separator(self.n_agents, N)
+
         self.id = id
         self.radius = 0.3
 
@@ -54,7 +53,7 @@ class PathFollowingLPV_MPC:
         self.dt = dt                # Sample time 33 ms
         self.map = map              # Used for getting the road curvature
 
-        self.first_it = 1
+        self.first_it = True
 
         self.OldSteering = [0.0]
 
@@ -87,8 +86,13 @@ class PathFollowingLPV_MPC:
 
         self.agent_list = agents_id
 
+        if self.first_it:
+            self.first_it = False
+            self.n_agents = agents_id.shape[0]  # TODO: remove this constant
+            self.plane_comp = hyperplane_separator(self.n_agents, self.N)
+
         if x_agents is None:
-            self.planes = np.zeros((self.N+1,self.n_agents,3)) # TODO fix lambdas into n neighbours x H time
+            self.planes = np.zeros((self.N+1,self.n_agents,3))
             x_agents = np.zeros((self.N+1,self.n_agents,2))
         else:
             self.planes = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)

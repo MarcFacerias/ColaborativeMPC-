@@ -21,7 +21,7 @@ class Map():
         para conservar algo de robustez y no salirnos de la pista en el primer segundo. """
         # HW            = rospy.get_param("/TrajectoryPlanner/halfWidth")+0.1
         HW            = 0.5
-        selectedTrack = "oval"
+        selectedTrack = "Oval2"
         self.lane = 0
 
         # if flagTrackShape == 0:
@@ -55,7 +55,9 @@ class Map():
                              [4.0, 0],
                              [5.85, 5.85 / np.pi],
                              [2.0, 0]])
-            self.halfWidth = np.array([0.75,0.75,0.35,0.75,0.75,0.75])
+            self.halfWidth = np.array([0.75,0.75,0.55,0.55,0.75,0.75])
+            # self.halfWidth = np.array([0.75,0.75,0.75,0.75,0.75,0.75])
+
 
         elif selectedTrack == "Oval2":
             self.slack      = 0.15

@@ -147,9 +147,9 @@ class PathFollowingNL_MPC:
             mod_u = (j-1) * 2
 
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
-            self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.slack_agent[j,1], 0.60))
+            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1], self.x[4+mod] + self.slack_agent[j,1], self.ey_ub[j-1]))
 
-            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1],self.u[0+mod_u] + self.slack_agent[j,2], self.ey_ub[j-1]))
+            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u] + self.slack_agent[j,2], 0.45))
             self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
 
             if j < self.N:

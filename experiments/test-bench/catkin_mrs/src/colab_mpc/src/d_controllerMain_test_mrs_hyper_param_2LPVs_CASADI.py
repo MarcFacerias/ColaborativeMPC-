@@ -21,7 +21,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 plot = False
 plot_end = True
 it_conv = 1
-n_agents =  2
+n_agents = 2
 
 def compute_hyper(x_ego,x_neg):
 
