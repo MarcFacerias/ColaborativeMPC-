@@ -212,9 +212,11 @@ def main():
         u_old0 = uPred0
         u_old1 = uPred1
 
+        print(xPred0[0,:])
+        print(xPred1[0,:])
 
         if dist_hist[-1] < 0.2:
-            print("placeholder")
+            print("error minimum distance")
 
         it += 1
         if plot :

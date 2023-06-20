@@ -23,7 +23,7 @@ class PathFollowingLPV_MPC:
     def __init__(self, Q, R, N, dt, map, Solver, id):
 
         self.n_s = 9
-        self.n_agents = 3 #TODO: remove this constant
+        self.n_agents = 1 #TODO: remove this constant
         self.slack = 3 #TODO: add du slack variable
         self.n_exp = self.n_s + self.slack
 
@@ -73,7 +73,7 @@ class PathFollowingLPV_MPC:
         Q = np.zeros((self.n_exp,self.n_exp))
         Q[0:self.n, 0: self.n] = self.Q
 
-        Q[-self.slack:, -self.slack:] = 100000*np.ones((self.slack,self.slack))
+        Q[-self.slack:, -self.slack:] = 10000000*np.ones((self.slack,self.slack))
         return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
@@ -401,9 +401,6 @@ def _buildMatEqConst(Controller, agents):
 
     Eoa = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1))
     L = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1)) # I guess L represents previous inputs? whatever rn is 0s
-
-    # TODO ADD agent initial state
-
 
     for i in range(1, N+1): # TODO: there's redundancy in this loops
         Gx[i * (n_exp):i * (n_exp) + Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i-1]
