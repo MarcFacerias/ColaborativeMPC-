@@ -21,7 +21,7 @@ class Map():
         para conservar algo de robustez y no salirnos de la pista en el primer segundo. """
         # HW            = rospy.get_param("/TrajectoryPlanner/halfWidth")+0.1
         HW            = 0.5
-        selectedTrack = "Oval2"
+        selectedTrack = "oval"
         self.lane = 0
 
         # if flagTrackShape == 0:
@@ -31,7 +31,7 @@ class Map():
         #     selectedTrack = "Oval2"
 
         if selectedTrack == "3110":
-            self.halfWidth = 0.6
+
             self.slack     = 0.15
             spec = np.array([[60 * 0.03, 0],
                              [80 * 0.03, +80 * 0.03 * 2 / np.pi],
@@ -45,19 +45,21 @@ class Map():
                              [80 * 0.03, +80 * 0.03 * 2 / np.pi],
                              [80 * 0.03, 0]])
 
+            self.halfWidth = 0.6 * np.ones(spec.shape[0])
+
         elif selectedTrack == "oval":
-            self.halfWidth  = HW
             self.slack      = 0.15
-            spec = np.array([[1.0, 0],
-                             [4.5, 4.5 / np.pi],
-                             [2.0, 0],
-                             [4.5, 4.5 / np.pi],
-                             [1.0, 0]])
+            spec = np.empty((5,2,1))
+            spec[:,:,0] = np.array([[2.0, 0],
+                             [5.85, 5.85 / np.pi],
+                             [4.0, 0],
+                             [5.85, 5.85 / np.pi],
+                             [2.0, 0]])
+            self.halfWidth = np.array([0.75,0.75,0.35,0.75,0.75,0.75])
 
         elif selectedTrack == "Oval2":
-            self.halfWidth  = HW
             self.slack      = 0.15
-            scale = 2; 
+            scale = 2
             spec = np.empty((5,2,2))
             spec[:,:,0] = scale * np.array([[1.0, 0],
                              [4.5, 4.5 / np.pi],
@@ -70,9 +72,10 @@ class Map():
                              [4.0, 0],
                              [5.85, 5.85 / np.pi],
                              [2.0, 0]])
+            self.halfWidth = HW * np.ones(spec.shape[0]+1)
+
 
         elif selectedTrack == "L_shape":
-            self.halfWidth  = HW
             self.slack      = 0.45
             lengthCurve     = 4.5
             spec = np.array([[1.0, 0],
@@ -82,9 +85,9 @@ class Map():
                              [lengthCurve, lengthCurve / np.pi],
                              [lengthCurve / np.pi *2, 0],
                              [lengthCurve/2, lengthCurve / np.pi]])
+            self.halfWidth = HW * np.ones(spec.shape[0]+1)
 
         elif selectedTrack == "L_shape_IDIADA":
-            self.halfWidth  = HW
             self.slack      = 6*0.45
             lengthCurve     = 10*4.5
             spec = np.array([[1.0, 0],
@@ -94,10 +97,10 @@ class Map():
                              [lengthCurve, lengthCurve / np.pi],
                              [lengthCurve / np.pi *2, 0],
                              [lengthCurve/2, lengthCurve / np.pi]])
+            self.halfWidth = HW * np.ones(spec.shape[0]+1)
 
 
         elif selectedTrack == "SLAM_shape1":
-            self.halfWidth = 0.4
             self.slack     = 0.15
             lengthCurve    = 1.5*(np.pi/2)
             spec = np.array([[2.5,0],
@@ -110,10 +113,9 @@ class Map():
                              [4.0,0],
                              [lengthCurve,(lengthCurve*2)/np.pi],
                              [2.6,0]])
-
+            self.halfWidth = 0.4 * np.ones(spec.shape[0]+1)
 
         elif selectedTrack == "8_track":
-            self.halfWidth = 0.4
             self.slack     = 0.15
             lengthCurve    = 1.5*(np.pi/2)
             spec = np.array([[0.5,0],
@@ -128,6 +130,7 @@ class Map():
                              [lengthCurve,(lengthCurve*2)/np.pi],
                              [1.0,0],
                              [lengthCurve,lengthCurve*2/np.pi]])
+            self.halfWidth = 0.4 * np.ones(spec.shape[0]+1)
 
 
 
@@ -137,7 +140,7 @@ class Map():
         # PointAndTangent = [x, y, psi, cumulative s, segment length, signed curvature]
         roads = spec.shape[2]
         PointAndTangent = np.zeros((spec.shape[0] + 1, 6,roads))
-        y_ini = [2 * self.halfWidth, 2 * 2 * self.halfWidth]
+        y_ini = [2 * self.halfWidth[0], 2 * 2 * self.halfWidth[0]]
         self.TrackLength = np.zeros(roads)
         for k in range(0, roads):
             for i in range(0, spec.shape[0]):
@@ -243,6 +246,12 @@ class Map():
         if lane is None:
             lane = self.lane
 
+        try:
+            ey.shape[0] == self.PointAndTangent[:,:,lane].shape[0]
+
+        except:
+            ey = ey*np.ones(self.PointAndTangent[:,:,lane].shape[0])
+
         # wrap s along the track
         while (s >= self.TrackLength[lane]):
             s = s - self.TrackLength[lane]
@@ -268,8 +277,8 @@ class Map():
             reltaL = s - PointAndTangent[i, 3]
 
             # Do the linear combination
-            x = (1 - reltaL / deltaL) * xs + reltaL / deltaL * xf + ey * np.cos(psi + np.pi / 2)
-            y = (1 - reltaL / deltaL) * ys + reltaL / deltaL * yf + ey * np.sin(psi + np.pi / 2)
+            x = (1 - reltaL / deltaL) * xs + reltaL / deltaL * xf + ey[i] * np.cos(psi + np.pi / 2)
+            y = (1 - reltaL / deltaL) * ys + reltaL / deltaL * yf + ey[i] * np.sin(psi + np.pi / 2)
             theta = psi
         else:
             r = 1 / PointAndTangent[i, 5]  # Extract curvature
@@ -290,9 +299,9 @@ class Map():
             angleNormal = wrap((direction * np.pi / 2 + ang))
             angle = -(np.pi - np.abs(angleNormal)) * (sign(angleNormal))
 
-            x = CenterX + (np.abs(r) - direction * ey) * np.cos(
+            x = CenterX + (np.abs(r) - direction * ey[i]) * np.cos(
                 angle + direction * spanAng)  # x coordinate of the last point of the segment
-            y = CenterY + (np.abs(r) - direction * ey) * np.sin(
+            y = CenterY + (np.abs(r) - direction * ey[i]) * np.sin(
                 angle + direction * spanAng)  # y coordinate of the last point of the segment
             theta = ang + direction * spanAng
 
@@ -380,7 +389,7 @@ class Map():
                         s       = s_local + PointAndTangent[i, 3]
                         ey      = la.norm(v1) * np.sin(angle)
 
-                        if np.abs(ey)<= self.halfWidth + self.slack:
+                        if np.abs(ey)<= self.halfWidth[i] + self.slack:
                             CompletedFlag = 1
 
             else:
@@ -425,7 +434,7 @@ class Map():
                         psi_unwrap = np.unwrap([ang + arc2, psi])[1]
                         epsi = psi_unwrap - (ang + arc2)
 
-                        if np.abs(ey) <= 3*self.halfWidth + self.slack: # OUT OF TRACK!!
+                        if np.abs(ey) <= 3*self.halfWidth[i] + self.slack: # OUT OF TRACK!!
                             CompletedFlag = 1
 
         # if epsi>1.0:

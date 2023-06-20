@@ -54,6 +54,28 @@ def Curvature(s, map):
     return curvature
     # return 0
 
+def get_ey(s_local, map):
+    """curvature and desired velocity computation
+    s: curvilinear abscissa at which the curvature has to be evaluated
+    PointAndTangent: points and tangent vectors defining the map (these quantities are initialized in the map object)
+    """
+    HW = np.zeros(s_local.shape[0])
+    for idx,s in enumerate(s_local):
+        PointAndTangent = map.PointAndTangent[:,:,map.lane]
+        TrackLength = PointAndTangent[-1,3]+PointAndTangent[-1,4]
+
+        # In case on a lap after the first one
+        while (s > TrackLength):
+            s = s - TrackLength
+
+        if s < 0: s = 0
+
+        index = np.all([[s >= PointAndTangent[:, 3]], [s < PointAndTangent[:, 3] + PointAndTangent[:, 4]]], axis=0)
+
+        i = int(np.where(np.squeeze(index))[0]) #EA: this works
+
+        HW[idx] = map.halfWidth[i]
+    return HW
 
 
 def GBELLMF(x, a, b, c):

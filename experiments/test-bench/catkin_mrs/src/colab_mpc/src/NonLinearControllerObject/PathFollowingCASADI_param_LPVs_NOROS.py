@@ -2,7 +2,7 @@
 import time
 from casadi import *
 import numpy as np
-from utilities import Curvature, GBELLMF
+from utilities import Curvature, get_ey
 from compute_plane import hyperplane_separator
 
 # TODO Arreglar els idx per a fer que es pugui fer la decomposicio amb mes vehicles
@@ -38,10 +38,9 @@ class PathFollowingNL_MPC:
         self.u  = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.du = self.opti.variable(2 * (N))
         self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
-        self.ey_ub = self.opti.parameter()
-        self.ey_lb = self.opti.parameter()
-        self.opti.set_value(self.ey_ub, 0.45)
-        self.opti.set_value(self.ey_lb, -0.45)
+        self.ey_ub = self.opti.parameter(N+1)
+        self.ey_lb = self.opti.parameter(N+1)
+
 
         self.A    = []
         self.B    = []
@@ -152,7 +151,7 @@ class PathFollowingNL_MPC:
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
             self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.slack_agent[j,1], 0.60))
 
-            self.opti.subject_to(self.opti.bounded(self.ey_lb,self.u[0+mod_u] + self.slack_agent[j,2], self.ey_ub))
+            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1],self.u[0+mod_u] + self.slack_agent[j,2], self.ey_ub[j-1]))
             self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
 
             if j < self.N:
@@ -246,6 +245,9 @@ class PathFollowingNL_MPC:
     def update_parameters(self,states,u):
 
         # set_planes fixed
+        ey = get_ey(states[:, 6], self.map) # asume one limit for the whole horizon TODO: Fix this
+        self.opti.set_value(self.ey_ub, ey)
+        self.opti.set_value(self.ey_lb, ey)
 
         for j in range (0,self.N):
 
@@ -257,6 +259,8 @@ class PathFollowingNL_MPC:
             s = states[j, 6]
 
             cur = Curvature(s, self.map)
+
+
             delta = u[j, 0]  # EA: steering angle at K-1
 
             self.opti.set_value(self.A12[j], (np.sin(delta) * self.Cf) / (self.m * vx))

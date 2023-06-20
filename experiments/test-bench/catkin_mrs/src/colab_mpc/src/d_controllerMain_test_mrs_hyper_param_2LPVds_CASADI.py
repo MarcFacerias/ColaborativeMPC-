@@ -184,7 +184,7 @@ def main():
     N = 10
     dt = 0.01
     alpha = 0.25
-    max_it = 150
+    max_it = 550
     finished = False
     finished_ph = False
     dth = 0.25
@@ -203,7 +203,7 @@ def main():
     states_hist = [agents]
 
     if plot:
-        disp = plotter(maps[0],4)
+        disp = plotter(maps[0],n_agents)
 
     if plot_end:
         d = plotter_offline(maps[0])
