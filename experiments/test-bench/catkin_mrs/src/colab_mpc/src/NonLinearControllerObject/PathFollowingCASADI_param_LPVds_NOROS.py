@@ -22,7 +22,7 @@ class PathFollowingNL_MPC:
 
         # Vehicle parameters:
         self.n_s = 9
-        self.n_neighbours = 3 #TODO: automate this line
+
         self.n_slack = 0
         self.n_exp = self.n_s + self.n_slack# slack variables
         self.dth = dth
@@ -35,7 +35,6 @@ class PathFollowingNL_MPC:
         self.mu = 0.0
         self.vx_ref = 6
         self.id = id
-        self.plane_comp = hyperplane_separator(self.n_neighbours, N)
         self.initialised = False
 
 
@@ -47,7 +46,7 @@ class PathFollowingNL_MPC:
         self.u  = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.du = self.opti.variable(2 * (N))
         self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
-        self.states_fixed = np.zeros(((N), self.n_neighbours, 3))
+
         self.ey_ub = self.opti.parameter()
         self.ey_lb = self.opti.parameter()
         self.opti.set_value(self.ey_ub, 0.45)
@@ -74,7 +73,6 @@ class PathFollowingNL_MPC:
 
         # parameters
         self.initial_states = self.opti.parameter(self.n_exp - self.n_slack)
-        self.lambdas = self.opti.parameter(self.n_neighbours, self.N)
 
         self.planes_param = []
         self.pose_param = []
@@ -127,7 +125,7 @@ class PathFollowingNL_MPC:
 
             J += self.Q[0,0]*(self.x[0+mod]**2 - self.vx_ref*self.x[0+mod]) + self.Q[1,1]*self.x[1+mod]**2 + self.Q[2,2]*self.x[2+mod]**2 +\
                  self.Q[3,3]*self.x[3+mod]**2 + self.Q[4,4]*self.x[4+mod]**2 + self.Q[5,5]*self.x[5+mod]**2 + self.Q[6,6]*self.x[6+mod]**2 + self.Q[7,7]*self.x[7+mod]**2 \
-                 + self.Q[8,8]*self.x[8+mod]**2 + self.Q[0,0]*self.du[0+(mod_u)]**2 + self.Q[1,1]*self.du[1+mod_u]**2 + model_slack*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)**2 + control_slack*(self.slack_agent[j,2]**2 + self.slack_agent[j,3]**2)
+                 + self.Q[8,8]*self.x[8+mod]**2 + self.R[0,0]*self.du[0+(mod_u)]**2 + self.R[1,1]*self.du[1+mod_u]**2 + model_slack*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)**2 + control_slack*(self.slack_agent[j,2]**2 + self.slack_agent[j,3]**2)
 
             for i, el in enumerate(self.agent_list):
 
@@ -135,7 +133,7 @@ class PathFollowingNL_MPC:
 
                 J += self.Q[0,0] * (self.states_param[i][0 + mod] ** 2 - self.vx_ref*self.states_param[i][0 + mod])+ self.Q[1,1] * self.states_param[i][1 + mod] ** 2 + self.Q[2,2] * self.states_param[i][2 + mod] ** 2 + \
                      self.Q[3,3] * self.states_param[i][3 + mod] ** 2 + self.Q[4,4] * self.states_param[i][4 + mod] ** 2 + self.Q[5,5] * self.states_param[i][5 + mod] ** 2 + self.Q[6,6] * self.states_param[i][6 + mod] ** 2 + \
-                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.Q[0,0]*self.u_param[i][0 + (mod_u)] ** 2 + self.Q[1,1]*self.u_param[i][1 + mod_u] ** 2  + model_slack * (
+                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.R[0,0]*self.u_param[i][0 + (mod_u)] ** 2 + self.R[1,1]*self.u_param[i][1 + mod_u] ** 2  + model_slack * (
                      self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1]**2) + control_slack*(self.s_agent_param[i][j,2]**2 + self.s_agent_param[i][j,3] ** 2)
 
                 if self.id < el:
@@ -305,11 +303,15 @@ class PathFollowingNL_MPC:
         """
         startTimer              = time.time()
 
-        self.agent_list = np.asarray(agents_id)
-        self.aux = (self.agent_list < self.id).sum()
-
-        # TODO: make an array of parameters mimiquing the 3 index
         if not self.initialised:
+
+            self.agent_list = np.asarray(agents_id)
+            self.aux = (self.agent_list < self.id).sum()
+
+            self.n_neighbours = self.agent_list.size # TODO: automate this line
+            self.plane_comp = hyperplane_separator(self.n_neighbours, self.N)
+            self.states_fixed = np.zeros(((self.N), self.n_neighbours, 3))
+            self.lambdas = self.opti.parameter(self.n_neighbours, self.N)
 
             for i in range(0, len(self.agent_list)):
 
@@ -328,7 +330,6 @@ class PathFollowingNL_MPC:
                 placeholder_sp = self.opti.parameter((self.N), (self.n_neighbours+1))
                 self.param_slack_dis.append(placeholder_sp)
 
-            # TODO: for more than 2 robots we'll need to fix this if s
             if self.aux != 0:
                 self.slack_dis = self.opti.variable((self.N) * self.aux)  # x11, ... , x1N, s11, ... xTN
 

@@ -18,7 +18,6 @@ class PathFollowingNL_MPC:
 
         # Vehicle parameters:
         self.n_s = 9
-        self.n_neighbours = 3
         self.n_exp = self.n_s # slack variables
         self.dth = dth
         self.lf = 0.12
@@ -29,7 +28,6 @@ class PathFollowingNL_MPC:
         self.Cr = 60.0
         self.mu = 0.0
         self.id = id
-        self.plane_comp = hyperplane_separator(self.n_neighbours, N)
         self.initialised = False
 
         self.g  = 9.81
@@ -40,7 +38,10 @@ class PathFollowingNL_MPC:
         self.u  = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.du = self.opti.variable(2 * (N))
         self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
-        self.states_fixed = np.zeros(((N), self.n_neighbours, 3))
+        self.ey_ub = self.opti.parameter()
+        self.ey_lb = self.opti.parameter()
+        self.opti.set_value(self.ey_ub, 0.45)
+        self.opti.set_value(self.ey_lb, -0.45)
 
         self.A    = []
         self.B    = []
@@ -63,7 +64,6 @@ class PathFollowingNL_MPC:
 
         # parameters
         self.initial_states = self.opti.parameter(self.n_exp )
-        self.lambdas = self.opti.parameter(self.n_neighbours, self.N)
 
         self.planes_param = []
         self.pose_param = []
@@ -152,7 +152,7 @@ class PathFollowingNL_MPC:
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
             self.opti.subject_to(self.opti.bounded(-0.60, self.x[4+mod] + self.slack_agent[j,1], 0.60))
 
-            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u] + self.slack_agent[j,2], 0.45))
+            self.opti.subject_to(self.opti.bounded(self.ey_lb,self.u[0+mod_u] + self.slack_agent[j,2], self.ey_ub))
             self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
 
             if j < self.N:
@@ -169,7 +169,6 @@ class PathFollowingNL_MPC:
 
                 if self.id < el:
 
-                    #TODO: Repasar aquesta constraint
                     self.opti.subject_to( self.planes[planes_idx+0]*self.x[7+mod] + self.planes[planes_idx+1]*self.x[8+mod] + self.planes[planes_idx+2] + self.slack_planes_master[j-1,it_m] < -self.dth/2 )
                     self.opti.subject_to((self.planes[planes_idx + 0]**2 + self.planes[planes_idx + 1]**2) == 1.0)
                     it_m += 1
@@ -316,11 +315,16 @@ class PathFollowingNL_MPC:
         """
         startTimer              = time.time()
 
-        self.agent_list = np.asarray(agents_id)
-        self.aux = (self.id < self.agent_list).sum()
-
         # TODO: make an array of parameters mimiquing the 3 index
         if not self.initialised:
+
+            self.agent_list = np.asarray(agents_id)
+            self.aux = (self.agent_list > self.id).sum()
+
+            self.n_neighbours = self.agent_list.size
+            self.plane_comp = hyperplane_separator(self.n_neighbours, self.N)
+            self.states_fixed = np.zeros(((self.N), self.n_neighbours, 3))
+            self.lambdas = self.opti.parameter(self.n_neighbours, self.N)
 
             for i in range(0, len(self.agent_list)):
                 placeholder_planes = self.opti.parameter(self.N, 3)
@@ -344,9 +348,7 @@ class PathFollowingNL_MPC:
                 placeholder_sps = self.opti.parameter((self.N), (self.n_neighbours+1))
                 self.slack_params_slave.append(placeholder_sps)
 
-            # TODO: for more than 2 robots we'll need to fix this if s
-
-            if self.aux!= 0:
+            if self.aux != 0:
                 self.planes = self.opti.variable(
                         3 * (self.N) * self.aux)  # theta111, theta121 ... , theta11N, theta12N
 

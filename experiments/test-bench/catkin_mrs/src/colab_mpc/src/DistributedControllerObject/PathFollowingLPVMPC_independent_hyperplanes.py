@@ -343,9 +343,9 @@ def _buildMatCost(Controller):
 
     Mx = linalg.block_diag(*d)
 
+    cu = [np.zeros((2,2))] * (N)
     c = [R] * (N)
-
-    Mu = linalg.block_diag(*c)
+    Mu = linalg.block_diag(*cu)
     Mdu = linalg.block_diag(*c)
 
     # This is without slack lane:
