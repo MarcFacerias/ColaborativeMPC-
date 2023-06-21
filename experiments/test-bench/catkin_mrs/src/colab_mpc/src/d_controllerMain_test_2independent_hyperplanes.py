@@ -184,7 +184,7 @@ def main():
 
     dist_hist = []
 
-    while(it<15000):
+    while(it<550):
 
         tic = time.time()
 
@@ -225,13 +225,12 @@ def main():
 
 
     if plot_end:
-        d.plot_offline_experiment(r0)
+        d.plot_offline_experiment(r0, "or", "-y")
         d.plot_offline_experiment(r1, "ob", "-y")
         plot_performance(r0)
         r0.save_to_csv()
         r0.save_to_csv()
         r1.save_to_csv()
-        r0.save_var_to_csv(time_OCD, "time_OCD")
         input("Press enter to continue...")
 
 def plot_performance( agent):

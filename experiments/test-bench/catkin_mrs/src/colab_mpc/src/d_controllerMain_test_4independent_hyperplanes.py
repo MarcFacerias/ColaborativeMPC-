@@ -261,7 +261,6 @@ def main():
         r2.save_to_csv()
         r3.save_to_csv()
         input("Press enter to continue...")
-        input("Press enter to continue...")
 
 def plot_performance( agent):
 

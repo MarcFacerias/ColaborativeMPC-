@@ -258,7 +258,6 @@ def main():
                         if (i != j) and i<j:
 
                             planes[k - 1, i, j, :] = planes_raw[i][k - 1, :, j]
-                            planes[k - 1, j, i, :] = planes_raw[i][k - 1, :, j]
                             cost[i,j,k-1]= eval_constraint(agents[k,j,:], planes[k-1,i,j,:],dth)
 
             lambdas += alpha*cost

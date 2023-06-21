@@ -36,7 +36,7 @@ class PathFollowingLPV_MPC:
         self.mu = 0.1
 
         self.id = id
-        self.radius = 0.3
+        self.radius = 0.45
 
         self.max_vel = 10
         self.min_vel = 0.2
@@ -72,7 +72,7 @@ class PathFollowingLPV_MPC:
         Q = np.zeros((self.n_exp,self.n_exp))
         Q[0:self.n, 0: self.n] = self.Q
 
-        Q[-self.slack:, -self.slack:] = 10000000*np.ones((self.slack,self.slack))
+        Q[-self.slack:, -self.slack:] = 10000000*np.eye(self.slack)
         return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
@@ -88,7 +88,7 @@ class PathFollowingLPV_MPC:
 
         if self.first_it:
             self.first_it = False
-            self.n_agents = agents_id.shape[0]  # TODO: remove this constant
+            self.n_agents = len(agents_id)
             self.plane_comp = hyperplane_separator(self.n_agents, self.N)
 
         if x_agents is None:

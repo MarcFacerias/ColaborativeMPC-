@@ -18,10 +18,10 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 # TODO: implement this suggestion https://groups.google.com/g/casadi-users/c/1B2kTOF--SI
 # TODO: Add quality of life changes to the planes
-plot = True
-plot_end = False
+plot = False
+plot_end = True
 it_conv = 1
-n_agents =  2
+n_agents = 2
 
 def compute_hyper(x_ego,x_neg):
 

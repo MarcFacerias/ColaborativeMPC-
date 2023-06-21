@@ -21,6 +21,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 plot = False
 plot_end = True
 it_conv = 1
+n_agents = 4
 
 def compute_hyper(x_ego,x_neg):
 
@@ -36,8 +37,8 @@ class agent():
         self.map = Map
         self.N = N
         self.dt = dt
-        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0,0,0,0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
-        self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
+        self.Q  = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0,0,0,0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
+        self.R  = 1000* np.diag([1, 1])                          #[delta ; a]
         self.Controller = PathFollowingNL_MPC(self.Q, self.R, N, dt, Map, id, dth)
         self.x0 = x0
         self.states = []
@@ -237,7 +238,7 @@ def main():
     old_solution2 = None
     old_solution3 = None
 
-    cost_old = np.zeros((2, 2, N))
+    cost_old = np.zeros((n_agents, n_agents, N))
     lambdas_hist = []
     cost_hist = []
     it = 0
@@ -245,7 +246,7 @@ def main():
     while(it<max_it):
 
         tic = time.time()
-        lambdas = np.zeros((4, 4, N))
+        lambdas = np.zeros((n_agents, n_agents, N))
         it_OCD = 0
         itc = 0
 
@@ -266,7 +267,7 @@ def main():
             # TODO Update plans between iterations(first time we have diferent values for the plans and then the optimisation problem doesn't match)
 
             # print("Are planes close?" + str(np.allclose(planes1, planes0)))
-            cost = np.zeros((4,4,N))
+            cost = np.zeros((n_agents,n_agents,N))
 
             agents[:,0,:] = xPred0[:,-2:]
             agents[:,1,:] = xPred1[:,-2:]
@@ -274,8 +275,8 @@ def main():
             agents[:,3,:] = xPred3[:,-2:]
 
             for k in range(1,N+1):
-                for i in range(0,4):
-                    for j in range(0,4):
+                for i in range(0,n_agents):
+                    for j in range(0,n_agents):
 
                         if (i != j) and i<j:
                             cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:],dth)
