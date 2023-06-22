@@ -10,7 +10,7 @@ sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 
-from PathFollowingCASADI_param_LPVs_NOROS import PathFollowingNL_MPC
+from PathFollowingCASADI_param_LPVds_NOROS import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -21,7 +21,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 plot = False
 plot_end = True
 it_conv = 1
-n_agents = 2
+n_agents = 4
 
 def compute_hyper(x_ego,x_neg):
 
@@ -37,15 +37,15 @@ class agent():
         self.map = Map
         self.N = N
         self.dt = dt
-        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0,0,0,0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
-        self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
+        self.Q  = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0,0,0,0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
+        self.R  = 10* np.diag([1, 1])                          #[delta ; a]
         self.Controller = PathFollowingNL_MPC(self.Q, self.R, N, dt, Map, id, dth)
         self.x0 = x0
         self.states = []
         self.u = []
         self.planes = []
         self.output_opti = []
-        self.time = []
+        self.time_op = []
         self.status = []
         self.slack = []
         self.data_opti = []
@@ -68,7 +68,7 @@ class agent():
 
         tic = time.time()
         feas, Solution, planes, slack, self.data_opti = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, pose, slack, self.data_share)
-        self.time.append(time.time() - tic)
+        self.time_op.append(time.time() - tic)
         self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes, slack, Solution
 
@@ -78,27 +78,25 @@ class agent():
         disp.add_agent_ti(self)
         disp.add_planes_ti(self)
 
-
     def save(self, xPred, uPred, planes):
 
         self.states.append(xPred[0,:])
         self.u.append(uPred[0,:])
-        self.planes.append(planes[0,:])
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/dist/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
 
         np.savetxt(path+'/states.dat', self.states, fmt='%.5e',delimiter=' ')
         np.savetxt(path + '/u.dat', self.u, fmt='%.5e', delimiter=' ')
-        np.savetxt(path + '/time.dat', self.time, fmt='%.5e', delimiter=' ')
+        np.savetxt(path + '/time.dat', self.time_op, fmt='%.5e', delimiter=' ')
 
     def save_var_to_csv(self,var, name):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/"
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/dist/"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -113,7 +111,7 @@ def initialise_agents(data,Hp,dt,map, accel_rate=0):
         # agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-4:-2] # with slack
         aux = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)
         agents[:,id,:] = aux[0][:,-2:] # without slack
-        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp+1,4)),np.zeros((Hp,len(data))),np.zeros((Hp,len(data)))]
+        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp,4)),np.zeros((Hp,len(data)))]
     return agents, data_holder
 
 def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
@@ -161,13 +159,21 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     uu = np.zeros(( Hp, 2 ))
     return xx, uu
 
-def eval_constraint(x2, planes, D):
+def eval_constraint(x1, x2, D):
 
     # planes = [0.87,0.48,-1.05]
-    cost1 = -planes[0] * x2[0] - planes[1] * x2[1] - planes[2] + D/2
-
+    cost1 = D - np.sqrt(sum((x1-x2)**2))
 
     return np.array(cost1)
+
+def convergence(current,old):
+
+    are_close = True
+    for i, _ in enumerate(current):
+        are_close = are_close and np.allclose(current[i], old[i], atol=0.01)
+
+    return are_close
+
 
 def main():
 
@@ -178,49 +184,63 @@ def main():
     N = 10
     dt = 0.01
     alpha = 0.25
-    max_it = 150
+    max_it = 500
     finished = False
     finished_ph = False
     dth = 0.25
     time_OCD = []
 
     # define neighbours
-    n_0 = [1]
-    n_1 = [0]
+    n_0 = [1,2,3]
+    n_1 = [0,2,3]
+    n_2 = [0,1,3]
+    n_3 = [0,1,2]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
-    x0_1 = [1.3, -0.16, 0.00,-0.55, 0, 0.0, 0.25, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [2.5, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
+    x0_1 = [2.5, -0.16, 0.00,-0.55, 0, 0.0, 0.25, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
+    x0_2 = [2.5, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
+    x0_3 = [2.5, -0.16, 0.00,-0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
-    maps = [Map(),Map()]
-    agents,data = initialise_agents([x0_0,x0_1],N,dt,maps)
+    maps = [Map(),Map(),Map(),Map()]
+    agents,data = initialise_agents([x0_0,x0_1,x0_2,x0_3],N,dt,maps)
 
-    planes = np.zeros((N,n_agents,n_agents,3))
     states_hist = [agents]
 
     if plot:
-        disp = plotter(maps[0],n_agents)
+        disp = plotter(maps[0],4)
 
     if plot_end:
         d = plotter_offline(maps[0])
 
     r0 = agent(N, maps[0], dt, x0_0, 0, dth)
     r1 = agent(N, maps[1], dt, x0_1, 1, dth)
+    r2 = agent(N, maps[2], dt, x0_2, 2, dth)
+    r3 = agent(N, maps[3], dt, x0_3, 3, dth)
 
     r0.data_share = [data[i] for i in n_0]
     r1.data_share = [data[i] for i in n_1]
+    r2.data_share = [data[i] for i in n_2]
+    r3.data_share = [data[i] for i in n_3]
 
     x_old0 = None
     x_old1 = None
+    x_old2 = None
+    x_old3 = None
 
     u_old0 = None
     u_old1 = None
+    u_old2 = None
+    u_old3 = None
 
     planes_old = None
     old_solution0 = None
     old_solution1 = None
+    old_solution2 = None
+    old_solution3 = None
 
     cost_old = np.zeros((n_agents, n_agents, N))
     lambdas_hist = []
+    cost_hist = []
     it = 0
 
     while(it<max_it):
@@ -233,48 +253,53 @@ def main():
         while(not (it_OCD > 2  and finished)) :
 
             it_OCD += 1
-            # TODO acces the subset of lambdas of our problem
 
             f0, uPred0, xPred0, planes0, lsack0, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], n_0, agents[:,0,:], u_old0, old_solution0, planes_old)
             f1, uPred1, xPred1, planes1, lsack1, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], n_1, agents[:,1,:], u_old1, old_solution1, planes_old)
+            f2, uPred2, xPred2, planes2, lsack2, Solution2 = r2.one_step(x_old2, lambdas[2,n_2,:], agents[:,n_2,:], n_2, agents[:,2,:], u_old2, old_solution2, planes_old)
+            f3, uPred3, xPred3, planes3, lsack3, Solution3 = r3.one_step(x_old3, lambdas[3,n_3,:], agents[:,n_3,:], n_3, agents[:,3,:], u_old3, old_solution3, planes_old)
 
-            r0.data_share = [r1.data_opti]
-            r1.data_share = [r0.data_opti]
 
-            # TODO Update plans between iterations(first time we have diferent values for the plans and then the optimisation problem doesn't match)
+            r0.data_share = [r1.data_opti,r2.data_opti,r3.data_opti]
+            r1.data_share = [r0.data_opti,r2.data_opti,r3.data_opti]
+            r2.data_share = [r0.data_opti,r1.data_opti,r3.data_opti]
+            r3.data_share = [r0.data_opti,r1.data_opti,r2.data_opti]
 
             # print("Are planes close?" + str(np.allclose(planes1, planes0)))
             cost = np.zeros((n_agents,n_agents,N))
 
             agents[:,0,:] = xPred0[:,-2:]
             agents[:,1,:] = xPred1[:,-2:]
-
-            planes_raw = [planes0, planes1]
+            agents[:,2,:] = xPred2[:,-2:]
+            agents[:,3,:] = xPred3[:,-2:]
 
             for k in range(1,N+1):
                 for i in range(0,n_agents):
                     for j in range(0,n_agents):
 
                         if (i != j) and i<j:
+                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:],dth)
 
-                            planes[k - 1, i, j, :] = planes_raw[i][k - 1, :, j]
-                            cost[i,j,k-1]= eval_constraint(agents[k,j,:], planes[k-1,i,j,:],dth)
 
             lambdas += alpha*cost
 
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
             if not it_OCD == 1:
-                finished_ph = np.allclose(x_old0, xPred0, atol=0.01) and np.allclose(x_old1, xPred1, atol=0.01) and np.allclose(cost, cost_old, atol=0.01) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
+                finished_ph = np.allclose(x_old2, xPred2, atol=0.01) and np.allclose(x_old3, xPred3, atol=0.01) and np.allclose(x_old0, xPred0, atol=0.01) and np.allclose(x_old1, xPred1, atol=0.01) and np.allclose(cost, cost_old, atol=0.01) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
                 itc += 1
 
             x_old0 = xPred0
             x_old1 = xPred1
+            x_old2 = xPred2
+            x_old3 = xPred3
 
             u_old0 = uPred0
             u_old1 = uPred1
-
+            u_old2 = uPred2
+            u_old3 = uPred3
             cost_old = cost
+
             planes_old = planes0
 
             if not finished_ph :
@@ -284,39 +309,54 @@ def main():
             elif itc >= it_conv:
                 finished = True
 
-            if it_OCD > 20:
+            if it_OCD > 40:
                 print("max it reached")
                 finished = True
 
 
-
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes1)
+        r2.save(xPred2, uPred2, planes2)
+        r3.save(xPred3, uPred3, planes3)
 
         r0.x0 = xPred0[1,:]
         r1.x0 = xPred1[1,:]
+        r2.x0 = xPred2[1,:]
+        r3.x0 = xPred3[1,:]
 
         x_old0 = xPred0[1:,:]
         x_old1 = xPred1[1:,:]
+        x_old2 = xPred2[1:,:]
+        x_old3 = xPred3[1:,:]
 
         u_old0 = uPred0
         u_old1 = uPred1
+        u_old2 = uPred2
+        u_old3 = uPred3
 
         old_solution0 = Solution0
         old_solution1 = Solution1
+        old_solution2 = Solution2
+        old_solution3 = Solution3
 
         finished = False
-        time_OCD.append(time.time() - tic)
-
+        time_OCD.append((time.time() - tic)/4)
+        cost_hist.append(r0.Controller._cost)
         print("-------------------------------------------------")
         print("it " + str(it))
         print("length " + str(it_OCD))
         print(time.time() - tic)
         print(xPred0[1,:])
         print(xPred1[1,:])
-
+        print(xPred2[1,:])
+        print(xPred3[1,:])
+        print(uPred0[0,:])
+        print(uPred1[0,:])
+        print(uPred2[0,:])
+        print(uPred3[0,:])
         # print(planes0[0,:,0])
-        print(np.sqrt( (xPred0[1,7] - xPred1[1,7])**2 + (xPred0[1,8] - xPred1[1,8])**2 ))
+        # print(np.sqrt( (xPred0[1,7] - xPred1[1,7])**2 + (xPred0[1,8] - xPred1[1,8])**2 ))
+
         print("-------------------------------------------------")
 
         it += 1
@@ -327,10 +367,14 @@ def main():
     if plot_end:
         d.plot_offline_experiment(r0, "oc", "-y")
         d.plot_offline_experiment(r1, "ob", "-y")
-
+        d.plot_offline_experiment(r2, "or", "-y")
+        d.plot_offline_experiment(r3, "oy", "-y")
         r0.save_to_csv()
         r1.save_to_csv()
+        r2.save_to_csv()
+        r3.save_to_csv()
         r0.save_var_to_csv(time_OCD, "time_OCD")
+        r0.save_var_to_csv(cost_hist, "cost_hist2")
         input("Press enter to continue...")
         # input("Press Enter to continue...")
 
@@ -341,7 +385,7 @@ def plot_performance( agent):
     x = np.arange(0,len(agent.status))
     plt.scatter(x, np.array(agent.status))
     fig_status.add_subplot(2, 1, 2)
-    plt.scatter(x, np.array(agent.time))
+    plt.scatter(x, np.array(agent.time_op))
     plt.show()
     plt.pause(0.001)
 

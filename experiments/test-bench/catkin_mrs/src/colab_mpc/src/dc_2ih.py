@@ -166,6 +166,7 @@ def main():
     maps = [Map(),Map()]
     agents = initialise_agents([x0_0,x0_1],N,dt,maps)
     states_hist = [agents]
+    time_alg = []
 
     if plot:
         disp = plotter(maps[0],2)
@@ -214,6 +215,7 @@ def main():
 
         print(xPred0[0,:])
         print(xPred1[0,:])
+        time_alg.append((time.time() - tic)/2)
 
         if dist_hist[-1] < 0.2:
             print("error minimum distance")
@@ -231,6 +233,7 @@ def main():
         r0.save_to_csv()
         r0.save_to_csv()
         r1.save_to_csv()
+        r0.save_var_to_csv(time_alg, "time_alg")
         input("Press enter to continue...")
 
 def plot_performance( agent):

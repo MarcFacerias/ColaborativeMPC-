@@ -2,7 +2,7 @@
 from scipy import linalg, sparse
 from cvxopt.solvers import qp
 from cvxopt import spmatrix, matrix, solvers
-from utilities import Curvature, GBELLMF
+from utilities import Curvature, get_ey
 import numpy as np
 from numpy import hstack, inf, ones
 from scipy.sparse import vstack
@@ -33,14 +33,14 @@ class PathFollowingLPV_MPC:
         self.I  = 0.06
         self.Cf = 60.0
         self.Cr = 60.0
-        self.mu = 0.1
+        self.mu = 0.0
+        self.vx_ref = 6.0
 
         self.id = id
         self.radius = 0.45
 
         self.max_vel = 10
         self.min_vel = 0.2
-        self.vel_ref = np.ones(N)*8
 
         self.A    = []
         self.B    = []
@@ -97,9 +97,9 @@ class PathFollowingLPV_MPC:
         else:
             self.planes = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
 
-        self.F, self.b = _buildMatIneqConst(self)
+        self.A, self.B, self.C, ey = _EstimateABC(self, Last_xPredicted, uPred)
 
-        self.A, self.B, self.C  = _EstimateABC(self, Last_xPredicted, uPred)
+        self.F, self.b = _buildMatIneqConst(self,ey)
 
         self.G, self.E, self.L, self.Eu, self.Eoa  = _buildMatEqConst(self,x_agents) # It's been introduced the C matrix (L in the output)
 
@@ -250,7 +250,7 @@ def GenerateColisionAvoidanceConstraints(Controller):
 
     '''END GENERATE HYPER CONSTRAITNS'''
 
-def _buildMatIneqConst(Controller):
+def _buildMatIneqConst(Controller,ey):
     N = Controller.N
     n_exp = Controller.n_exp
 
@@ -270,10 +270,22 @@ def _buildMatIneqConst(Controller):
     Fx[3,-2] = 1
 
     #B
-    bx = np.array([[-min_vel],
-                   [max_vel],
-                   [0.60],
-                   [0.60]]) # vx min; vx max; ey min; ey max; t1 min ... tn min
+    bx_vel = np.tile(np.squeeze(np.array([[-min_vel],
+                   [max_vel]])), N+1) # vx min; vx max; ey min; ey max; t1 min ... tn min
+
+    if ey.shape[0] < N+1:
+        ey = np.append(ey, ey[-1])
+    # print(ey)
+    bx_ey = np.repeat(np.array(ey),2).tolist()
+
+    bxtot = iter(bx_vel)
+    res = []
+
+    for idx in range(0,len(bx_ey),2):
+        res.extend([next(bxtot) for _ in range(2)])
+        res += bx_ey[idx:idx+2]
+
+    bxtot = np.array(res)
 
     # Builc the matrices for the input constraint in each region. In the region i we want Fx[i]x <= bx[b]
     Fu = np.array([[1., 0.],
@@ -300,7 +312,6 @@ def _buildMatIneqConst(Controller):
     '''
 
     Fxtot = Mat
-    bxtot = np.tile(np.squeeze(bx), N+1)
 
     n = 5
     bxtot = iter(bxtot)
@@ -360,7 +371,7 @@ def _buildMatCost(Controller):
     Pdu = np.zeros(N * Controller.d)
     Px = np.zeros(Controller.n_exp)
     # Px[6] = -1
-    Px[0] = -6*100
+    Px[0] = -Controller.vx_ref*Controller.Q[0,0]
     Px_total = np.tile(Px, N+1)
     P= 2*np.hstack((Px_total, Pu, Pdu))
 
@@ -434,6 +445,8 @@ def _EstimateABC(Controller,states, u):
         Atv = []
         Btv = []
         Ctv = []
+
+        ey_hor = get_ey(states[:, 6], Controller.map)
 
         for i in range(0, Controller.N):
 
@@ -538,7 +551,7 @@ def _EstimateABC(Controller,states, u):
             Btv.append(Bi)
             Ctv.append(Ci)
 
-        return Atv, Btv, Ctv
+        return Atv, Btv, Ctv, ey_hor
 
 
 

@@ -10,7 +10,7 @@ from compute_plane import hyperplane_separator
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 # constants
-model_slack = 100
+model_slack = 10000000
 control_slack = 1
 obs_slack = 1000000
 class PathFollowingNL_MPC:
@@ -33,7 +33,7 @@ class PathFollowingNL_MPC:
         self.Cf = 60.0
         self.Cr = 60.0
         self.mu = 0.0
-        self.vx_ref = 6
+        self.vx_ref = 4.5
         self.id = id
         self.initialised = False
         self.g  = 9.81
@@ -43,7 +43,7 @@ class PathFollowingNL_MPC:
         self.x = self.opti.variable(self.n_exp*(N+1)) # x11, ... , x1N, s11, ... xTN
         self.u  = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.du = self.opti.variable(2 * (N))
-        self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
+        self.slack_agent = self.opti.variable(N,4)  # x11, ... , x1N, s11, ... xTN
         self.ey_ub = self.opti.parameter(N)
         self.ey_lb = self.opti.parameter(N)
 
@@ -62,8 +62,7 @@ class PathFollowingNL_MPC:
         self.first_it = 1
         self.flag_lambdas = True
 
-        self.min_vel = 6
-        self.min_vel = -6
+        self.min_vel = -10
         self._cost = 0
 
         # parameters
@@ -71,7 +70,7 @@ class PathFollowingNL_MPC:
 
         self.planes_param = []
         self.pose_param = []
-        self.u_param = []
+        self.du_param = []
         self.states_param = []
         self.s_agent_param = []
         self.param_slack_dis = []
@@ -118,18 +117,18 @@ class PathFollowingNL_MPC:
             mod = j * self.n_exp
             mod_u = (j-1) * 2
 
-            J += self.Q[0,0]*(self.x[0+mod]**2 - self.vx_ref*self.x[0+mod]) + self.Q[1,1]*self.x[1+mod]**2 + self.Q[2,2]*self.x[2+mod]**2 +\
+            J += self.Q[0,0]*(self.x[0+mod] - self.vx_ref)**2 + self.Q[1,1]*self.x[1+mod]**2 + self.Q[2,2]*self.x[2+mod]**2 +\
                  self.Q[3,3]*self.x[3+mod]**2 + self.Q[4,4]*self.x[4+mod]**2 + self.Q[5,5]*self.x[5+mod]**2 + self.Q[6,6]*self.x[6+mod]**2 + self.Q[7,7]*self.x[7+mod]**2 \
-                 + self.Q[8,8]*self.x[8+mod]**2 + self.R[0,0]*self.du[0+(mod_u)]**2 + self.R[1,1]*self.du[1+mod_u]**2 + model_slack*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)**2 + control_slack*(self.slack_agent[j,2]**2 + self.slack_agent[j,3]**2)
+                 + self.Q[8,8]*self.x[8+mod]**2 + self.R[0,0]*self.du[0+(mod_u)]**2 + self.R[1,1]*self.du[1+mod_u]**2 + model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2)**2 + control_slack*(self.slack_agent[j-1,2]**2 + self.slack_agent[j-1,3]**2)
 
             for i, el in enumerate(self.agent_list):
 
                 slack_idx = (j - 1) * self.aux + i
 
-                J += self.Q[0,0] * (self.states_param[i][0 + mod] ** 2 - self.vx_ref*self.states_param[i][0 + mod])+ self.Q[1,1] * self.states_param[i][1 + mod] ** 2 + self.Q[2,2] * self.states_param[i][2 + mod] ** 2 + \
+                J += self.Q[0,0] * (self.states_param[i][0 + mod] - self.vx_ref)** 2+ self.Q[1,1] * self.states_param[i][1 + mod] ** 2 + self.Q[2,2] * self.states_param[i][2 + mod] ** 2 + \
                      self.Q[3,3] * self.states_param[i][3 + mod] ** 2 + self.Q[4,4] * self.states_param[i][4 + mod] ** 2 + self.Q[5,5] * self.states_param[i][5 + mod] ** 2 + self.Q[6,6] * self.states_param[i][6 + mod] ** 2 + \
-                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.R[0,0]*self.u_param[i][0 + (mod_u)] ** 2 + self.R[1,1]*self.u_param[i][1 + mod_u] ** 2  + model_slack * (
-                     self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1]**2) + control_slack*(self.s_agent_param[i][j,2]**2 + self.s_agent_param[i][j,3] ** 2)
+                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.R[0,0]*self.du_param[i][0 + (mod_u)] ** 2 + self.R[1,1]*self.du_param[i][1 + mod_u] ** 2  + model_slack * (
+                     self.s_agent_param[i][j-1,0] ** 2 + self.s_agent_param[i][j-1,1]**2) + control_slack*(self.s_agent_param[i][j-1,2]**2 + self.s_agent_param[i][j-1,3] ** 2)
 
                 if self.id < el:
                     J+= self.lambdas[i,j-1]*(self.param_slack_dis[i][j-1,self.id] + self.dth - sqrt((self.x[7+mod] - self.pose_param[i][j-1,0])**2 + (self.x[8+mod]
@@ -146,11 +145,11 @@ class PathFollowingNL_MPC:
             mod = j * self.n_exp
             mod_u = (j-1) * 2
 
-            self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
-            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1], self.x[4+mod] + self.slack_agent[j,1], self.ey_ub[j-1]))
+            self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j-1,0],self.max_vel))
+            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1], self.x[4+mod] + self.slack_agent[j-1,1], self.ey_ub[j-1]))
 
-            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u] + self.slack_agent[j,2], 0.45))
-            self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
+            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u], 0.45))
+            self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u], 8.0))
 
             if j < self.N:
 
@@ -325,9 +324,9 @@ class PathFollowingNL_MPC:
                 self.states_param.append(placeholder_states)
 
                 placeholder_u = self.opti.parameter(2 * (self.N))
-                self.u_param.append(placeholder_u)
+                self.du_param.append(placeholder_u)
 
-                placeholder_sa = self.opti.parameter(self.N+1,4) #we have 4 slack variables
+                placeholder_sa = self.opti.parameter(self.N,4) #we have 4 slack variables
                 self.s_agent_param.append(placeholder_sa)
 
                 placeholder_sp = self.opti.parameter((self.N), (self.n_neighbours+1))
@@ -367,7 +366,7 @@ class PathFollowingNL_MPC:
         for i,agent in enumerate(data):
 
             self.opti.set_value(self.states_param[i], agent[0])
-            self.opti.set_value(self.u_param[i], agent[1])
+            self.opti.set_value(self.du_param[i], agent[1])
             self.opti.set_value(self.s_agent_param[i], agent[2])
             self.opti.set_value(self.param_slack_dis[i], agent[3])
 
