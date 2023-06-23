@@ -53,7 +53,7 @@ class agent():
         self.id = id
 
     # TODO: clean redundant functions
-    def one_step(self,x0, lambdas, agents, agents_id, pose, uPred = None, xPred = None, planes_fixed = None, slack = None):
+    def one_step(self,x0, lambdas, agents, agents_id, pose, uPred = None, xPred = None, slack = None):
 
         if (xPred is None):
             xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
@@ -61,17 +61,14 @@ class agent():
         if x0 is None:
             x0 = xPred
 
-        feas, uPred, xPred, planes, lsack, Solution = self._solve(x0, agents, agents_id, pose, lambdas, xPred, uPred, planes_fixed, slack)
-
-        return feas,uPred, xPred, planes, lsack, Solution
-
-    def _solve(self, x0, agents, agents_id, pose, lambdas, Xpred, uPred ,planes_fixed, slack):
-
         tic = time.time()
-        feas, Solution, planes, slack, self.data_opti = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, pose, slack, self.data_share)
+        feas, Solution, planes, slack, self.data_opti = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, agents_id, pose, slack, self.data_share)
         self.time_op.append(time.time() - tic)
         self.status.append(feas)
+
         return feas, self.Controller.uPred, self.Controller.xPred, planes, slack, Solution
+
+
 
     def plot_experiment(self):
 
@@ -247,10 +244,10 @@ def main():
             it_OCD += 1
 
             # run an instance of the optimisation problems
-            f0, uPred0, xPred0, planes0, lsack0, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], n_0, agents[:,0,:], u_old0, old_solution0, planes_old)
-            f1, uPred1, xPred1, planes1, lsack1, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], n_1, agents[:,1,:], u_old1, old_solution1, planes_old)
-            f2, uPred2, xPred2, planes2, lsack2, Solution2 = r2.one_step(x_old2, lambdas[2,n_2,:], agents[:,n_2,:], n_2, agents[:,2,:], u_old2, old_solution2, planes_old)
-            f3, uPred3, xPred3, planes3, lsack3, Solution3 = r3.one_step(x_old3, lambdas[3,n_3,:], agents[:,n_3,:], n_3, agents[:,3,:], u_old3, old_solution3, planes_old)
+            f0, uPred0, xPred0, planes0, lsack0, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], n_0, agents[:,0,:], u_old0, old_solution0)
+            f1, uPred1, xPred1, planes1, lsack1, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], n_1, agents[:,1,:], u_old1, old_solution1)
+            f2, uPred2, xPred2, planes2, lsack2, Solution2 = r2.one_step(x_old2, lambdas[2,n_2,:], agents[:,n_2,:], n_2, agents[:,2,:], u_old2, old_solution2)
+            f3, uPred3, xPred3, planes3, lsack3, Solution3 = r3.one_step(x_old3, lambdas[3,n_3,:], agents[:,n_3,:], n_3, agents[:,3,:], u_old3, old_solution3)
 
             # share the results within the network
             r0.data_share = [r1.data_opti,r2.data_opti,r3.data_opti]
@@ -294,8 +291,6 @@ def main():
             u_old3 = uPred3
             cost_old = cost
 
-            planes_old = planes0 # TODO: remove this varaible as they are being updated from inside
-
             if not finished_ph :
                 print("breakpoint placeholder with " + str(it_OCD))
                 itc = 0
@@ -307,7 +302,7 @@ def main():
                 print("max it reached")
                 finished = True
 
-
+        #save current iteration for logging purposes
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes1)
         r2.save(xPred2, uPred2, planes2)
@@ -336,22 +331,21 @@ def main():
         finished = False
         time_OCD.append((time.time() - tic)/4)
         cost_hist.append(r0.Controller._cost)
-        print("-------------------------------------------------")
-        print("it " + str(it))
-        print("length " + str(it_OCD))
-        print(time.time() - tic)
-        print(xPred0[1,:])
-        print(xPred1[1,:])
-        print(xPred2[1,:])
-        print(xPred3[1,:])
-        print(uPred0[0,:])
-        print(uPred1[0,:])
-        print(uPred2[0,:])
-        print(uPred3[0,:])
-        # print(planes0[0,:,0])
-        # print(np.sqrt( (xPred0[1,7] - xPred1[1,7])**2 + (xPred0[1,8] - xPred1[1,8])**2 ))
 
-        print("-------------------------------------------------")
+        ## printing states
+        # print("-------------------------------------------------")
+        # print("it " + str(it))
+        # print("length " + str(it_OCD))
+        # print(time.time() - tic)
+        # print(xPred0[1,:])
+        # print(xPred1[1,:])
+        # print(xPred2[1,:])
+        # print(xPred3[1,:])
+        # print(uPred0[0,:])
+        # print(uPred1[0,:])
+        # print(uPred2[0,:])
+        # print(uPred3[0,:])
+        # print("-------------------------------------------------")
 
         it += 1
         if plot :
@@ -370,7 +364,6 @@ def main():
         r0.save_var_to_csv(time_OCD, "time_OCD")
         r0.save_var_to_csv(cost_hist, "cost_hist2")
         input("Press enter to continue...")
-        # input("Press Enter to continue...")
 
 def plot_performance( agent):
 

@@ -8,3 +8,8 @@ LIST OF COMMENTED FILES
 
 * dc_4ih_Corridor
 * dc_hp_4LPVds_CASADI
+* PathFollowingCASADI_param_LPVds_NOROS
+
+TODO LIST  
+* remove redundant function calls from dc_* files (done in dc_hp_4LPVds_CASADI)
+* update the file path so that consecutive paths don't overwrite consecutive experiments 
