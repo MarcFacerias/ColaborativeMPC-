@@ -9,6 +9,7 @@ LIST OF COMMENTED FILES
 * dc_4ih_Corridor
 * dc_hp_4LPVds_CASADI
 * PathFollowingCASADI_param_LPVds_NOROS
+* PathFollowingLPVMPV_independent_hyperplanes
 
 TODO LIST  
 * remove redundant function calls from dc_* files (done in dc_hp_4LPVds_CASADI)

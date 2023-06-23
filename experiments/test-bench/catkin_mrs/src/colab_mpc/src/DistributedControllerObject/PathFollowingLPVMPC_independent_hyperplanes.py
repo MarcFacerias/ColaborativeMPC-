@@ -23,7 +23,7 @@ class PathFollowingLPV_MPC:
     def __init__(self, Q, R, N, dt, map, Solver, id):
 
         self.n_s = 9
-        self.slack = 3 #TODO: add du slack variable
+        self.slack = 3
         self.n_exp = self.n_s + self.slack
 
         # Vehicle parameters:
@@ -42,6 +42,7 @@ class PathFollowingLPV_MPC:
         self.max_vel = 10
         self.min_vel = 0.2
 
+        # variable placeholders
         self.A    = []
         self.B    = []
         self.C    = []
@@ -52,23 +53,22 @@ class PathFollowingLPV_MPC:
         self.R    = R
         self.dt = dt                # Sample time 33 ms
         self.map = map              # Used for getting the road curvature
-
-        self.first_it = True
-
-        self.OldSteering = [0.0]
-
-        self.OldAccelera = [0.0]*int(1)
-
-        self.Solver = Solver
-
         self.G = []
         self.E = []
         self.L = []
         self.Eu =[]
 
+        self.first_it = True
+
+        # previous values initialisation
+        self.OldSteering = [0.0]
+        self.OldAccelera = [0.0]*int(1)
+
+        self.Solver = Solver # solver holder, string that tells if it's cvx or qp? TODO: remove cvx
+
 
     def _buildQ(self):
-
+        # funtion to build the Q, which is states Q and slack variables
         Q = np.zeros((self.n_exp,self.n_exp))
         Q[0:self.n, 0: self.n] = self.Q
 
@@ -84,72 +84,54 @@ class PathFollowingLPV_MPC:
             EA: A_L, B_L ,C_L: Set of LPV matrices
         """
 
-        self.agent_list = agents_id
+        self.agent_list = agents_id # load the agent list
 
         if self.first_it:
             self.first_it = False
-            self.n_agents = len(agents_id)
-            self.plane_comp = hyperplane_separator(self.n_agents, self.N)
+            self.n_agents = len(agents_id) # set number fo neighbours
+            self.plane_comp = hyperplane_separator(self.n_agents, self.N) # load the hyperplane generation code
 
+        # set the planes and compute them if necesary
         if x_agents is None:
             self.planes = np.zeros((self.N+1,self.n_agents,3))
             x_agents = np.zeros((self.N+1,self.n_agents,2))
         else:
             self.planes = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
 
+        # update system matrices
         self.A, self.B, self.C, ey = _EstimateABC(self, Last_xPredicted, uPred)
 
+        # generate ineq constraints
         self.F, self.b = _buildMatIneqConst(self,ey)
 
-        self.G, self.E, self.L, self.Eu, self.Eoa  = _buildMatEqConst(self,x_agents) # It's been introduced the C matrix (L in the output)
+        # generate eq constraints
+        self.G, self.E, self.L, self.Eu, self.Eoa = _buildMatEqConst(self) # It's been introduced the C matrix (L in the output)
 
+        # generate Q and q from the quadratic cost functions
         self.M, self.q          = _buildMatCost(self)
 
-        M = self.M
-        q = self.q
-        G = self.G
-        E = self.E
-        L = self.L
-        Eu= self.Eu
-        F = self.F
-        b = self.b
-        n = self.n
-        N = self.N
-        d = self.d
+        uOld  = [self.OldSteering[0], self.OldAccelera[0]] # update the old control action to input it into the system matrices
 
-        uOld  = [self.OldSteering[0], self.OldAccelera[0]]
+        # solve the optimisation problem
+        res_cons, feasible = osqp_solve_qp(sparse.csr_matrix(self.M), self.q, sparse.csr_matrix(self.F),
+         self.b, sparse.csr_matrix(self.G), np.add(np.dot(self.E,x0), np.dot(self.Eu,uOld)))
 
-        if self.Solver == "CVX":
-            sol = qp(M, matrix(q), F, matrix(b), G, E * matrix(x0))
-            if sol['status'] == 'optimal':
-                self.feasible = 1
-            else:
-                self.feasible = 0
+        if feasible == 0:
+            print ('QUIT...')
 
-            self.xPred = np.squeeze(np.transpose(np.reshape((np.squeeze(sol['x'])[np.arange(n * (N + 1))]), (N + 1, n))))
-            self.uPred = np.squeeze(np.transpose(np.reshape((np.squeeze(sol['x'])[n * (N + 1) + np.arange(d * N)]), (N, d))))
+        Solution = res_cons.x
 
-        else:
-            res_cons, feasible = osqp_solve_qp(sparse.csr_matrix(M), q, sparse.csr_matrix(F),
-             b, sparse.csr_matrix(G), np.add(np.dot(E,x0), np.dot(Eu,uOld)))
+        # rearange the solution, packed form is (x0 x9, s ... , u1 u2, du1, du2) for all N+1
+        idx = np.arange(0,self.n_s)
+        for i in range(1,self.N+1):
+            aux = np.arange(0,self.n_s) + i*self.n_exp
+            idx = np.hstack((idx,aux))
 
-            # osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None)
+        self.xPred = np.reshape((Solution[idx]), (self.N+1, self.n_s))
+        self.uPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.d * self.N)]), (self.N, self.d)) # TODO: fix this with new variable structure
+        self.OldSteering = [self.uPred[1,0]]
+        self.OldAccelera = [self.uPred[1,1]]
 
-            if feasible == 0:
-                print ('QUIT...')
-
-            Solution = res_cons.x
-
-            idx = np.arange(0,self.n_s)
-            for i in range(1,N+1):
-                aux = np.arange(0,self.n_s) + i*self.n_exp
-                idx = np.hstack((idx,aux))
-
-            self.xPred = np.reshape((Solution[idx]), (N+1, self.n_s))
-            self.uPred = np.reshape((Solution[self.n_exp * (N+1) + np.arange(d * N)]), (N, d)) # TODO: fix this with new variable structure
-            self.OldSteering = [self.uPred[1,0]]
-            self.OldAccelera = [self.uPred[1,1]]
-            # self.uPred - np.reshape((Solution[self.n_exp * (N + 1) + d * N + np.arange(d * N)]), (N, d))
         return feasible, Solution, self.planes
 
 
@@ -220,44 +202,52 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
 
 def GenerateColisionAvoidanceConstraints(Controller):
 
-    K_list = []
-    Lim_list = []
-    K = np.zeros((len(Controller.agent_list), Controller.n_exp))
-    K_list.append(K)
+    # function to generate the obstacle avoidance constraitns of the shape x * plane < d // x * plane > d note that both
+    # constraints are expressed as < for convinience
+    K_list = [] # list of submatrices
+    Lim_list = [] # list of constraint limtis
+
+    # we add the first elements to match dimensions, 0 as the initial state is fixed and not constrained
+    K_list.append(np.zeros((len(Controller.agent_list), Controller.n_exp)))
     Lim_list.extend(np.zeros(len(Controller.agent_list)))
 
+    # we will add a block of constraints from 1 to N
     for t in range(1,Controller.N + 1):
 
-        K = np.zeros((len(Controller.agent_list),Controller.n_exp))
+        K = np.zeros((len(Controller.agent_list),Controller.n_exp)) # generate a placeholder
 
         for i,el in enumerate(Controller.agent_list):
 
-            if Controller.id < el:
+            if Controller.id < el: # if master
                 K[i, 7] = Controller.planes[t-1, 0, i]
                 K[i, 8] = Controller.planes[t-1, 1, i]
                 K[i, -1] = -1
                 Lim_list.append(- Controller.radius/2 - Controller.planes[t-1, 2, i] )
 
-            else:
+            else: # if slave
                 K[i, 7] = - Controller.planes[t-1, 0, i]
                 K[i, 8] = - Controller.planes[t-1, 1, i]
                 K[i, -1] = -1
                 Lim_list.append(Controller.planes[t-1, 2, i] - Controller.radius/2 )
 
-        K_list.append(K)
+        K_list.append(K) # append the block of constraints to the list
 
     return K_list, Lim_list
 
     '''END GENERATE HYPER CONSTRAITNS'''
 
 def _buildMatIneqConst(Controller,ey):
+    # Build the set of inequality constraints note that all constaints are expressed as < for convenience
+    # cast some constants for conveniece
     N = Controller.N
     n_exp = Controller.n_exp
-
     max_vel = Controller.max_vel
     min_vel = Controller.min_vel
+
+    # agent constraints placeholder
     Fx = np.zeros((4,n_exp))
 
+    # linear velocity constraints + slack variables
     Fx[0,0] = -1
     Fx[1,0] = 1
     Fx[0,-3] = -1
@@ -269,15 +259,18 @@ def _buildMatIneqConst(Controller,ey):
     Fx[2,-2] = 1
     Fx[3,-2] = 1
 
-    #B
+    # generate the upper bounds of the velocity constraints
     bx_vel = np.tile(np.squeeze(np.array([[-min_vel],
                    [max_vel]])), N+1) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
+    # generate the upper bounds of the lateral error constraitns constraints
     if ey.shape[0] < N+1:
         ey = np.append(ey, ey[-1])
-    # print(ey)
+
     bx_ey = np.repeat(np.array(ey),2).tolist()
 
+    # piece of code used to rearenge the constraitns so that (v_ub, v_lb, ey_ub, ey_lb) for all horizon
+    # TODO: we could rearange the constraints to avoid having to add this piece of code
     bxtot = iter(bx_vel)
     res = []
 
@@ -287,7 +280,9 @@ def _buildMatIneqConst(Controller,ey):
 
     bxtot = np.array(res)
 
-    # Builc the matrices for the input constraint in each region. In the region i we want Fx[i]x <= bx[b]
+    # The resulting matrices represent Fx[i]x <= bxtot[b]
+
+    # Builc the matrices for the input constraint in each region. In the region i we want Fu[i]x <= bu[b]
     Fu = np.array([[1., 0.],
                    [-1., 0.],
                    [0., 1.],
@@ -299,20 +294,17 @@ def _buildMatIneqConst(Controller,ey):
                    [8.0]])  # Max DesAcceleration
 
 
-    rep_a = [Fx] * (N+1) # add n times Fx to a list
+    rep_a = [Fx] * (N+1) # expand the constraints for the whole horizon
     k_list, lim_list = GenerateColisionAvoidanceConstraints(Controller)
 
+    # smaill loop to rearange the constraints so that they are more readable
     for j,_ in enumerate(rep_a):
         rep_a[j] = np.vstack((rep_a[j],np.vstack(k_list[j])))
 
     Mat = linalg.block_diag(*rep_a) # make a block diagonal where the elements of the diagonal are the matrices in the list
-    '''
-    NoTerminalConstr = np.zeros((np.shape(Mat)[0], n_exp))  # No need to constraint also the terminal point
-    Fxtot = np.hstack((Mat, NoTerminalConstr))
-    '''
-
     Fxtot = Mat
 
+    # smaill loop to rearange the constraints so that they are more readable
     n = 5
     bxtot = iter(bxtot)
     res = []
@@ -321,14 +313,14 @@ def _buildMatIneqConst(Controller,ey):
         res.extend([next(bxtot) for _ in range(n - 1)])
         res += lim_list[idx:idx+Controller.n_agents]
     res.extend(bxtot)
-
     bxtot = np.array(res)
 
+    # repeat the control actions along the horizon to constraint it in all time instants
     rep_b = [Fu] * (N)
     Futot = linalg.block_diag(*rep_b)
     butot = np.tile(np.squeeze(bu), N)
 
-    # Let's stack all together
+    # Let's stack everything together
     rFxtot, cFxtot = np.shape(Fxtot)
     rFutot, cFutot = np.shape(Futot)
     Dummy1 = np.hstack((Fxtot, np.zeros((rFxtot, cFutot))))
@@ -337,71 +329,60 @@ def _buildMatIneqConst(Controller,ey):
     F = np.hstack((F,np.zeros((np.shape(F)[0], cFutot))))
     b = np.hstack((bxtot, butot))
 
-    if Controller.Solver == "CVX":
-        F_sparse = spmatrix(F[np.nonzero(F)], np.nonzero(F)[0].astype(int), np.nonzero(F)[1].astype(int), F.shape)
-        F_return = F_sparse
-    else:
-        F_return = F
-
-    return F_return, b
+    return F, b
 
 def _buildMatCost(Controller):
     # EA: This represents to be: [(r-x)^T * Q * (r-x)] up to N+1
     # and [u^T * R * u] up to N
 
-    # I consider Q to have the proper shape (9 base states +3N  with N being the neighbours )
-    q  = Controller._buildQ()
-    # I consider R to have the proper shape ( 2xN )
+    q  = Controller._buildQ() # we collect list of Qs
+
+    # copy some varaibles for clarity purposes
     R  = Controller.R
     N  = Controller.N
+
+    # expand the q along the horizon
     d = [q] * (N+1)
 
-    Mx = linalg.block_diag(*d)
+    Mx = linalg.block_diag(*d)  # generate a diagonal matrix with the expanded Qs
 
-    cu = [np.zeros((2,2))] * (N)
-    c = [R] * (N)
+    cu = [np.zeros((2,2))] * (N) # we consider no penalty to the control action so it's weight is 0
+    c = [R] * (N) # we penalise it's change rate to prevent an agresive behaviour
+
+    # once this is done we generate block diagonal matrices with each list along the horizon
     Mu = linalg.block_diag(*cu)
     Mdu = linalg.block_diag(*c)
 
-    # This is without slack lane:
+    # Finally we merge all the sub cost matrices together:
     M0 = linalg.block_diag(Mx, Mu, Mdu)
 
-    # Maximise change on S
+    # Create matrices to padd missing values
     Pu = np.zeros(N*Controller.d)
     Pdu = np.zeros(N * Controller.d)
     Px = np.zeros(Controller.n_exp)
-    # Px[6] = -1
-    Px[0] = -Controller.vx_ref*Controller.Q[0,0]
-    Px_total = np.tile(Px, N+1)
-    P= 2*np.hstack((Px_total, Pu, Pdu))
+    Px[0] = -Controller.vx_ref*Controller.Q[0,0] # added to represent vx - vref in a quadratic fashion
+    Px_total = np.tile(Px, N+1) # expand p along the horizon
+    P= 2*np.hstack((Px_total, Pu, Pdu)) # padd missing values
 
-    M = 2 * M0  # Need to multiply by two because CVX considers 1/2 in front of quadratic cost
+    return 2 * M0, P
 
-    if Controller.Solver == "CVX":
-        M_sparse = spmatrix(M[np.nonzero(M)], np.nonzero(M)[0].astype(int), np.nonzero(M)[1].astype(int), M.shape)
-        M_return = M_sparse
-    else:
-        M_return = M
-
-    return M_return, P
-
-def _buildMatEqConst(Controller, agents):
+def _buildMatEqConst(Controller):
     # Buil matrices for optimization (Convention from Chapter 15.2 Borrelli, Bemporad and Morari MPC book)
     # We are going to build our optimization vector z \in \mathbb{R}^((N+1) \dot n \dot N \dot d), note that this vector
     # stucks the predicted trajectory x_{k|t} \forall k = t, \ldots, t+N+1 over the horizon and
     # the predicted input u_{k|t} \forall k = t, \ldots, t+N over the horizon
     # G * z = L + E * x(t) + Eu * OldInputs
-    # TODO Check Eu and E
+
+    # Parse variables intro local for conviniece
     A = Controller.A
     B = Controller.B
     N = Controller.N # N horizon
     n_exp = Controller.n_exp # N horizon
     d = Controller.d # N horizon
 
-    auxG = np.eye(Controller.n_exp-Controller.slack)
 
     Gx = np.zeros((n_exp,n_exp ))
-    Gx[:auxG.shape[0],:auxG.shape[0]] = auxG
+    Gx[:Controller.n_s,:Controller.n_s] = np.eye(Controller.n_s)
     Gx = linalg.block_diag(*[Gx]*(N+1))
 
     Gu = np.zeros(((n_exp) * (N+1), d * (N)))
@@ -415,9 +396,11 @@ def _buildMatEqConst(Controller, agents):
     Eu[(n_exp) * (N+1) : (n_exp) * (N+1) + Controller.d, :] = np.eye(2)
 
     Eoa = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1))
-    L = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1)) # I guess L represents previous inputs? whatever rn is 0s
+    L = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1))
 
-    for i in range(1, N+1): # TODO: there's redundancy in this loops
+    # TODO: there's redundancy in this loops
+
+    for i in range(1, N+1):
         Gx[i * (n_exp):i * (n_exp) + Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i-1]
         Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i-1]
 
