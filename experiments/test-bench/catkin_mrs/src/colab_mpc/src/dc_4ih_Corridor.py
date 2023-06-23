@@ -1,4 +1,7 @@
 
+# CODE to test the corridor version of the map where 4 agents colaborate using asumed
+# hyperplanes to constraint the free space of the solution
+
 import sys
 import numpy as np
 import matplotlib as mpl
@@ -6,28 +9,22 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/DistributedControllerObject')
+sys.path.append(sys.path[0]+'/DistributedControllerObject') # folder containing the controller
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 
 from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
-from trackInitialization import Map, wrap
-from plot_vehicle import *
+from trackInitialization import Map, wrap # additional funtions
+from plot_vehicle import *  #plooting functions
 
+# hyperparameters
 plot = True
 plot_end = False
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-def compute_hyper(x_ego,x_neg):
-
-    a = x_neg - x_ego
-    b = 0.5 * a @ (x_ego + x_neg).T
-
-    return a,b
-
 class agent():
+# Agent class that parses to the controller
 
-    #TODO: define Q and R
     def __init__(self, N, Map, dt, x0, id, Q=np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0, 0]), R=1000 * np.diag([1, 1])):
         self.map = Map
         self.N = N
@@ -44,6 +41,7 @@ class agent():
         self.status = []
         self.id = id
 
+    #TODO clear this redundant functions calls
     def one_step(self, agents, agents_id, pose, uPred = None, xPred = None):
 
         if (xPred is None):
@@ -61,13 +59,14 @@ class agent():
         self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes, Solution
 
+    # Plotting function used to add all the data into the plotting library
     def plot_experiment(self):
 
         disp = plotter_offline(self.map)
         disp.add_agent_ti(self)
         disp.add_planes_ti(self)
 
-
+    # keep current values as values for time k
     def save(self, xPred, uPred, planes):
 
         self.states.append(xPred[0,:])
@@ -75,7 +74,8 @@ class agent():
         self.planes.append(planes[0,:])
 
     def save_to_csv(self):
-
+        # save agent data in .dat (suitable for matlab plotting) in a hard coded path within the experimetn folder
+        #TODO: automate this to have consequtive experiments not overwrite each other
         path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/corr/" + str(self.id)
 
         if not os.path.exists(path):
@@ -86,7 +86,7 @@ class agent():
         np.savetxt(path + '/time.dat', self.time_op, fmt='%.5e', delimiter=' ')
 
     def save_var_to_csv(self,var, name):
-
+        # save any data in .dat (suitable for matlab plotting) in a hard coded path within the experimetn folder
         path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/corr/" + str(self.id)
 
         if not os.path.exists(path):
@@ -95,6 +95,7 @@ class agent():
         np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
 
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
+    # initialisation function for u0s and x0s
     agents = np.zeros((Hp+1,len(data),2))
     for id, el in enumerate(data):
 
@@ -152,39 +153,44 @@ def main():
 
 #########################################################
 #########################################################
-    # set constants
+    # controller constants
 
     N = 25
     dt = 0.01
 
-    # define neighbours
+    # define coms
     n_0 = [1,2,3]
     n_1 = [0,2,3]
     n_2 = [0,1,3]
     n_3 = [0,1,2]
 
+    # define initial positions
     x0_0 = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
     x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
     x0_2 = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
     x0_3 = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
+    # initialise map object
     maps = [Map("oval"),Map("oval"),Map("oval"),Map("oval")]
     # maps = [Map(), Map(), Map(), Map()]
 
+    # get initial values for the agents
     agents = initialise_agents([x0_0,x0_1,x0_2,x0_3],N,dt,maps)
-    states_hist = [agents]
 
+    #set up plotting
     if plot:
         disp = plotter(maps[0],4)
 
     if plot_end:
         d = plotter_offline(maps[0])
 
+    # initialise controller objects
     r0 = agent(N, maps[0], dt, x0_0, 0)
     r1 = agent(N, maps[1], dt, x0_1, 1)
     r2 = agent(N, maps[2], dt, x0_2, 2)
     r3 = agent(N, maps[3], dt, x0_3, 3)
 
+    # initialise update placeholders
     x_old0 = None
     x_old1 = None
     x_old2 = None
@@ -196,34 +202,35 @@ def main():
     u_old3 = None
     it = 0
 
-    dist_hist = []
     time_alg = []
 
     while(it<550):
 
         tic = time.time()
 
-        # TODO acces the subset of lambdas of our problem
+        # run an optimisation
         f0, uPred0, xPred0, planes0, raw0 = r0.one_step(agents[:,n_0,:], n_0, agents[:,0,:], u_old0, x_old0)
         f1, uPred1, xPred1, planes1, raw1 = r1.one_step(agents[:,n_1,:], n_1, agents[:,1,:], u_old1, x_old1)
         f2, uPred2, xPred2, planes2, raw2 = r2.one_step(agents[:,n_2,:], n_2, agents[:,2,:], u_old2, x_old2)
         f3, uPred3, xPred3, planes3, raw3 = r3.one_step(agents[:,n_3,:], n_3, agents[:,3,:], u_old3, x_old3)
-        if not (f0 and 1):
-            break
-        # print(uPred0[0,:])
-        print(xPred0[0,:])
-        print(xPred1[0,:])
-        print(xPred2[0,:])
-        print(xPred3[0,:])
 
+        # break if any of the problems could not be solved
+        if not (f0 and f1 and f2 and f3):
+            break
+
+        ## print if needed
+        # print(xPred0[0,:])
+        # print(xPred1[0,:])
+        # print(xPred2[0,:])
+        # print(xPred3[0,:])
+
+        # update agents (x,y positions)
         agents[:, 0, :] = xPred0[:, -2:]
         agents[:, 1, :] = xPred1[:, -2:]
         agents[:, 2, :] = xPred2[:, -2:]
         agents[:, 3, :] = xPred3[:, -2:]
 
-        states_hist.append(agents)
-        dist_hist.append( np.sqrt((xPred0[0,7] - xPred1[0,7])**2 + (xPred0[0,8] - xPred1[0,8])**2) )
-
+        # save current values for the next iteration
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes1)
         r2.save(xPred2, uPred2, planes2)
@@ -245,11 +252,9 @@ def main():
         u_old3 = uPred3
         time_alg.append((time.time() - tic) / 2)
 
-        if dist_hist[-1] < 0.2:
-            print("error minimum distance")
-
-        print(time.time() - tic)
+        # print(time.time() - tic)
         it += 1
+
         if plot :
             disp.plot_step(xPred0[1, 7], xPred0[1, 8], xPred0[1, 5], 0)
             disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)

@@ -32,13 +32,13 @@ def compute_hyper(x_ego,x_neg):
 
 class agent():
 
-    #TODO: define Q and R
-    def __init__(self, N, Map, dt, x0, id, dth, Q=None, R=None):
+    #TODO: clean redundant variables
+    def __init__(self, N, Map, dt, x0, id, dth, Q=np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0,0,0,0]), R=10* np.diag([1, 1])  ):
         self.map = Map
         self.N = N
         self.dt = dt
-        self.Q  = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0,0,0,0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
-        self.R  = 10* np.diag([1, 1])                          #[delta ; a]
+        self.Q  = Q   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
+        self.R  = R   #[delta ; a]
         self.Controller = PathFollowingNL_MPC(self.Q, self.R, N, dt, Map, id, dth)
         self.x0 = x0
         self.states = []
@@ -52,6 +52,7 @@ class agent():
         self.data_share = []
         self.id = id
 
+    # TODO: clean redundant functions
     def one_step(self,x0, lambdas, agents, agents_id, pose, uPred = None, xPred = None, planes_fixed = None, slack = None):
 
         if (xPred is None):
@@ -79,7 +80,7 @@ class agent():
         disp.add_planes_ti(self)
 
     def save(self, xPred, uPred, planes):
-
+        # TODO add the functionality to save the planes somewhere for the future problems
         self.states.append(xPred[0,:])
         self.u.append(uPred[0,:])
 
@@ -108,10 +109,9 @@ def initialise_agents(data,Hp,dt,map, accel_rate=0):
     data_holder = [i for i in range(len(data))]
     for id, el in enumerate(data):
 
-        # agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-4:-2] # with slack
         aux = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)
         agents[:,id,:] = aux[0][:,-2:] # without slack
-        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp,4)),np.zeros((Hp,len(data)))]
+        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp,4)),np.zeros((Hp,len(data)))] # we need to initialise the slack vars
     return agents, data_holder
 
 def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
@@ -161,26 +161,16 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
 
 def eval_constraint(x1, x2, D):
 
-    # planes = [0.87,0.48,-1.05]
-    cost1 = D - np.sqrt(sum((x1-x2)**2))
+    cost1 = D - np.sqrt(sum((x1-x2)**2)) # the OCD update depends on on the diference between the minimum D and the euclidean dist
 
     return np.array(cost1)
-
-def convergence(current,old):
-
-    are_close = True
-    for i, _ in enumerate(current):
-        are_close = are_close and np.allclose(current[i], old[i], atol=0.01)
-
-    return are_close
-
 
 def main():
 
 #########################################################
 #########################################################
-    # set constants
 
+    # controller constants
     N = 10
     dt = 0.01
     alpha = 0.25
@@ -196,15 +186,15 @@ def main():
     n_2 = [0,1,3]
     n_3 = [0,1,2]
 
+    # define initial positions
     x0_0 = [2.5, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
     x0_1 = [2.5, -0.16, 0.00,-0.55, 0, 0.0, 0.25, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
     x0_2 = [2.5, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
     x0_3 = [2.5, -0.16, 0.00,-0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
+    # initialise data structures
     maps = [Map(),Map(),Map(),Map()]
     agents,data = initialise_agents([x0_0,x0_1,x0_2,x0_3],N,dt,maps)
-
-    states_hist = [agents]
 
     if plot:
         disp = plotter(maps[0],4)
@@ -212,6 +202,7 @@ def main():
     if plot_end:
         d = plotter_offline(maps[0])
 
+    # initialise controllers
     r0 = agent(N, maps[0], dt, x0_0, 0, dth)
     r1 = agent(N, maps[1], dt, x0_1, 1, dth)
     r2 = agent(N, maps[2], dt, x0_2, 2, dth)
@@ -251,23 +242,25 @@ def main():
         itc = 0
 
         while(not (it_OCD > 2  and finished)) :
+            # OCD loop, we want to force at least 2 iterations + it_conv iterations without significant changes
 
             it_OCD += 1
 
+            # run an instance of the optimisation problems
             f0, uPred0, xPred0, planes0, lsack0, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], n_0, agents[:,0,:], u_old0, old_solution0, planes_old)
             f1, uPred1, xPred1, planes1, lsack1, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], n_1, agents[:,1,:], u_old1, old_solution1, planes_old)
             f2, uPred2, xPred2, planes2, lsack2, Solution2 = r2.one_step(x_old2, lambdas[2,n_2,:], agents[:,n_2,:], n_2, agents[:,2,:], u_old2, old_solution2, planes_old)
             f3, uPred3, xPred3, planes3, lsack3, Solution3 = r3.one_step(x_old3, lambdas[3,n_3,:], agents[:,n_3,:], n_3, agents[:,3,:], u_old3, old_solution3, planes_old)
 
-
+            # share the results within the network
             r0.data_share = [r1.data_opti,r2.data_opti,r3.data_opti]
             r1.data_share = [r0.data_opti,r2.data_opti,r3.data_opti]
             r2.data_share = [r0.data_opti,r1.data_opti,r3.data_opti]
             r3.data_share = [r0.data_opti,r1.data_opti,r2.data_opti]
 
-            # print("Are planes close?" + str(np.allclose(planes1, planes0)))
             cost = np.zeros((n_agents,n_agents,N))
 
+            # update the values of x,y for the obstacle avoidance constraints
             agents[:,0,:] = xPred0[:,-2:]
             agents[:,1,:] = xPred1[:,-2:]
             agents[:,2,:] = xPred2[:,-2:]
@@ -281,14 +274,15 @@ def main():
                             cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:],dth)
 
 
-            lambdas += alpha*cost
+            lambdas += alpha*cost # update lambdas
 
             lambdas_hist.append(lambdas)
-            states_hist.append(agents)
+            # check if the values of x changed, if they are close enough for two iterations the algorithm has converged
             if not it_OCD == 1:
                 finished_ph = np.allclose(x_old2, xPred2, atol=0.01) and np.allclose(x_old3, xPred3, atol=0.01) and np.allclose(x_old0, xPred0, atol=0.01) and np.allclose(x_old1, xPred1, atol=0.01) and np.allclose(cost, cost_old, atol=0.01) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
                 itc += 1
 
+            # store values from current iteration into the following one
             x_old0 = xPred0
             x_old1 = xPred1
             x_old2 = xPred2
@@ -300,7 +294,7 @@ def main():
             u_old3 = uPred3
             cost_old = cost
 
-            planes_old = planes0
+            planes_old = planes0 # TODO: remove this varaible as they are being updated from inside
 
             if not finished_ph :
                 print("breakpoint placeholder with " + str(it_OCD))
