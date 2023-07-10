@@ -7,6 +7,6 @@ TODO esta setmana:
 
 CODIS A EXECUTAR
 
-* dc_hp_4LPVds_CASADI: Comportament raro, sempre arriba a les maximes iteracions tindre q tornar a versions anteriors o revisar q onda 
+* dc_hp_4LPVds_CASADI: Funciona, es tindria q tunejar pel tema de temps de execucio i tal 
 * dc_hp_4LPVs_CASADI: No acaba de funcionar per constraints temporals (Tarda moltissima estona, pensar com ho gestionem)
 * dc_4ih: aparentment funciona mes o menys (mantenen una formacio)

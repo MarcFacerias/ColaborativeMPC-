@@ -246,9 +246,6 @@ def main():
 
         while(not (it_OCD > 2  and finished)) :
             # OCD loop, we want to force at least 2 iterations + it_conv iterations without significant changes
-
-            it_OCD += 1
-
             # run an instance of the optimisation problems
             f0, uPred0, xPred0, planes0, lsack0, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], n_0, u_old0, old_solution0)
             f1, uPred1, xPred1, planes1, lsack1, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], n_1, u_old1, old_solution1)
@@ -281,9 +278,10 @@ def main():
 
             lambdas_hist.append(lambdas)
             # check if the values of x changed, if they are close enough for two iterations the algorithm has converged
-
-            finished_ph = np.allclose(x_old2, xPred2, atol=0.01) and np.allclose(x_old3, xPred3, atol=0.01) and np.allclose(x_old0, xPred0, atol=0.01) and np.allclose(x_old1, xPred1, atol=0.01) and np.allclose(cost, cost_old, atol=0.01) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
-            itc += 1
+            if it_OCD != 0:
+                finished_ph = np.allclose(x_old2, xPred2, atol=0.01) and np.allclose(x_old3, xPred3, atol=0.01) and np.allclose(x_old0, xPred0, atol=0.01) and np.allclose(x_old1, xPred1, atol=0.01) and np.allclose(cost, cost_old, atol=0.01) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
+                itc += 1
+                print(finished_ph)
 
             # store values from current iteration into the following one
             x_old0 = xPred0
@@ -310,6 +308,7 @@ def main():
                 print("max it reached")
                 finished = True
 
+            it_OCD += 1
 
 
         #save current iteration for logging purposes
