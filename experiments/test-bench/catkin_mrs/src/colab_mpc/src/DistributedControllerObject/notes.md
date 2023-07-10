@@ -1,14 +1,12 @@
 TODO esta setmana: 
 
-* Testejar els plans offline, sense la part del OCD 
-  * Es resol pero en algun punt el problema peta 
-  * La performance es tindria q intentar millorar -> using a cruise velocity a
-  * Revisar la formu del cost function
-* Testejar el problema amb el solver no lineal
-  * Hauria de llegir algun paper per veure quin solvers fan servir quan les constraints son quadratic
+* Revisar el codi i mirar q tot vagi mes o menos be 
+* Planejar el paper (seccions + experiments)
+* Reunio amb el Vicenç per discutir com esta plantejat el paper
+* Escriure una mica el estate of the art i la introduccio 
 
-La idea es a) veure si es necesari fer la coordinacio b) comparar el cas no lineal amb comparacio i el cas linealirazat sense coordinacio
+CODIS A EXECUTAR
 
-TODO Today: 
-
-* Intentar fer servir el controlador del euge en python pa veure que onda amb els stats i tota la pesca
+* dc_hp_4LPVds_CASADI: Comportament raro, sempre arriba a les maximes iteracions tindre q tornar a versions anteriors o revisar q onda 
+* dc_hp_4LPVs_CASADI: No acaba de funcionar per constraints temporals (Tarda moltissima estona, pensar com ho gestionem)
+* dc_4ih: aparentment funciona mes o menys (mantenen una formacio)

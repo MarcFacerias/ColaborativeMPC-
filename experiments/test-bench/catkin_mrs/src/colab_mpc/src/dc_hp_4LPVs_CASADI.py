@@ -16,8 +16,7 @@ from plot_vehicle import *
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-# TODO: implement this suggestion https://groups.google.com/g/casadi-users/c/1B2kTOF--SI
-# TODO: Add quality of life changes to the planes
+
 plot = False
 plot_end = True
 it_conv = 1
@@ -87,7 +86,7 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/TestsPaperNLs/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -98,7 +97,7 @@ class agent():
 
     def save_var_to_csv(self,var, name):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/"
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/TestsPaperNLs/"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)

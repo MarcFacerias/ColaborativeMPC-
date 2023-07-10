@@ -1,15 +1,11 @@
 
 from scipy import linalg, sparse
-from cvxopt.solvers import qp
-from cvxopt import spmatrix, matrix, solvers
 from utilities import Curvature, get_ey
 import numpy as np
 from numpy import hstack, inf, ones
 from scipy.sparse import vstack
 from osqp import OSQP
 from compute_plane import hyperplane_separator
-
-solvers.options['show_progress'] = False
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
@@ -64,7 +60,7 @@ class PathFollowingLPV_MPC:
         self.OldSteering = [0.0]
         self.OldAccelera = [0.0]*int(1)
 
-        self.Solver = Solver # solver holder, string that tells if it's cvx or qp? TODO: remove cvx
+        self.Solver = Solver # solver holder, string that tells if it's cvx or qp?
 
 
     def _buildQ(self):
@@ -128,7 +124,7 @@ class PathFollowingLPV_MPC:
             idx = np.hstack((idx,aux))
 
         self.xPred = np.reshape((Solution[idx]), (self.N+1, self.n_s))
-        self.uPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.d * self.N)]), (self.N, self.d)) # TODO: fix this with new variable structure
+        self.uPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.d * self.N)]), (self.N, self.d))
         self.OldSteering = [self.uPred[1,0]]
         self.OldAccelera = [self.uPred[1,1]]
 
@@ -270,7 +266,7 @@ def _buildMatIneqConst(Controller,ey):
     bx_ey = np.repeat(np.array(ey),2).tolist()
 
     # piece of code used to rearenge the constraitns so that (v_ub, v_lb, ey_ub, ey_lb) for all horizon
-    # TODO: we could rearange the constraints to avoid having to add this piece of code
+
     bxtot = iter(bx_vel)
     res = []
 
@@ -397,8 +393,6 @@ def _buildMatEqConst(Controller):
 
     Eoa = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1))
     L = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1))
-
-    # TODO: there's redundancy in this loops
 
     for i in range(1, N+1):
         Gx[i * (n_exp):i * (n_exp) + Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i-1]

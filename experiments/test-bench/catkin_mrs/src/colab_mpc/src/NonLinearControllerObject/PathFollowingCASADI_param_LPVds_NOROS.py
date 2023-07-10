@@ -67,7 +67,7 @@ class PathFollowingNL_MPC:
         self._cost = 0 # cost logging
 
         # parameters
-        self.initial_states = self.opti.parameter(self.n_exp - self.n_slack)
+        self.initial_states = self.opti.parameter(self.n_exp)
 
         # LPV placeholders
         # vx
@@ -164,7 +164,7 @@ class PathFollowingNL_MPC:
     def eq_constraints(self):
 
         # set initial states
-        for i in range(0, self.n_exp-self.n_slack):
+        for i in range(0, self.n_exp):
 
             self.opti.subject_to(
                 self.x[i] == self.initial_states[i]
