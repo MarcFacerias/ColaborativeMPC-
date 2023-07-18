@@ -79,18 +79,14 @@ class Map():
         elif selectedTrack == "TestOpenMap":
             self.slack      = 0.15
             scale = 2
-            spec = np.empty((5,2,2))
+            spec = np.empty((3,2,2))
             spec[:,:,0] = scale * np.array([[1.0, 0],
                              [4.5, 4.5 / np.pi],
-                             [2.0, 0],
-                             [4.5, 4.5 / np.pi],
-                             [1.0, 0]])
+                             [2.0, 0]])
 
             spec[:,:,1] = np.array([[2.0, 0],
                              [5.85, 5.85 / np.pi],
-                             [4.0, 0],
-                             [5.85, 5.85 / np.pi],
-                             [2.0, 0]])
+                             [4.0, 0]])
             self.halfWidth = HW * np.ones(spec.shape[0]+1)
 
 
@@ -158,7 +154,7 @@ class Map():
         # we compute also the cumulative s at the starting point of the segment at signed curvature
         # PointAndTangent = [x, y, psi, cumulative s, segment length, signed curvature]
         roads = spec.shape[2]
-        PointAndTangent = np.zeros((spec.shape[0] + 1, 6,roads))
+        PointAndTangent = np.zeros((spec.shape[0] , 6,roads))
         y_ini = [2 * self.halfWidth[0], 2 * 2 * self.halfWidth[0]]
         self.TrackLength = np.zeros(roads)
         for k in range(0, roads):
@@ -238,18 +234,18 @@ class Map():
 
                     PointAndTangent[i, :, k] = NewLine  # Write the new info
 
-            xs = PointAndTangent[-2, 0, k]
-            ys = PointAndTangent[-2, 1, k]
-            xf = 0
-            yf = y_ini[k]
-            psif = 0
-
-            # plt.plot(xf, yf, 'or')
-            # plt.show()
-            l = np.sqrt((xf - xs) ** 2 + (yf - ys) ** 2)
-
-            NewLine = np.array([xf, yf, psif, PointAndTangent[-2, 3, k] + PointAndTangent[-2, 4, k], l, 0])
-            PointAndTangent[-1, :, k] = NewLine
+            # xs = PointAndTangent[-2, 0, k]
+            # ys = PointAndTangent[-2, 1, k]
+            # xf = 0
+            # yf = y_ini[k]
+            # psif = 0
+            #
+            # # plt.plot(xf, yf, 'or')
+            # # plt.show()
+            # l = np.sqrt((xf - xs) ** 2 + (yf - ys) ** 2)
+            #
+            # NewLine = np.array([xf, yf, psif, PointAndTangent[-2, 3, k] + PointAndTangent[-2, 4, k], l, 0])
+            # PointAndTangent[-1, :, k] = NewLine
 
             self.TrackLength[k] = PointAndTangent[-1, 3, k] + PointAndTangent[-1, 4, k]
         self.PointAndTangent = PointAndTangent
