@@ -46,6 +46,7 @@ class Map():
                              [80 * 0.03, 0]])
 
             self.halfWidth = 0.6 * np.ones(spec.shape[0])
+            self.open = False
 
         elif selectedTrack == "oval":
             self.slack      = 0.15
@@ -56,7 +57,7 @@ class Map():
                              [5.85, 5.85 / np.pi],
                              [2.0, 0]])
             self.halfWidth = np.array([0.55,0.55,0.45,0.45,0.55,0.55])
-            # self.halfWidth = np.array([0.75,0.75,0.75,0.75,0.75,0.75])
+            self.open = False
 
 
         elif selectedTrack == "Oval2":
@@ -75,19 +76,24 @@ class Map():
                              [5.85, 5.85 / np.pi],
                              [2.0, 0]])
             self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.open = False
 
         elif selectedTrack == "TestOpenMap":
             self.slack      = 0.15
             scale = 2
-            spec = np.empty((3,2,2))
-            spec[:,:,0] = scale * np.array([[1.0, 0],
+            spec = np.empty((5,2,2))
+            # Add two 0 segments to prevent weird jumps
+            spec[:,:,0] = scale * np.array([[0.0, 0],[1.0, 0],
                              [4.5, 4.5 / np.pi],
-                             [2.0, 0]])
+                             [2.0, 0],
+                             [0.0, 0]])
 
-            spec[:,:,1] = np.array([[2.0, 0],
+            spec[:,:,1] = np.array([[0.0, 0],[2.0, 0],
                              [5.85, 5.85 / np.pi],
-                             [4.0, 0]])
+                             [4.0, 0],
+                             [0.0, 0]])
             self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.open = True
 
 
         elif selectedTrack == "L_shape":
@@ -101,6 +107,7 @@ class Map():
                              [lengthCurve / np.pi *2, 0],
                              [lengthCurve/2, lengthCurve / np.pi]])
             self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.open = False
 
         elif selectedTrack == "L_shape_IDIADA":
             self.slack      = 6*0.45
@@ -113,6 +120,7 @@ class Map():
                              [lengthCurve / np.pi *2, 0],
                              [lengthCurve/2, lengthCurve / np.pi]])
             self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.open = False
 
 
         elif selectedTrack == "SLAM_shape1":
@@ -129,6 +137,7 @@ class Map():
                              [lengthCurve,(lengthCurve*2)/np.pi],
                              [2.6,0]])
             self.halfWidth = 0.4 * np.ones(spec.shape[0]+1)
+            self.open = False
 
         elif selectedTrack == "8_track":
             self.slack     = 0.15
@@ -146,6 +155,7 @@ class Map():
                              [1.0,0],
                              [lengthCurve,lengthCurve*2/np.pi]])
             self.halfWidth = 0.4 * np.ones(spec.shape[0]+1)
+            self.open = False
 
 
 
@@ -154,7 +164,11 @@ class Map():
         # we compute also the cumulative s at the starting point of the segment at signed curvature
         # PointAndTangent = [x, y, psi, cumulative s, segment length, signed curvature]
         roads = spec.shape[2]
-        PointAndTangent = np.zeros((spec.shape[0] , 6,roads))
+        if self.open:
+            PointAndTangent = np.zeros((spec.shape[0] , 6,roads))
+        else:
+            PointAndTangent = np.zeros((spec.shape[0]+1, 6, roads))
+
         y_ini = [2 * self.halfWidth[0], 2 * 2 * self.halfWidth[0]]
         self.TrackLength = np.zeros(roads)
         for k in range(0, roads):
@@ -170,14 +184,6 @@ class Map():
                         x = PointAndTangent[i-1, 0, k] + l * np.cos(ang)  # x coordinate of the last point of the segment
                         y = PointAndTangent[i-1, 1, k] + l * np.sin(ang)  # y coordinate of the last point of the segment
                     psi = ang  # Angle of the tangent vector at the last point of the segment
-
-                    # # With the above information create the new line
-                    # if i == 0:
-                    #     NewLine = np.array([x, y, psi, PointAndTangent[i, 3], l, 0])
-                    # else:
-                    #     NewLine = np.array([x, y, psi, PointAndTangent[i, 3] + PointAndTangent[i, 4], l, 0])
-                    #
-                    # PointAndTangent[i + 1, :] = NewLine  # Write the new info
 
                     if i == 0:
                         NewLine = np.array([x, y, psi, PointAndTangent[i, 3, k], l, 0])
@@ -216,17 +222,6 @@ class Map():
                     y = CenterY + np.abs(r) * np.sin(
                         angle + direction * spanAng)  # y coordinate of the last point of the segment
 
-                    # With the above information create the new line
-                    # plt.plot(CenterX, CenterY, 'bo')
-                    # plt.plot(x, y, 'ro')
-
-                    # if i == 0:
-                    #     NewLine = np.array([x, y, psi, PointAndTangent[i, 3], l, 1 / r])
-                    # else:
-                    #     NewLine = np.array([x, y, psi, PointAndTangent[i, 3] + PointAndTangent[i, 4], l, 1 / r])
-                    #
-                    # PointAndTangent[i + 1, :] = NewLine  # Write the new info
-
                     if i == 0:
                         NewLine = np.array([x, y, psi, PointAndTangent[i, 3, k], l, 1 / r])
                     else:
@@ -234,18 +229,17 @@ class Map():
 
                     PointAndTangent[i, :, k] = NewLine  # Write the new info
 
-            # xs = PointAndTangent[-2, 0, k]
-            # ys = PointAndTangent[-2, 1, k]
-            # xf = 0
-            # yf = y_ini[k]
-            # psif = 0
-            #
-            # # plt.plot(xf, yf, 'or')
-            # # plt.show()
-            # l = np.sqrt((xf - xs) ** 2 + (yf - ys) ** 2)
-            #
-            # NewLine = np.array([xf, yf, psif, PointAndTangent[-2, 3, k] + PointAndTangent[-2, 4, k], l, 0])
-            # PointAndTangent[-1, :, k] = NewLine
+            if not self.open:
+                xs = PointAndTangent[-2, 0, k]
+                ys = PointAndTangent[-2, 1, k]
+                xf = 0
+                yf = y_ini[k]
+                psif = 0
+
+                l = np.sqrt((xf - xs) ** 2 + (yf - ys) ** 2)
+
+                NewLine = np.array([xf, yf, psif, PointAndTangent[-2, 3, k] + PointAndTangent[-2, 4, k], l, 0])
+                PointAndTangent[-1, :, k] = NewLine
 
             self.TrackLength[k] = PointAndTangent[-1, 3, k] + PointAndTangent[-1, 4, k]
         self.PointAndTangent = PointAndTangent
@@ -268,7 +262,12 @@ class Map():
             ey = ey*np.ones(self.PointAndTangent[:,:,lane].shape[0])
 
         # wrap s along the track
-        while (s >= self.TrackLength[lane]):
+
+        if not self.open:
+            while (s >= self.TrackLength[lane]):
+                s = s - self.TrackLength[lane]
+
+        elif s >= self.TrackLength[lane]:
             s = s - self.TrackLength[lane]
 
         if s < 0:

@@ -18,8 +18,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 def main():
 
-    disp = plotter_offline(Map("TestOpenMap"))
-    # disp = plotter_offline(Map())
+    disp = plotter_offline(Map())
     disp.plot_map()
     input("Press enter to continue...")
 

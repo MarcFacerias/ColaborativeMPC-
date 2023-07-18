@@ -48,8 +48,8 @@ class plotter_offline():
 
             plt.plot(map.PointAndTangent[:, 0, j], map.PointAndTangent[:, 1, j], 'o')
             plt.plot(Points0[:, 0], Points0[:, 1], linestyle='dashed')
-            # plt.plot(Points1[:, 0], Points1[:, 1], '-b')
-            # plt.plot(Points2[:, 0], Points2[:, 1], '-b')
+            plt.plot(Points1[:, 0], Points1[:, 1], '-b')
+            plt.plot(Points2[:, 0], Points2[:, 1], '-b')
 
     def add_agent(self, agent, style):
 
