@@ -95,6 +95,22 @@ class Map():
             self.halfWidth = HW * np.ones(spec.shape[0]+1)
             self.open = True
 
+        elif selectedTrack == "Highway":
+            self.slack      = 0.15
+            scale = 2
+            spec = np.empty((10,2,1))
+            spec[:,:,0] = scale * np.array([[0.0, 0],[1.0, 0],
+                             [4.5, 4.5 / (0.5*np.pi)],
+                             [2.0, 0],
+                             [2.5, -2.5 / (0.5 * np.pi)],
+                             [2.0, 0],
+                             [4.5, 4.5 / np.pi],
+                             [2.0, 0],
+                             [5.0, 0],
+                             [0.0, 0]])
+
+            self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.open = True
 
         elif selectedTrack == "L_shape":
             self.slack      = 0.45

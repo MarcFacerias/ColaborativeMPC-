@@ -64,10 +64,11 @@ class plotter_offline():
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def plot_map(self):
+    def plot_map(self,path):
         plt.show()
         self.fig.canvas.draw()
         plt.pause(0.001)
+        plt.savefig(path)
 
 
 class plotter():

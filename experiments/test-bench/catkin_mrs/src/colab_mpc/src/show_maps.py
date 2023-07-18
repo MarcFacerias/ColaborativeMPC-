@@ -18,8 +18,10 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 def main():
 
-    disp = plotter_offline(Map())
-    disp.plot_map()
+    path = r"I:\Marc\PhD\ColaborativeMPC-\experiments\test-bench\catkin_mrs\src\colab_mpc\src\drawings\png\map.png"
+    disp = plotter_offline(Map("Highway"))
+    disp.plot_map(path)
+
     input("Press enter to continue...")
 
 if __name__ == "__main__":
