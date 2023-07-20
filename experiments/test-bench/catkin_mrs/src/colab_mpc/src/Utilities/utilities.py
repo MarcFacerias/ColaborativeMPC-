@@ -6,7 +6,7 @@ def checkEnd(x, maps):
     for i,agent in enumerate(x):
 
         if not agent is None:
-            if np.isclose(agent[0,-3],maps[i].TrackLength,atol=0.15) or (agent[0,-3] > maps[i].TrackLength) :
+            if np.isclose(agent[0,-3],maps[i].TrackLength[maps[i].lane],atol=0.15) or (agent[0,-3] > maps[i].TrackLength[maps[i].lane]) :
                 status = True
                 return status
         else:

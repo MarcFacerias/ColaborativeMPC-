@@ -167,7 +167,9 @@ def main():
     x0_2 = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
     x0_3 = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
-    maps = [Map("Highway"),Map("Highway"),Map("Highway"),Map("Highway")]
+    # maps = [Map("Highway"),Map("Highway"),Map("Highway"),Map("Highway")]
+    maps = [Map(),Map(),Map(),Map()]
+
     agents = initialise_agents([x0_0,x0_1,x0_2,x0_3],N,dt,maps)
     states_hist = [agents]
 
@@ -195,7 +197,7 @@ def main():
 
     dist_hist = []
 
-    while(it<450):
+    while(it<4000):
 
         tic = time.time()
 

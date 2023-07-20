@@ -99,12 +99,10 @@ class agent():
 
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp+1,len(data),2))
-    x_pred = [''] * len(data)
     for id, el in enumerate(data):
+        agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-2:]
 
-        x_pred[id] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0]
-        agents[:,id,:] = x_pred[id][:,-2:]
-    return agents,x_pred
+    return agents
 
 def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     # We need a prediction of the states for the start-up proces of the controller (To instantiate the LPV variables)
@@ -176,6 +174,7 @@ def main():
         n.remove(j)
 
     x_pred = [None] * n_agents
+    x_old  = [None] * n_agents
     u_pred = [None] * n_agents
     u_old  = [None] * n_agents
     feas   = [None] * n_agents
@@ -183,8 +182,9 @@ def main():
     planes = [None] * n_agents
     rs     = [None] * n_agents
 
-    maps = [Map("Highway")]*n_agents
-    agents,x_old = initialise_agents(x0,N,dt,maps)
+    # maps = [Map("Highway")]*n_agents
+    maps = [Map()]*n_agents
+    agents = initialise_agents(x0,N,dt,maps)
     states_hist = [agents]
 
     if plot:
@@ -208,6 +208,7 @@ def main():
             r.x0 = x_pred[i][1, :]
             x_old[i] = x_pred[i][1:, :]
 
+        u_old = u_pred
         agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:],0,1)
         states_hist.append(agents)
         toc = time.time()
@@ -217,16 +218,20 @@ def main():
             for idx in range(0,n_agents):
                 disp.plot_step(x_pred[idx][1, 7], x_pred[idx][1, 8], x_pred[0][1, 5], idx)
 
-
         if verb:
 
             print("--------------------------------------------------------------")
             print("it: " + str(it))
             print("agents x : " + str(agents[0,:,0]))
             print("agents y : " + str(agents[0,:,1]))
-            for i in range(0,n_agents):
-                print("Agent " + str(i) + " track s: " + str(x_pred[i][0,-3]) + "/" + str(maps[i].TrackLength[0]))
 
+            for i in range(0,n_agents):
+                print("---------------------Agents---------------------------------------")
+
+                print("Agent " + str(i) + " track s: " + str(x_pred[i][0,-3]) + "/" + str(maps[i].TrackLength[0]))
+                print("Agent " + str(i) + " u0: " + str(u_pred[i][0,0]) + " uº: " + str(u_pred[i][0,1]))
+
+            print("---------------------END Agents---------------------------------------")
             print("avg computational time: " + str((toc-tic)/n_agents))
             print("--------------------------------------------------------------")
 
