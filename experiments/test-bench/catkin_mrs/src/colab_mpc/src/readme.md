@@ -12,5 +12,5 @@ LIST OF COMMENTED FILES
 * PathFollowingLPVMPV_independent_hyperplanes
 
 TODO LIST  
-* remove redundant function calls from dc_* files (done in dc_hp_4LPVds_CASADI)
-* update the file path so that consecutive paths don't overwrite consecutive experiments 
+* Improve the code to make it modular, right now it's a pain to use! vectorise everything 
+* Test new track 

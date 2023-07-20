@@ -75,7 +75,7 @@ class Map():
                              [4.0, 0],
                              [5.85, 5.85 / np.pi],
                              [2.0, 0]])
-            self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.halfWidth = HW * np.ones(spec.shape[0])
             self.open = False
 
         elif selectedTrack == "TestOpenMap":
@@ -92,7 +92,7 @@ class Map():
                              [5.85, 5.85 / np.pi],
                              [4.0, 0],
                              [0.0, 0]])
-            self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.halfWidth = HW * np.ones(spec.shape[0])
             self.open = True
 
         elif selectedTrack == "Highway":
@@ -109,7 +109,7 @@ class Map():
                              [5.0, 0],
                              [0.0, 0]])
 
-            self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.halfWidth = HW * np.ones(spec.shape[0])
             self.open = True
 
         elif selectedTrack == "L_shape":
@@ -122,7 +122,7 @@ class Map():
                              [lengthCurve, lengthCurve / np.pi],
                              [lengthCurve / np.pi *2, 0],
                              [lengthCurve/2, lengthCurve / np.pi]])
-            self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.halfWidth = HW * np.ones(spec.shape[0])
             self.open = False
 
         elif selectedTrack == "L_shape_IDIADA":
@@ -135,7 +135,7 @@ class Map():
                              [lengthCurve, lengthCurve / np.pi],
                              [lengthCurve / np.pi *2, 0],
                              [lengthCurve/2, lengthCurve / np.pi]])
-            self.halfWidth = HW * np.ones(spec.shape[0]+1)
+            self.halfWidth = HW * np.ones(spec.shape[0])
             self.open = False
 
 
@@ -152,7 +152,7 @@ class Map():
                              [4.0,0],
                              [lengthCurve,(lengthCurve*2)/np.pi],
                              [2.6,0]])
-            self.halfWidth = 0.4 * np.ones(spec.shape[0]+1)
+            self.halfWidth = 0.4 * np.ones(spec.shape[0])
             self.open = False
 
         elif selectedTrack == "8_track":
@@ -170,7 +170,7 @@ class Map():
                              [lengthCurve,(lengthCurve*2)/np.pi],
                              [1.0,0],
                              [lengthCurve,lengthCurve*2/np.pi]])
-            self.halfWidth = 0.4 * np.ones(spec.shape[0]+1)
+            self.halfWidth = 0.4 * np.ones(spec.shape[0])
             self.open = False
 
 
@@ -271,11 +271,13 @@ class Map():
         if lane is None:
             lane = self.lane
 
-        try:
-            ey.shape[0] == self.PointAndTangent[:,:,lane].shape[0]
+        # Code to treat the case were we deal with the map, ugly fix
 
+        try:
+            if not ey.shape[0] == self.PointAndTangent[:,:,lane].shape[0]:
+                ey = ey[0] * np.ones(self.PointAndTangent[:, :, lane].shape[0])
         except:
-            ey = ey*np.ones(self.PointAndTangent[:,:,lane].shape[0])
+            ey = ey * np.ones(self.PointAndTangent[:, :, lane].shape[0])
 
         # wrap s along the track
 

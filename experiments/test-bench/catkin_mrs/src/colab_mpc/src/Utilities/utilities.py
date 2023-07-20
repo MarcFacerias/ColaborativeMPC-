@@ -1,5 +1,19 @@
 import numpy as np
-import pdb
+
+def checkEnd(x, maps):
+
+    status = False
+    for i,agent in enumerate(x):
+
+        if not agent is None:
+            if np.isclose(agent[0,-3],maps[i].TrackLength,atol=0.15) or (agent[0,-3] > maps[i].TrackLength) :
+                status = True
+                return status
+        else:
+            return False
+
+    return status
+
 def Regression(x, u, lamb):
     """Estimates linear system dynamics
     x, u: date used in the regression
