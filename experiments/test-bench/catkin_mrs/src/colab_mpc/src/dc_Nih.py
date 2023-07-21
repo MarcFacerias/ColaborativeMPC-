@@ -1,4 +1,5 @@
 
+# Global Variables
 import sys
 import numpy as np
 import matplotlib as mpl
@@ -9,39 +10,30 @@ import os
 sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
+sys.path.append(sys.path[0]+'/Config/LPV')
 
 from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 from utilities import checkEnd
+from config import *  #Important!! Containts system definitions
 
-plot = False
-plot_end = True
-verb = True
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-def compute_hyper(x_ego,x_neg):
-
-    a = x_neg - x_ego
-    b = 0.5 * a @ (x_ego + x_neg).T
-
-    return a,b
-
-class agent():
-
-    #TODO: define Q and R
-    def __init__(self, N, Map, dt, x0, id, Q=np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0, 0]), R=1000 * np.diag([1, 1])):
+class agent(initialiserLPV):
+    # Agents class, interfaces with the planner, saves data etc
+    #  Q: [vx ; vy ; psiDot ; e_psi ; s ; e_y]
+    #  R:  [delta ; a] la R es sobre el dU
+    def __init__(self, N, Map, dt, x0, id):
+        super().__init__("LPV") # initialise the initialiser
         self.map = Map
         self.N = N
         self.dt = dt
-        self.Q  = Q   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
-        self.R  = R                         #[delta ; a]
-        self.Controller = PathFollowingLPV_MPC(self.Q, self.R, N, dt, Map, "OSQP", id)
+        self.Controller = PathFollowingLPV_MPC(self.Q,self.Qs, self.R, N, dt, Map, id, self.model_param, self.sys_lim)
         self.x0 = x0
         self.states = []
         self.u = []
         self.planes = []
-        self.output_opti = []
         self.time_op = []
         self.status = []
         self.id = id
@@ -51,25 +43,20 @@ class agent():
         if (xPred is None or uPred is None):
             xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
-        feas, uPred, xPred, planes, raw = self._solve(self.x0, agents, agents_id, pose, xPred, uPred)
+        tic = time.time()
+        feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, agents, agents_id, pose)
+        uPred, xPred = self.Controller.uPred, self.Controller.xPred
+        self.time_op.append(time.time() - tic)
+        self.status.append(feas)
         self.save(xPred, uPred, planes)
 
         return feas,uPred, xPred, planes, raw
-
-    def _solve(self, x0, agents, agents_id, pose, Xpred, uPred):
-
-        tic = time.time()
-        feas, Solution, planes = self.Controller.solve(x0, Xpred, uPred, agents, agents_id, pose)
-        self.time_op.append(time.time() - tic)
-        self.status.append(feas)
-        return feas, self.Controller.uPred, self.Controller.xPred, planes, Solution
 
     def plot_experiment(self):
 
         disp = plotter_offline(self.map)
         disp.add_agent_ti(self)
         disp.add_planes_ti(self)
-
 
     def save(self, xPred, uPred, planes):
 
@@ -139,7 +126,6 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
         Ey[i+1]      = x0[3]
         Epsi[i+1]    = x0[4]
 
-
     Accel   = Accel + np.array([ (accel_rate * i) for i in range(0, Hp)])
 
     for i in range(0, Hp):
@@ -157,19 +143,7 @@ def main():
 #########################################################
 #########################################################
     # set constants
-
-    N = 25
-    dt = 0.01
-
-    x0_0 = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
-    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
-    x0_2 = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
-    x0_3 = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
-
-
-    x0 = [x0_0, x0_1, x0_2, x0_3]
-    n_agents = len(x0)
-
+    x0 = x0_database[0:n_agents]
     ns = [[i for i in range(0, n_agents)] for j in range(0, n_agents)]
 
     for j,n in enumerate(ns):
@@ -183,7 +157,8 @@ def main():
     planes = [None] * n_agents
     rs     = [None] * n_agents
 
-    maps = [Map("Highway")]*n_agents
+    maps = [Map(map_type)]*n_agents
+
     agents,x_old = initialise_agents(x0,N,dt,maps)
     states_hist = [agents]
 
@@ -193,14 +168,13 @@ def main():
     if plot_end:
         d = plotter_offline(maps[0])
 
-
     for i in range (0,n_agents):
 
         rs[i] = agent(N, maps[i], dt, x0[i], i)
 
     it = 0
 
-    while(it<1000 and not checkEnd(x_pred, maps)):
+    while(it<max_it and not checkEnd(x_pred, maps)):
 
         tic = time.time()
         for i,r in enumerate(rs):
@@ -208,6 +182,7 @@ def main():
             r.x0 = x_pred[i][1, :]
             x_old[i] = x_pred[i][1:, :]
 
+        u_old = u_pred
         agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:],0,1)
         states_hist.append(agents)
         toc = time.time()
@@ -217,22 +192,26 @@ def main():
             for idx in range(0,n_agents):
                 disp.plot_step(x_pred[idx][1, 7], x_pred[idx][1, 8], x_pred[0][1, 5], idx)
 
-
         if verb:
 
             print("--------------------------------------------------------------")
             print("it: " + str(it))
             print("agents x : " + str(agents[0,:,0]))
             print("agents y : " + str(agents[0,:,1]))
-            for i in range(0,n_agents):
-                print("Agent " + str(i) + " track s: " + str(x_pred[i][0,-3]) + "/" + str(maps[i].TrackLength[0]))
 
+            for i in range(0,n_agents):
+                print("---------------------Agents---------------------------------------")
+
+                print("Agent " + str(i) + " track s: " + str(x_pred[i][0,-3]) + "/" + str(maps[i].TrackLength[0]))
+                print("Agent " + str(i) + " u0: " + str(u_pred[i][0,0]) + " u1: " + str(u_pred[i][0,1]))
+
+            print("---------------------END Agents---------------------------------------")
             print("avg computational time: " + str((toc-tic)/n_agents))
             print("--------------------------------------------------------------")
 
     if plot_end:
-        for r in rs:
-            d.plot_offline_experiment(r, "oc", "-y")
+        for j,r in enumerate(rs):
+            d.plot_offline_experiment(r, color_list[j])
             r.save_to_csv()
         input("Press enter to continue...")
 

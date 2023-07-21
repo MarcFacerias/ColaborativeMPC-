@@ -6,7 +6,7 @@ def checkEnd(x, maps):
     for i,agent in enumerate(x):
 
         if not agent is None:
-            if np.isclose(agent[0,-3],maps[i].TrackLength,atol=0.15) or (agent[0,-3] > maps[i].TrackLength) :
+            if np.isclose(agent[0,-3],maps[i].TrackLength[maps[i].lane],atol=0.15) or (agent[0,-3] > maps[i].TrackLength[maps[i].lane]) :
                 status = True
                 return status
         else:
@@ -68,7 +68,7 @@ def Curvature(s, map):
     return curvature
     # return 0
 
-def get_ey(s_local, map):
+def get_ey(s_local, map, sm = 0.9):
     """curvature and desired velocity computation
     s: curvilinear abscissa at which the curvature has to be evaluated
     PointAndTangent: points and tangent vectors defining the map (these quantities are initialized in the map object)
@@ -88,7 +88,7 @@ def get_ey(s_local, map):
 
         i = int(np.where(np.squeeze(index))[0]) #EA: this works
 
-        HW[idx] = map.halfWidth[i]
+        HW[idx] = map.halfWidth[i]*sm
     return HW
 
 

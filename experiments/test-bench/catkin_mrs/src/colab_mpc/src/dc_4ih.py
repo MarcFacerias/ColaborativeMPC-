@@ -255,10 +255,6 @@ def main():
         d.plot_offline_experiment(r1, "ob", "-y")
         d.plot_offline_experiment(r2, "or", "-y")
         d.plot_offline_experiment(r3, "oy", "-y")
-        # r0.save_to_csv()
-        # r1.save_to_csv()
-        # r2.save_to_csv()
-        # r3.save_to_csv()
         input("Press enter to continue...")
 
 def plot_performance( agent):

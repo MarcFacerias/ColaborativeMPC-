@@ -58,7 +58,7 @@ class plotter_offline():
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def plot_offline_experiment(self, agent, style_agent = ".b", style_plane = "-r"):
+    def plot_offline_experiment(self, agent, style_agent = ".b"):
         states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
         plt.plot(states[:, 7],states[:, 8], style_agent)
         self.fig.canvas.draw()

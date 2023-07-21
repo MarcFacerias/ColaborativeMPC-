@@ -6,6 +6,7 @@ from numpy import hstack, inf, ones
 from scipy.sparse import vstack
 from osqp import OSQP
 from compute_plane import hyperplane_separator
+import warnings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
@@ -16,37 +17,83 @@ class PathFollowingLPV_MPC:
     Attributes:
         solve: given x0 computes the control action
     """
-    def __init__(self, Q, R, N, dt, map, Solver, id):
+    def __init__(self, Q, Qs ,R, N, dt, map, id, model_param = None, sys_lim = None):
 
         self.n_s = 9
         self.slack = 3
+        self.n_u     = 2
         self.n_exp = self.n_s + self.slack
+        self.id = id
 
         # Vehicle parameters:
-        self.lf = 0.12
-        self.lr = 0.14
-        self.m  = 2.250
-        self.I  = 0.06
-        self.Cf = 60.0
-        self.Cr = 60.0
-        self.mu = 0.0
-        self.vx_ref = 6.0
+        if model_param is None:
+            self.lf = 0.12
+            self.lr = 0.14
+            self.m  = 2.250
+            self.I  = 0.06
+            self.Cf = 60.0
+            self.Cr = 60.0
+            self.mu = 0.0
 
-        self.id = id
-        self.radius = 0.45
+        else:
+            self.lf = model_param["lf"]
+            self.lr = model_param["lr"]
+            self.m  = model_param["m"]
+            self.I  = model_param["I"]
+            self.Cf = model_param["Cf"]
+            self.Cr = model_param["Cr"]
+            self.mu = model_param["mu"]
 
-        self.max_vel = 10
-        self.min_vel = 0.2
+        if sys_lim is None:
+            self.vx_ref = 6.0
+            self.radius = 0.45
+            self.max_vel = 10
+            self.min_vel = 0.2
+            self.max_rs = 0.45
+            self.max_ls = 0.45
+            self.max_ac = 8.0
+            self.max_dc = 8.0
+            self.sm     = 0.9
+
+        else:
+            self.vx_ref  = sys_lim["vx_ref"]
+            self.radius  = sys_lim["radius"]
+            self.max_vel = sys_lim["max_vel"]
+            self.min_vel = sys_lim["min_vel"]
+            self.max_rs  = sys_lim["max_rs"]
+            self.max_ls  = sys_lim["max_ls"]
+            self.max_ac  = sys_lim["max_ac"]
+            self.max_dc  = sys_lim["max_dc"]
+            self.sm      = sys_lim["sm"]
+
 
         # variable placeholders
         self.A    = []
         self.B    = []
         self.C    = []
         self.N    = N
-        self.n    = Q.shape[0]
-        self.d    = R.shape[0]
-        self.Q    = Q
-        self.R    = R
+
+        if Q.shape[0] == self.n_s:
+            self.Q    = Q
+        else:
+            msg = 'Q has not the correct shape!, defaulting to identity of ' + str(self.n_s)
+            warnings.warn(msg)
+            self.Q = np.eye(self.n_s)
+
+        if Qs.shape[0] == self.slack:
+            self.Qs   = Qs
+        else:
+            msg = "Qs has not the correct shape!, defaulting to identity of " + str(self.slack)
+            warnings.warn(msg)
+            self.Qs = np.eye(self.slack)
+
+        if R.shape[0] == self.n_u:
+            self.R   = R
+        else:
+            msg = "Qs has not the correct shape!, defaulting to identity of " + str(self.n_u)
+            warnings.warn(msg)
+            self.R = np.eye(self.n_u)
+
         self.dt = dt                # Sample time 33 ms
         self.map = map              # Used for getting the road curvature
         self.G = []
@@ -60,15 +107,12 @@ class PathFollowingLPV_MPC:
         self.OldSteering = [0.0]
         self.OldAccelera = [0.0]*int(1)
 
-        self.Solver = Solver # solver holder, string that tells if it's cvx or qp?
-
-
     def _buildQ(self):
         # funtion to build the Q, which is states Q and slack variables
         Q = np.zeros((self.n_exp,self.n_exp))
-        Q[0:self.n, 0: self.n] = self.Q
+        Q[0:self.n_s, 0: self.n_s] = self.Q
+        Q[-self.slack:, -self.slack:] = self.Qs
 
-        Q[-self.slack:, -self.slack:] = 10000000*np.eye(self.slack)
         return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
@@ -90,7 +134,6 @@ class PathFollowingLPV_MPC:
         # set the planes and compute them if necesary
         if x_agents is None:
             self.planes = np.zeros((self.N+1,self.n_agents,3))
-            x_agents = np.zeros((self.N+1,self.n_agents,2))
         else:
             self.planes = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
 
@@ -124,7 +167,7 @@ class PathFollowingLPV_MPC:
             idx = np.hstack((idx,aux))
 
         self.xPred = np.reshape((Solution[idx]), (self.N+1, self.n_s))
-        self.uPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.d * self.N)]), (self.N, self.d))
+        self.uPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.n_u * self.N)]), (self.N, self.n_u))
         self.OldSteering = [self.uPred[1,0]]
         self.OldAccelera = [self.uPred[1,1]]
 
@@ -239,6 +282,10 @@ def _buildMatIneqConst(Controller,ey):
     n_exp = Controller.n_exp
     max_vel = Controller.max_vel
     min_vel = Controller.min_vel
+    max_rs  = Controller.max_rs
+    max_ls  = Controller.max_ls
+    max_ac  = Controller.max_ac
+    max_dc  = Controller.max_dc
 
     # agent constraints placeholder
     Fx = np.zeros((4,n_exp))
@@ -284,10 +331,10 @@ def _buildMatIneqConst(Controller,ey):
                    [0., 1.],
                    [0., -1.]])
 
-    bu = np.array([[0.45], # Max right Steering
-                   [0.45], # Max left Steering
-                   [8.0],   # Max Acceleration
-                   [8.0]])  # Max DesAcceleration
+    bu = np.array([[max_rs], # Max right Steering
+                   [max_ls], # Max left Steering
+                   [max_ac],   # Max Acceleration
+                   [max_dc]])  # Max DesAcceleration
 
 
     rep_a = [Fx] * (N+1) # expand the constraints for the whole horizon
@@ -353,8 +400,8 @@ def _buildMatCost(Controller):
     M0 = linalg.block_diag(Mx, Mu, Mdu)
 
     # Create matrices to padd missing values
-    Pu = np.zeros(N*Controller.d)
-    Pdu = np.zeros(N * Controller.d)
+    Pu = np.zeros(N*Controller.n_u)
+    Pdu = np.zeros(N * Controller.n_u)
     Px = np.zeros(Controller.n_exp)
     Px[0] = -Controller.vx_ref*Controller.Q[0,0] # added to represent vx - vref in a quadratic fashion
     Px_total = np.tile(Px, N+1) # expand p along the horizon
@@ -373,37 +420,38 @@ def _buildMatEqConst(Controller):
     A = Controller.A
     B = Controller.B
     N = Controller.N # N horizon
-    n_exp = Controller.n_exp # N horizon
-    d = Controller.d # N horizon
+    n_exp = Controller.n_exp # number of states + slack
+    n_u = Controller.n_u # number of u
+    n_s = Controller.n_s  # number of states
 
 
     Gx = np.zeros((n_exp,n_exp ))
-    Gx[:Controller.n_s,:Controller.n_s] = np.eye(Controller.n_s)
+    Gx[:n_s,:n_s] = np.eye(n_s)
     Gx = linalg.block_diag(*[Gx]*(N+1))
 
-    Gu = np.zeros(((n_exp) * (N+1), d * (N)))
-    Gdu_aux = np.zeros(((n_exp) * (N+1), d * (N)))
-    Gdu     = np.zeros((d * (N), n_exp * (N+1) + 2*d * (N)))
+    Gu = np.zeros(((n_exp) * (N+1), n_u * (N)))
+    Gdu_aux = np.zeros(((n_exp) * (N+1), n_u * (N)))
+    Gdu     = np.zeros((n_u * (N), n_exp * (N+1) + 2*n_u * (N)))
 
-    E = np.zeros(((n_exp ) * (N+1) + N*Controller.d , Controller.n_s))
-    E[:Controller.n_s,:Controller.n_s] = np.eye(Controller.n_s)
+    E = np.zeros(((n_exp ) * (N+1) + N*n_u , n_s))
+    E[:n_s,:n_s] = np.eye(n_s)
 
-    Eu = np.zeros(((n_exp) * (N+1) + N*Controller.d , d))
-    Eu[(n_exp) * (N+1) : (n_exp) * (N+1) + Controller.d, :] = np.eye(2)
+    Eu = np.zeros(((n_exp) * (N+1) + N*n_u , n_u))
+    Eu[(n_exp) * (N+1) : (n_exp) * (N+1) + n_u, :] = np.eye(2)
 
-    Eoa = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1))
-    L = np.zeros(((n_exp) * (N+1) + N*Controller.d , 1))
+    Eoa = np.zeros(((n_exp) * (N+1) + N*n_u , 1))
+    L = np.zeros(((n_exp) * (N+1) + N*n_u , 1))
 
     for i in range(1, N+1):
-        Gx[i * (n_exp):i * (n_exp) + Controller.n_s, (i-1) * n_exp:(i-1) * n_exp + Controller.n_s] = -A[i-1]
-        Gu[i * (n_exp):i * (n_exp) + Controller.n_s, (i - 1) * Controller.d: (i - 1) * Controller.d + Controller.d] = -B[i-1]
+        Gx[i * (n_exp):i * (n_exp) + n_s, (i-1) * n_exp:(i-1) * n_exp + n_s] = -A[i-1]
+        Gu[i * (n_exp):i * (n_exp) + n_s, (i - 1) * n_u: (i - 1) * n_u + n_u] = -B[i-1]
 
-    Gdu[0: Controller.d, n_exp * (N + 1) : n_exp * (N + 1) + Controller.d] = np.eye(2)
+    Gdu[0: n_u, n_exp * (N + 1) : n_exp * (N + 1) + n_u] = np.eye(2)
 
     for i in range(1, N ):
-        Gdu[ i * Controller.d: i * Controller.d + Controller.d,  n_exp * (N+1) + (i - 1) * Controller.d : n_exp * (N+1) + (i - 1) * Controller.d + Controller.d] = np.eye(2)
-        Gdu[ i * Controller.d: i * Controller.d + Controller.d,  n_exp * (N+1) + i * Controller.d : n_exp * (N+1) + i * Controller.d + Controller.d] = -np.eye(2)
-        Gdu[ i * Controller.d: i * Controller.d + Controller.d,  n_exp * (N+1) + Controller.d * (N) + (i - 1) * Controller.d :  n_exp * (N+1) + Controller.d * (N) + (i - 1) * Controller.d + Controller.d] = np.eye(2)
+        Gdu[ i * n_u: i * n_u + n_u,  n_exp * (N+1) + (i - 1) * n_u : n_exp * (N+1) + (i - 1) * n_u + n_u] = np.eye(2)
+        Gdu[ i * n_u: i * n_u + n_u,  n_exp * (N+1) + i * n_u : n_exp * (N+1) + i * n_u + n_u] = -np.eye(2)
+        Gdu[ i * n_u: i * n_u + n_u,  n_exp * (N+1) + n_u * (N) + (i - 1) * n_u :  n_exp * (N+1) + n_u * (N) + (i - 1) * n_u + n_u] = np.eye(2)
 
     G = np.hstack((Gx, Gu, Gdu_aux))
     G = np.vstack((G, Gdu))
@@ -423,7 +471,7 @@ def _EstimateABC(Controller,states, u):
         Btv = []
         Ctv = []
 
-        ey_hor = get_ey(states[:, 6], Controller.map)
+        ey_hor = get_ey(states[:, 6], Controller.map, Controller.sm)
 
         for i in range(0, Controller.N):
 

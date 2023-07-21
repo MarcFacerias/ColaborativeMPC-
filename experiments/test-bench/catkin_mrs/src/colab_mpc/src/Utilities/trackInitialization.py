@@ -3,7 +3,7 @@
 import numpy as np
 import pdb
 import numpy.linalg as la
-# import rospy
+import warnings
 
 class Map():
     """map object
@@ -12,7 +12,7 @@ class Map():
     """
 
 
-    def __init__(self, selectedTrack = "Oval2"):
+    def __init__(self, selectedTrack = None):
         """Initialization
         Modify the vector spec to change the geometry of the track
         """
@@ -23,12 +23,6 @@ class Map():
         HW            = 0.5
 
         self.lane = 0
-
-        # if flagTrackShape == 0:
-        #     # selectedTrack = rospy.get_param("trackShape") # comentado para el testeo del planner
-        #     selectedTrack = "Oval2"
-        # else:
-        #     selectedTrack = "Oval2"
 
         if selectedTrack == "3110":
 
@@ -173,6 +167,24 @@ class Map():
             self.halfWidth = 0.4 * np.ones(spec.shape[0])
             self.open = False
 
+        else:
+            warnings.warn("Track not found! defaulting to Oval2")
+            self.slack      = 0.15
+            scale = 2
+            spec = np.empty((5,2,2))
+            spec[:,:,0] = scale * np.array([[1.0, 0],
+                             [4.5, 4.5 / np.pi],
+                             [2.0, 0],
+                             [4.5, 4.5 / np.pi],
+                             [1.0, 0]])
+
+            spec[:,:,1] = np.array([[2.0, 0],
+                             [5.85, 5.85 / np.pi],
+                             [4.0, 0],
+                             [5.85, 5.85 / np.pi],
+                             [2.0, 0]])
+            self.halfWidth = HW * np.ones(spec.shape[0])
+            self.open = False
 
 
         # Now given the above segments we compute the (x, y) points of the track and the angle of the tangent vector (psi) at
