@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/NonLinearControllerObject')
+sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedPlanner')
@@ -21,7 +21,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 plot = False
 plot_end = True
 it_conv = 1
-n_agents = 2
+n_agents = 3
 
 def compute_hyper(x_ego,x_neg):
 
@@ -37,7 +37,7 @@ class agent():
         self.map = Map
         self.N = N
         self.dt = dt
-        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0,0,0,0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
+        self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
         self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
         self.Controller = PathFollowingNL_MPC(self.Q, self.R, N, dt, Map, id, dth)
         self.x0 = x0
@@ -87,7 +87,7 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinDistribPlanner/planes/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -98,7 +98,7 @@ class agent():
 
     def save_var_to_csv(self,var, name):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/planes/"
+        path = "/NonLinDistribPlanner/planes/"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -185,14 +185,16 @@ def main():
     time_OCD = []
 
     # define neighbours
-    n_0 = [1]
-    n_1 = [0]
+    n_0 = [1,2]
+    n_1 = [0,2]
+    n_2 = [0,1]
 
     x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
     x0_1 = [1.3, -0.16, 0.00,-0.55, 0, 0.0, 0.25, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
+    x0_2 = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
 
-    maps = [Map(),Map()]
-    agents,data = initialise_agents([x0_0,x0_1],N,dt,maps)
+    maps = [Map(),Map(),Map()]
+    agents,data = initialise_agents([x0_0,x0_1,x0_2],N,dt,maps)
 
     planes = np.zeros((N,n_agents,n_agents,3))
     states_hist = [agents]
@@ -205,19 +207,25 @@ def main():
 
     r0 = agent(N, maps[0], dt, x0_0, 0, dth)
     r1 = agent(N, maps[1], dt, x0_1, 1, dth)
+    r2 = agent(N, maps[2], dt, x0_2, 2, dth)
+
 
     r0.data_share = [data[i] for i in n_0]
     r1.data_share = [data[i] for i in n_1]
+    r2.data_share = [data[i] for i in n_2]
 
     x_old0 = None
     x_old1 = None
+    x_old2 = None
 
     u_old0 = None
     u_old1 = None
+    u_old2 = None
 
     planes_old = None
     old_solution0 = None
     old_solution1 = None
+    old_solution2 = None
 
     cost_old = np.zeros((n_agents, n_agents, N))
     lambdas_hist = []
@@ -237,9 +245,11 @@ def main():
 
             f0, uPred0, xPred0, planes0, lsack0, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], n_0, agents[:,0,:], u_old0, old_solution0, planes_old)
             f1, uPred1, xPred1, planes1, lsack1, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], n_1, agents[:,1,:], u_old1, old_solution1, planes_old)
+            f2, uPred2, xPred2, planes2, lsack2, Solution2 = r2.one_step(x_old2, lambdas[2,n_2,:], agents[:,n_2,:], n_2, agents[:,2,:], u_old2, old_solution2, planes_old)
 
-            r0.data_share = [r1.data_opti]
-            r1.data_share = [r0.data_opti]
+            r0.data_share = [r1.data_opti,r2.data_opti]
+            r1.data_share = [r0.data_opti,r2.data_opti]
+            r2.data_share = [r0.data_opti,r1.data_opti]
 
             # TODO Update plans between iterations(first time we have diferent values for the plans and then the optimisation problem doesn't match)
 
@@ -248,8 +258,9 @@ def main():
 
             agents[:,0,:] = xPred0[:,-2:]
             agents[:,1,:] = xPred1[:,-2:]
+            agents[:,2,:] = xPred2[:,-2:]
 
-            planes_raw = [planes0, planes1]
+            planes_raw = [planes0, planes1, planes2]
 
             for k in range(1,N+1):
                 for i in range(0,n_agents):
@@ -265,14 +276,16 @@ def main():
             lambdas_hist.append(lambdas)
             states_hist.append(agents)
             if not it_OCD == 1:
-                finished_ph = np.allclose(x_old0, xPred0, atol=0.01) and np.allclose(x_old1, xPred1, atol=0.01) and np.allclose(cost, cost_old, atol=0.01) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
+                finished_ph = np.allclose(x_old2, xPred2, atol=0.01) and np.allclose(x_old3, xPred3, atol=0.01) and np.allclose(x_old0, xPred0, atol=0.01) and np.allclose(x_old1, xPred1, atol=0.01) and np.allclose(cost, cost_old, atol=0.01) #convergence([xPred0,xPred1,uPred0,uPred1], [x_old0_OCD,x_old1_OCD,u_old0_OCD,u_old1_OCD]) and
                 itc += 1
 
             x_old0 = xPred0
             x_old1 = xPred1
+            x_old2 = xPred2
 
             u_old0 = uPred0
             u_old1 = uPred1
+            u_old2 = uPred2
 
             cost_old = cost
             planes_old = planes0
@@ -292,21 +305,26 @@ def main():
 
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes1)
+        r2.save(xPred2, uPred2, planes2)
 
         r0.x0 = xPred0[1,:]
         r1.x0 = xPred1[1,:]
+        r2.x0 = xPred2[1,:]
 
         x_old0 = xPred0[1:,:]
         x_old1 = xPred1[1:,:]
+        x_old2 = xPred2[1:,:]
 
         u_old0 = uPred0
         u_old1 = uPred1
+        u_old2 = uPred2
 
         old_solution0 = Solution0
         old_solution1 = Solution1
+        old_solution2 = Solution2
 
         finished = False
-        time_OCD.append((time.time() - tic)/n_agents)
+        time_OCD.append(time.time() - tic)
 
         print("-------------------------------------------------")
         print("it " + str(it))
@@ -314,7 +332,7 @@ def main():
         print(time.time() - tic)
         print(xPred0[1,:])
         print(xPred1[1,:])
-
+        print(xPred2[1,:])
         # print(planes0[0,:,0])
         print(np.sqrt( (xPred0[1,7] - xPred1[1,7])**2 + (xPred0[1,8] - xPred1[1,8])**2 ))
         print("-------------------------------------------------")
@@ -327,7 +345,7 @@ def main():
     if plot_end:
         d.plot_offline_experiment(r0, "oc", "-y")
         d.plot_offline_experiment(r1, "ob", "-y")
-
+        d.plot_offline_experiment(r2, "or", "-y")
         r0.save_to_csv()
         r1.save_to_csv()
         r0.save_var_to_csv(time_OCD, "time_OCD")

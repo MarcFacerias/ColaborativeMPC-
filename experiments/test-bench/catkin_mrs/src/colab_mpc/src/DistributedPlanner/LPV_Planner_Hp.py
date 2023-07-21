@@ -5,7 +5,7 @@ import numpy as np
 from numpy import hstack, inf, ones
 from scipy.sparse import vstack
 from osqp import OSQP
-from compute_plane import hyperplane_separator
+from Utilities.compute_plane import hyperplane_separator
 import warnings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})

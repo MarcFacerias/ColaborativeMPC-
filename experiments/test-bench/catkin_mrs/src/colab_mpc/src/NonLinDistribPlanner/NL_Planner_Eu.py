@@ -3,7 +3,6 @@ import time
 from casadi import *
 import numpy as np
 from utilities import Curvature, get_ey
-from compute_plane import hyperplane_separator
 
 # TODO Arreglar el cost funcion
 
@@ -14,10 +13,10 @@ model_slack = 10000000
 control_slack = 1
 obs_slack = 1000000
 
-class PathFollowingNL_MPC:
+class NL_Planner_EU:
     """Create the Path Following LMPC controller with LTV model
     Attributes:
-        solve: given x0 computes the control action
+        solve: given ini_xPredicted computes the control action
     """
     def __init__(self, Q, R, N, dt, map, id, dth):
 
@@ -236,7 +235,6 @@ class PathFollowingNL_MPC:
 
         # Update the parametric expresions inside the solver
 
-
         ey = get_ey(states[:, 6], self.map) # update lateral error limits
 
         try:
@@ -301,10 +299,10 @@ class PathFollowingNL_MPC:
         for i in range(0, self.n_exp):
             self.opti.set_value(self.initial_states[i] ,states[0,i])
 
-    def solve(self, x0 = None, Last_xPredicted = None, uPred = None, lambdas = None, x_agents = None, agents_id = None, data = None):
+    def solve(self, ini_xPredicted = None, Last_xPredicted = None, uPred = None, lambdas = None, x_agents = None, agents_id = None, data = None):
         """Computes control action
         Arguments:
-            x0: current state positionsolve
+            ini_xPredicted: current state predicted
             EA: Last_xPredicted: it is just used for the warm up
             EA: uPred: set of last predicted control inputs used for updating matrix A LPV
             EA: A_L, B_L ,C_L: Set of LPV matrices
@@ -388,7 +386,7 @@ class PathFollowingNL_MPC:
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-        self.update_parameters(x0,uPred) #update parameters in the control problem and run the optimisation
+        self.update_parameters(ini_xPredicted,uPred) #update parameters in the control problem and run the optimisation
 
         p_opts = {"ipopt.print_level":0, "ipopt.sb":"yes", "print_time":0}
         s_opts = {"max_iter": 1}

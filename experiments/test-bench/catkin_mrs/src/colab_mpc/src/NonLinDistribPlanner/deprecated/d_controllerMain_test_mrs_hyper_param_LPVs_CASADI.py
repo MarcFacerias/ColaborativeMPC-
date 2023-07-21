@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/NonLinearControllerObject')
+sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedPlanner')
 
-from PathFollowingCASADI_param_LPVds_NOROS import PathFollowingNL_MPC
+from PathFollowingCASADI_param_LPVs_NOROS import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -20,7 +20,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 # TODO: Add quality of life changes to the planes
 plot = False
 plot_end = True
-it_conv = 1
+it_conv = 5
 
 def compute_hyper(x_ego,x_neg):
 
@@ -44,7 +44,7 @@ class agent():
         self.u = []
         self.planes = []
         self.output_opti = []
-        self.time_op = []
+        self.time = []
         self.status = []
         self.slack = []
         self.data_opti = []
@@ -67,7 +67,7 @@ class agent():
 
         tic = time.time()
         feas, Solution, planes, slack, self.data_opti = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, pose, slack, self.data_share)
-        self.time_op.append(time.time() - tic)
+        self.time.append(time.time() - tic)
         self.status.append(feas)
         return feas, self.Controller.uPred, self.Controller.xPred, planes, slack, Solution
 
@@ -77,25 +77,27 @@ class agent():
         disp.add_agent_ti(self)
         disp.add_planes_ti(self)
 
+
     def save(self, xPred, uPred, planes):
 
         self.states.append(xPred[0,:])
         self.u.append(uPred[0,:])
+        self.planes.append(planes[0,:])
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/dist/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinDistribPlanner/planes/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
 
         np.savetxt(path+'/states.dat', self.states, fmt='%.5e',delimiter=' ')
         np.savetxt(path + '/u.dat', self.u, fmt='%.5e', delimiter=' ')
-        np.savetxt(path + '/time.dat', self.time_op, fmt='%.5e', delimiter=' ')
+        np.savetxt(path + '/time.dat', self.time, fmt='%.5e', delimiter=' ')
 
     def save_var_to_csv(self,var, name):
 
-        path = "/NonLinearControllerObject/dist/"
+        path = "/NonLinDistribPlanner/planes/"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -110,7 +112,7 @@ def initialise_agents(data,Hp,dt,map, accel_rate=0):
         # agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-4:-2] # with slack
         aux = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)
         agents[:,id,:] = aux[0][:,-2:] # without slack
-        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp+1*len(data)-1,4)),np.zeros(Hp+1*len(data)-1)]
+        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp+1*len(data)-1,2)),np.zeros(Hp+1*len(data)-1)]
     return agents, data_holder
 
 def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
@@ -158,21 +160,13 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     uu = np.zeros(( Hp, 2 ))
     return xx, uu
 
-def eval_constraint(x1, x2, D):
+def eval_constraint(x1, x2, planes, D, lsack):
 
     # planes = [0.87,0.48,-1.05]
-    cost1 = D - np.sqrt(sum((x1-x2)**2))
+    cost1 = -planes[0] * x2[0] - planes[1] * x2[1] - planes[2] + D/2
+    cost2 = planes[0] * x1[0] + planes[1] * x1[1] + planes[2] + D / 2
 
     return np.array(cost1)
-
-def convergence(current,old):
-
-    are_close = True
-    for i, _ in enumerate(current):
-        are_close = are_close and np.allclose(current[i], old[i], atol=0.01)
-
-    return are_close
-
 
 def main():
 
@@ -183,7 +177,7 @@ def main():
     N = 10
     dt = 0.01
     alpha = 0.1
-    max_it = 150
+    max_it = 250
     finished = False
     finished_ph = False
     dth = 0.3
@@ -193,12 +187,13 @@ def main():
     n_0 = [1]
     n_1 = [0]
 
-    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0, 0, 0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
-    x0_1 = [1.3, -0.16, 0.00, 0, 0, 0, 0, 0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
+    x0_0 = [1.3, -0.16, 0.00, 0.55, 0, 0.0, 0, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
+    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     maps = [Map(),Map()]
     agents,data = initialise_agents([x0_0,x0_1],N,dt,maps)
 
+    planes = np.zeros((N,3,3,3))
     states_hist = [agents]
 
     if plot:
@@ -207,8 +202,8 @@ def main():
     if plot_end:
         d = plotter_offline(maps[0])
 
-    r0 = agent(N, maps[0], dt, x0_0, 0, dth)
-    r1 = agent(N, maps[1], dt, x0_1, 1, dth)
+    r0 = agent(N, maps[0], dt, x0_0, 0,dth)
+    r1 = agent(N, maps[1], dt, x0_1, 1,dth)
 
     r0.data_share = [data[1]]
     r1.data_share = [data[0]]
@@ -222,13 +217,12 @@ def main():
     old_solution1 = None
     cost_old = np.zeros((2, 2, N))
     lambdas_hist = []
-    cost_hist = []
     it = 0
 
     while(it<max_it):
 
         tic = time.time()
-        lambdas = np.zeros((2, 2, N))
+        lambdas = np.ones((2, 2, N))
         it_OCD = 0
         itc = 0
 
@@ -237,8 +231,9 @@ def main():
             it_OCD += 1
             # TODO acces the subset of lambdas of our problem
 
-            f0, uPred0, xPred0, planes0, lsack0, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], [1], agents[:,0,:], u_old0, old_solution0, planes_old)
-            f1, uPred1, xPred1, planes1, lsack1, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], [0], agents[:,1,:], u_old1, old_solution1, planes_old)
+            f0, uPred0, xPred0, planes0, _, Solution0 = r0.one_step(x_old0, lambdas[0,n_0,:], agents[:,n_0,:], [1], agents[:,0,:], u_old0, old_solution0, planes_old)
+
+            f1, uPred1, xPred1, planes1, lsack0, Solution1 = r1.one_step(x_old1, lambdas[1,n_1,:], agents[:,n_1,:], [0], agents[:,1,:], u_old1, old_solution1, planes_old)
 
             r0.data_share = [r1.data_opti]
             r1.data_share = [r0.data_opti]
@@ -246,17 +241,20 @@ def main():
             # TODO Update plans between iterations(first time we have diferent values for the plans and then the optimisation problem doesn't match)
 
             # print("Are planes close?" + str(np.allclose(planes1, planes0)))
-            cost = np.zeros((2,2,N))
+            cost = np.zeros((2,2,N  ))
 
             agents[:,0,:] = xPred0[:,-2:]
             agents[:,1,:] = xPred1[:,-2:]
+
+            planes[:,0,1,:] = planes0.squeeze()
+            planes[:,1,0,:] = planes0.squeeze()
 
             for k in range(1,N+1):
                 for i in range(0,2):
                     for j in range(0, 2):
 
                         if (i != j) and i<j:
-                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:],dth)
+                            cost[i,j,k-1]= eval_constraint(agents[k,i,:],agents[k,j,:], planes[k-1,i,j,:],dth,0)
 
             # update lambdas
             # cost[cost < 0.0001] = 0
@@ -309,14 +307,14 @@ def main():
 
         finished = False
         time_OCD.append(time.time() - tic)
-        cost_hist.append(r0.Controller._cost)
+
         print("-------------------------------------------------")
         print("it " + str(it))
         print("length " + str(it_OCD))
         print(time.time() - tic)
         print(xPred0[1,:])
         print(xPred1[1,:])
-        # print(planes0[0,:,0])
+        print(planes0[0,:,0])
         print(np.sqrt( (xPred0[1,7] - xPred1[1,7])**2 + (xPred0[1,8] - xPred1[1,8])**2 ))
         print("-------------------------------------------------")
 
@@ -333,7 +331,6 @@ def main():
         r0.save_to_csv()
         r1.save_to_csv()
         r0.save_var_to_csv(time_OCD, "time_OCD")
-        r0.save_var_to_csv(cost_hist, "cost_hist2")
         input("Press enter to continue...")
         # input("Press Enter to continue...")
 
@@ -344,7 +341,7 @@ def plot_performance( agent):
     x = np.arange(0,len(agent.status))
     plt.scatter(x, np.array(agent.status))
     fig_status.add_subplot(2, 1, 2)
-    plt.scatter(x, np.array(agent.time_op))
+    plt.scatter(x, np.array(agent.time))
     plt.show()
     plt.pause(0.001)
 

@@ -12,7 +12,7 @@ sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/Config/LPV')
 
-from LPV_Planner_HP import PlannerLPV
+from LPV_Planner_Hp import PlannerLPV
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 from utilities import checkEnd
@@ -25,7 +25,7 @@ class agent(initialiserLPV):
     #  Q: [vx ; vy ; psiDot ; e_psi ; s ; e_y]
     #  R:  [delta ; a] la R es sobre el dU
     def __init__(self, N, Map, dt, x0, id):
-        super().__init__("LPV") # initialise the initialiser
+        super().__init__() # initialise the initialiser
         self.map = Map
         self.N = N
         self.dt = dt
@@ -39,9 +39,6 @@ class agent(initialiserLPV):
         self.id = id
 
     def one_step(self, agents, agents_id, pose, uPred = None, xPred = None):
-
-        if (xPred is None or uPred is None):
-            xPred, uPred = predicted_vectors_generation_V2(self.N, np.array(self.x0), self.dt, self.map)
 
         tic = time.time()
         feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, agents, agents_id, pose)
@@ -87,11 +84,12 @@ class agent(initialiserLPV):
 def initialise_agents(data,Hp,dt,map, accel_rate=0):
     agents = np.zeros((Hp+1,len(data),2))
     x_pred = [''] * len(data)
+    u_pred = [''] * len(data)
     for id, el in enumerate(data):
 
-        x_pred[id] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0]
+        x_pred[id],u_pred[id] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)
         agents[:,id,:] = x_pred[id][:,-2:]
-    return agents,x_pred
+    return agents,x_pred,u_pred
 
 def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     # We need a prediction of the states for the start-up proces of the controller (To instantiate the LPV variables)
@@ -100,7 +98,7 @@ def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
     Vx      = np.zeros((Hp+1, 1))
     Vx[0]   = x0[0]
     S       = np.zeros((Hp+1, 1))
-    S[0]    = 0
+    S[0]    = x0[6]
     Vy      = np.zeros((Hp+1, 1))
     Vy[0]   = x0[1]
     W       = np.zeros((Hp+1, 1))
@@ -151,7 +149,6 @@ def main():
 
     x_pred = [None] * n_agents
     u_pred = [None] * n_agents
-    u_old  = [None] * n_agents
     feas   = [None] * n_agents
     raws   = [None] * n_agents
     planes = [None] * n_agents
@@ -159,7 +156,7 @@ def main():
 
     maps = [Map(map_type)]*n_agents
 
-    agents,x_old = initialise_agents(x0,N,dt,maps)
+    agents,x_old,u_old = initialise_agents(x0,N,dt,maps)
     states_hist = [agents]
 
     if plot:
@@ -170,7 +167,7 @@ def main():
 
     for i in range (0,n_agents):
 
-        rs[i] = agent(N, maps[i], dt, x0[i], i)
+        rs[i] = agent(N, maps[i], dt, x_old[i][0,:], i)
 
     it = 0
 

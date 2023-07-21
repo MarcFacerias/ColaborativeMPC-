@@ -3,9 +3,17 @@ import matplotlib.colors as mcolors
 import numpy as np
 plot = False
 plot_end = True
-verb = True
+verb = False
+verb_OCD = False
 color_list = list(mcolors.TABLEAU_COLORS)
 n_agents = 4
+it_conv = 1
+
+max_it = 500
+max_it_OCD = 10
+N = 10
+dt = 0.01
+dth = 0.25
 
 x0_database = [""] * 4
 x0_database[0] = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
@@ -13,14 +21,15 @@ x0_database[1] = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y
 x0_database[2] = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
 x0_database[3] = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
-max_it = 1000
-N = 25
-dt = 0.01
 # map_type = "Highway"
 map_type = "Oval2"
 
+def get_alpha():
 
-class initialiserLPV():
+    alpha = 0.25
+    return alpha
+
+class initialiserNL_EU():
     def __init__(self, model = "SCALED CAR"):
         if model == "SCALED CAR":
             self.model_param = {

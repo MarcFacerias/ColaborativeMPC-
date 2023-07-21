@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-sys.path.append(sys.path[0]+'/NonLinearControllerObject')
+sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedPlanner')

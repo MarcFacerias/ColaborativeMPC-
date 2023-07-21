@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/NonLinearControllerObject')
+sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedPlanner')
@@ -15,19 +15,6 @@ from trackInitialization import Map, wrap
 from plot_vehicle import *
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
-
-
-plot = False
-plot_end = True
-it_conv = 1
-n_agents = 4
-
-def compute_hyper(x_ego,x_neg):
-
-    a = x_neg - x_ego
-    b = 0.5 * a @ (x_ego + x_neg).T
-
-    return a,b
 
 class agent():
 
@@ -86,7 +73,7 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/TestsPaperNLs/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinDistribPlanner/TestsPaperNLs/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -97,7 +84,7 @@ class agent():
 
     def save_var_to_csv(self,var, name):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinearControllerObject/TestsPaperNLs/"
+        path = "/NonLinDistribPlanner/TestsPaperNLs/"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
