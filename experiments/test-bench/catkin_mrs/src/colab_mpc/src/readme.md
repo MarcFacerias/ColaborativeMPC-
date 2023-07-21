@@ -12,5 +12,5 @@ LIST OF COMMENTED FILES
 * PathFollowingLPVMPV_independent_hyperplanes
 
 TODO LIST  
-* Improve the code to make it modular, right now it's a pain to use! vectorise everything 
-* Test new track 
+* Compare perfomance and check that the refactoring did indeed work 
+* Make one experiment with LPV to show Vicens 
