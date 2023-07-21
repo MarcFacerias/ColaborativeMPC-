@@ -75,7 +75,7 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/vars"
+        path = "/DistributedControllerObject/vars"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -86,7 +86,7 @@ class agent():
 
     def save_var_to_csv(self,var, name):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/vars"
+        path = "/DistributedControllerObject/vars"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)

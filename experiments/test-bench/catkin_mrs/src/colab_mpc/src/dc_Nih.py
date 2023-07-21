@@ -12,7 +12,7 @@ sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/Config/LPV')
 
-from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
+from LPV_Planner_HP import PlannerLPV
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 from utilities import checkEnd
@@ -29,7 +29,7 @@ class agent(initialiserLPV):
         self.map = Map
         self.N = N
         self.dt = dt
-        self.Controller = PathFollowingLPV_MPC(self.Q,self.Qs, self.R, N, dt, Map, id, self.model_param, self.sys_lim)
+        self.Controller = PlannerLPV(self.Q,self.Qs, self.R, N, dt, Map, id, self.model_param, self.sys_lim)
         self.x0 = x0
         self.states = []
         self.u = []

@@ -10,9 +10,7 @@ import warnings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-# TODO: check slack contraints it looks like there's some issue with them
-
-class PathFollowingLPV_MPC:
+class PlannerLPV:
     """Create the Path Following LMPC controller with LTV model
     Attributes:
         solve: given x0 computes the control action
