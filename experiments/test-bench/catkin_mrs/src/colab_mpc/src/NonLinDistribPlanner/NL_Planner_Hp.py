@@ -14,59 +14,105 @@ class PathFollowingNL_MPC:
     Attributes:
         solve: given x0 computes the control action
     """
-    def __init__(self, Q, R, N, dt, map, id, dth):
+    def __init__(self, Q, Qs, R, N, dt, map, id, dth, model_param = None, sys_lim = None):
 
         # Vehicle parameters:
         self.n_s = 9
-        self.n_exp = self.n_s # slack variables
+        self.n_u = 2
+        self.n_sl = 4
         self.dth = dth
-        self.lf = 0.12
-        self.lr = 0.14
-        self.m  = 2.250
-        self.I  = 0.06
-        self.Cf = 60.0
-        self.Cr = 60.0
-        self.mu = 0.0
         self.id = id
         self.initialised = False
-
         self.g  = 9.81
 
-        self.max_vel = 10
+        # Vehicle parameters:
+        if model_param is None:
+            self.lf = 0.12
+            self.lr = 0.14
+            self.m  = 2.250
+            self.I  = 0.06
+            self.Cf = 60.0
+            self.Cr = 60.0
+            self.mu = 0.0
+
+        else:
+            self.lf = model_param["lf"]
+            self.lr = model_param["lr"]
+            self.m  = model_param["m"]
+            self.I  = model_param["I"]
+            self.Cf = model_param["Cf"]
+            self.Cr = model_param["Cr"]
+            self.mu = model_param["mu"]
+
+        if sys_lim is None:
+            self.vx_ref = 6.0
+            self.max_vel = 10
+            self.min_vel = 0.2
+            self.max_rs = 0.45
+            self.max_ls = 0.45
+            self.max_ac = 8.0
+            self.max_dc = 8.0
+            self.sm     = 0.9
+
+        else:
+            self.vx_ref  = sys_lim["vx_ref"]
+            self.max_vel = sys_lim["max_vel"]
+            self.min_vel = sys_lim["min_vel"]
+            self.max_rs  = sys_lim["max_rs"]
+            self.max_ls  = sys_lim["max_ls"]
+            self.max_ac  = sys_lim["max_ac"]
+            self.max_dc  = sys_lim["max_dc"]
+            self.sm      = sys_lim["sm"]
+
         self.opti = casadi.Opti()
-        self.x = self.opti.variable(self.n_exp*(N+1)) # x11, ... , x1N, s11, ... xTN
+        self.x = self.opti.variable(self.n_s*(N+1)) # x11, ... , x1N, s11, ... xTN
         self.u  = self.opti.variable(2 * (N))  # x11, ... , x1N, s11, ... xTN
         self.du = self.opti.variable(2 * (N))
-        self.slack_agent = self.opti.variable(N+1,4)  # x11, ... , x1N, s11, ... xTN
+        self.slack_agent = self.opti.variable(N,4)  # x11, ... , x1N, s11, ... xTN
         self.ey_ub = self.opti.parameter(N)
         self.ey_lb = self.opti.parameter(N)
-
 
         self.A    = []
         self.B    = []
         self.C    = []
-        self.N    = N
-        self.n    = Q.shape[0]
-        self.d    = R.shape[0]
-        self.Q    = Q
-        self.R    = R
-        self.LinPoints = np.zeros((self.N+2,self.n))
-        self.dt = dt                # Sample time 33 ms
+
+        if Q.shape[0] == self.n_s:
+            self.Q    = Q
+        else:
+            msg = 'Q has not the correct shape!, defaulting to identity of ' + str(self.n_s)
+            warnings.warn(msg)
+            self.Q = np.eye(self.n_s)
+
+        if Qs.shape[0] == self.n_sl:
+            self.model_slack   = Qs[0,0]
+            self.control_slack = Qs[1,1]
+            self.obs_slack     = Qs[2,2]
+            self.planes_slack  = Qs[3,3]
+        else:
+            msg = "Qs has not the correct shape!, defaulting to inf of " + str(self.n_sl)
+            warnings.warn(msg)
+            self.model_slack   = 1000000
+            self.control_slack = 1000000
+            self.obs_slack     = 1000000
+            self.planes_slack = 1000000
+
+        if R.shape[0] == self.n_u:
+            self.R   = R
+        else:
+            msg = "Qs has not the correct shape!, defaulting to identity of " + str(self.n_u)
+            warnings.warn(msg)
+            self.R = np.eye(self.n_u)
+
+        self.N   = N
+        self.dt  = dt                # Sample time 33 ms
         self.map = map              # Used for getting the road curvature
         self.planes_constraints = []
 
-        self.first_it = 1
-        self.flag_lambdas = True
-
-        self.min_vel = 6
-        self.min_vel = -6
-
         # parameters
-        self.initial_states = self.opti.parameter(self.n_exp )
-
+        self.initial_states = self.opti.parameter(self.n_s )
         self.planes_param = []
         self.pose_param = []
-        self.u_param = []
+        self.du_param = []
         self.states_param = []
         self.s_agent_param = []
         self.slack_params_master = []
@@ -111,12 +157,14 @@ class PathFollowingNL_MPC:
 
         J  = 0
         for j in range (1,self.N+1):
-            mod = j * self.n_exp
-            mod_u = (j-1) * 2
+            mod = j * self.n_s
+            mod_u = (j-1) * self.n_u
 
-            J += 120*self.x[0+mod]**2 + self.x[1+mod]**2 + self.x[2+mod]**2 +\
-                 1500*self.x[3+mod]**2 + 70*self.x[4+mod]**2 \
-                 + 1000*self.du[0+(mod_u)]**2 + 1000*self.du[1+mod_u]**2 - 600*self.x[0+mod] + 10000000*(self.slack_agent[j,0]**2 + self.slack_agent[j,1]**2)
+            J += self.Q[0,0]*(self.x[0+mod] - self.vx_ref)**2 + self.Q[1,1]*self.x[1+mod]**2 + self.Q[2,2]*self.x[2+mod]**2 +\
+                 self.Q[3,3]*self.x[3+mod]**2 + self.Q[4,4]*self.x[4+mod]**2 + self.Q[5,5]*self.x[5+mod]**2 + self.Q[6,6]*self.x[6+mod]**2 + self.Q[7,7]*self.x[7+mod]**2 \
+                 + self.Q[8,8]*self.x[8+mod]**2 + self.R[0,0]*self.du[0+(mod_u)]**2 + self.R[1,1]*self.du[1+mod_u]**2 + \
+                 self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2)**2 + self.control_slack*(self.slack_agent[j-1,2]**2 + self.slack_agent[j-1,3]**2)
+
             it_s = 0
             it_m = 0
 
@@ -124,35 +172,37 @@ class PathFollowingNL_MPC:
 
                 planes_idx = (j - 1) * 3 * self.aux + 3 * it_m
 
-                J += 120 * self.states_param[i][0 + mod] ** 2 + self.states_param[i][1 + mod] ** 2 + self.states_param[i][2 + mod] ** 2 + \
-                     1500 * self.states_param[i][3 + mod] ** 2 + 70 * self.states_param[i][4 + mod] ** 2 \
-                     + 1000*self.u_param[i][0 + (mod_u)] ** 2 + 1000*self.u_param[i][1 + mod_u] ** 2 - 600 * self.states_param[i][0 + mod] + 100 * (
-                     self.s_agent_param[i][j,0] ** 2 + self.s_agent_param[i][j,1] ** 2) + 1000000000*(self.slack_params_master[i][j-1,self.id]**2) + 1000000000*(self.slack_params_slave[i][j-1,self.id]**2)
+                J += self.Q[0,0] * (self.states_param[i][0 + mod] - self.vx_ref) ** 2 + self.Q[1,1] * self.states_param[i][1 + mod] ** 2 + self.Q[2,2] * self.states_param[i][2 + mod] ** 2 + \
+                     self.Q[3,3] * self.states_param[i][3 + mod] ** 2 + self.Q[4,4] * self.states_param[i][4 + mod] ** 2 + self.Q[5,5] * self.states_param[i][5 + mod] ** 2 + self.Q[6,6] * self.states_param[i][6 + mod] ** 2 + \
+                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.R[0,0] * self.du_param[i][0 + mod_u] ** 2 + self.R[1,1] * self.du_param[i][1 + mod_u] ** 2 + self.model_slack * (
+                     self.s_agent_param[i][j-1,0] ** 2 + self.s_agent_param[i][j-1,1]**2) + self.control_slack * (self.s_agent_param[i][j-1,2]**2 + self.s_agent_param[i][j-1,3] ** 2)
 
                 if self.id < el:
 
                     J+= self.lambdas[i,j-1]*(-(self.slack_params_slave[i][j-1,self.id] + self.planes[planes_idx+0]*self.pose_param[i][j-1,0] +
                         self.planes[planes_idx+1]*self.pose_param[i][j-1,1] + self.planes[planes_idx+2] - self.dth/2 ) ) +\
-                        1000000000 * (self.slack_planes_master[j-1,it_m] ** 2)
+                        self.planes_slack * (self.slack_planes_master[j-1,it_m] ** 2)
                     it_m += 1
+
                 else:
 
-                    J += 1000000000*(self.slack_planes_slave[j-1,it_s]**2)
+                    J += self.planes_slack*(self.slack_planes_slave[j-1,it_s]**2)
                     it_s += 1
 
         return J
 
     def ineq_constraints(self):
 
-        for j in range(1, self.N + 1):
-            mod = j * self.n_exp
-            mod_u = (j-1) * 2
+        for j in range(1, self.N+1):
+            mod = j * self.n_s
+            mod_u = (j-1) * self.n_u
 
-            self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j,0],self.max_vel))
-            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1], self.x[4+mod] + self.slack_agent[j,1], self.ey_ub[j-1]))
+            self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j-1,0],self.max_vel))
+            self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1], self.x[4+mod] + self.slack_agent[j-1,1], self.ey_ub[j-1]))
 
-            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u] + self.slack_agent[j,2], 0.45))
-            self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u]+ self.slack_agent[j,3], 8.0))
+            # bound control actions
+            self.opti.subject_to(self.opti.bounded(-self.max_ls,self.u[0+mod_u], self.max_rs))
+            self.opti.subject_to(self.opti.bounded(-self.max_dc, self.u[1 + mod_u], self.max_ac))
 
             if j < self.N:
 
@@ -179,7 +229,7 @@ class PathFollowingNL_MPC:
     def eq_constraints(self):
 
         # set initial states
-        for i in range(0, self.n_exp):
+        for i in range(0, self.n_s):
 
             self.opti.subject_to(
                 self.x[i] == self.initial_states[i]
@@ -187,9 +237,9 @@ class PathFollowingNL_MPC:
 
 
         for j in range(1, self.N + 1):
-            mod = j * self.n_exp
-            mod_prev = (j-1) * self.n_exp
-            mod_u    = (j-1) * 2
+            mod = j * self.n_s
+            mod_prev = (j-1) * self.n_s
+            mod_u    = (j-1) * self.n_u
 
             # vx
             self.opti.subject_to(
@@ -248,11 +298,11 @@ class PathFollowingNL_MPC:
         ey = get_ey(states[:, 6], self.map) # asume one limit for the whole horizon
 
         try:
-            self.opti.set_value(self.ey_ub, ey)
-            self.opti.set_value(self.ey_lb, -ey)
+            self.opti.set_value(self.ey_ub*self.sm, ey*self.sm)
+            self.opti.set_value(self.ey_lb*self.sm, -ey*self.sm)
         except:
-            self.opti.set_value(self.ey_ub, ey[1:])
-            self.opti.set_value(self.ey_lb, -ey[1:])
+            self.opti.set_value(self.ey_ub*self.sm, ey[1:]*self.sm)
+            self.opti.set_value(self.ey_lb*self.sm, -ey[1:]*self.sm)
 
         for j in range (0,self.N):
 
@@ -264,8 +314,6 @@ class PathFollowingNL_MPC:
             s = states[j, 6]
 
             cur = Curvature(s, self.map)
-
-
             delta = u[j, 0]  # EA: steering angle at K-1
 
             self.opti.set_value(self.A12[j], (np.sin(delta) * self.Cf) / (self.m * vx))
@@ -309,15 +357,15 @@ class PathFollowingNL_MPC:
             self.opti.set_value(self.pose_param[i][-1, 0], self.states_fixed[-1, i, 0])
             self.opti.set_value(self.pose_param[i][-1, 1], self.states_fixed[-1, i, 1])
 
-        for i in range(0, self.n_exp):
+        for i in range(0, self.n_s):
             self.opti.set_value(self.initial_states[i] ,states[0,i])
 
 
 
-    def solve(self, x0 = None, Last_xPredicted = None, uPred = None, lambdas = None, x_agents = None, planes_fixed = None, agents_id = None, pose = None, slack =None, data = None):
+    def solve(self, ini_xPredicted = None, Last_xPredicted = None, uPred = None, lambdas = None, x_agents = None, planes_fixed = None, agents_id = None, data = None):
         """Computes control action
         Arguments:
-            x0: current state positionsolve
+            ini_xPredicted: current state positionsolve
             EA: Last_xPredicted: it is just used for the warm up
             EA: uPred: set of last predicted control inputs used for updating matrix A LPV
             EA: A_L, B_L ,C_L: Set of LPV matrices
@@ -342,13 +390,13 @@ class PathFollowingNL_MPC:
                 placeholder_pose = self.opti.parameter(self.N, 2)
                 self.pose_param.append(placeholder_pose)
 
-                placeholder_states = self.opti.parameter(self.n_exp * (self.N + 1))
+                placeholder_states = self.opti.parameter(self.n_s * (self.N + 1))
                 self.states_param.append(placeholder_states)
 
                 placeholder_u = self.opti.parameter(2 * (self.N))
-                self.u_param.append(placeholder_u)
+                self.du_param.append(placeholder_u)
 
-                placeholder_sa = self.opti.parameter(self.N+1,4) #we have 4 slack variables
+                placeholder_sa = self.opti.parameter(self.N,4) #we have 4 slack variables
                 self.s_agent_param.append(placeholder_sa)
 
                 placeholder_spm = self.opti.parameter((self.N), (self.n_neighbours+1))
@@ -374,7 +422,6 @@ class PathFollowingNL_MPC:
             self.opti.minimize(J)
             self.initialised = True
 
-        # self.opti.set_initial(self.planes, Last_xPredicted.flatten())
         if not Last_xPredicted is None:
             self.opti.set_initial(self.x,Last_xPredicted.flatten())
 
@@ -391,15 +438,12 @@ class PathFollowingNL_MPC:
         else:
             self.opti.set_value(self.lambdas,lambdas)
 
-            # if self.id == 0:
-            #     print(lambdas)
-
         # unpack data
 
         for i,agent in enumerate(data):
 
             self.opti.set_value(self.states_param[i], agent[0])
-            self.opti.set_value(self.u_param[i], agent[1])
+            self.opti.set_value(self.du_param[i], agent[1])
             self.opti.set_value(self.s_agent_param[i], agent[2])
             self.opti.set_value(self.slack_params_master[i], agent[3])
             self.opti.set_value(self.slack_params_slave[i], agent[4])
@@ -407,7 +451,7 @@ class PathFollowingNL_MPC:
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         if x_agents is None:
-            x_agents = np.zeros((10,self.n_neighbours,2))
+            x_agents = np.zeros((N,self.n_neighbours,2))
 
         self.states_fixed = x_agents
 
@@ -415,7 +459,7 @@ class PathFollowingNL_MPC:
 
         if planes_fixed is None:
 
-            self.planes_fixed = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
+            self.planes_fixed = self.plane_comp.compute_hyperplane(x_agents, ini_xPredicted[:,7:8], self.id, agents_id)
 
         else:
             self.planes_fixed = planes_fixed
@@ -433,16 +477,13 @@ class PathFollowingNL_MPC:
             pass
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-        self.update_parameters(x0,uPred)
+        self.update_parameters(ini_xPredicted,uPred)
 
-        # tic = time.time()
         p_opts = {"ipopt.print_level":0, "ipopt.sb":"yes", "print_time":0}
         s_opts = {"max_iter": 1}
         self.opti.solver("ipopt", p_opts,
                     s_opts)
-        tic = time.time()
 
-        # self.opti.solver("cplex")
         self.settingTime = time.time() - startTimer
 
         try:
@@ -503,14 +544,14 @@ class PathFollowingNL_MPC:
             except:
                 slack_agent = None
 
-        idx = np.arange(0, 9)
+        idx = np.arange(0, self.n_s)
         d = 2
         for i in range(1, self.N + 1):
-            aux = np.arange(0, 9) + i * self.n_exp
+            aux = np.arange(0, self.n_s) + i * self.n_s
             idx = np.hstack((idx, aux))
 
         self.xPred = np.reshape((x)[idx], (self.N + 1, self.n_s))
-        self.uPred = np.reshape(u, (self.N, d))
+        self.uPred = np.reshape(u, (self.N, self.n_u))
 
         self.solverTime = time.time() - startTimer
 
@@ -539,4 +580,4 @@ class PathFollowingNL_MPC:
 
         data = [x,du,slack_agent,spm_data,sps_data]
 
-        return status, x, planes_std, slack, data
+        return status, x, planes_std, data

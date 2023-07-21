@@ -165,7 +165,8 @@ class Planner_Eud:
             # cost asociated to the current agent
             J += self.Q[0,0]*(self.x[0+mod] - self.vx_ref)**2 + self.Q[1,1]*self.x[1+mod]**2 + self.Q[2,2]*self.x[2+mod]**2 +\
                  self.Q[3,3]*self.x[3+mod]**2 + self.Q[4,4]*self.x[4+mod]**2 + self.Q[5,5]*self.x[5+mod]**2 + self.Q[6,6]*self.x[6+mod]**2 + self.Q[7,7]*self.x[7+mod]**2 \
-                 + self.Q[8,8]*self.x[8+mod]**2 + self.R[0,0]*self.du[0+(mod_u)]**2 + self.R[1,1]*self.du[1+mod_u]**2 + self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2)**2 + self.control_slack*(self.slack_agent[j-1,2]**2 + self.slack_agent[j-1,3]**2)
+                 + self.Q[8,8]*self.x[8+mod]**2 + self.R[0,0]*self.du[0+(mod_u)]**2 + self.R[1,1]*self.du[1+mod_u]**2 + \
+                 self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2)**2 + self.control_slack*(self.slack_agent[j-1,2]**2 + self.slack_agent[j-1,3]**2)
 
             for i, el in enumerate(self.agent_list):
 
@@ -288,11 +289,11 @@ class Planner_Eud:
         ey = get_ey(states[:, 6], self.map) # update lateral error limits
 
         try:
-            self.opti.set_value(self.ey_ub, ey*self.sm)
-            self.opti.set_value(self.ey_lb, -ey*self.sm)
+            self.opti.set_value(self.ey_ub*self.sm, ey*self.sm)
+            self.opti.set_value(self.ey_lb*self.sm, -ey*self.sm)
         except:
-            self.opti.set_value(self.ey_ub, ey[1:]*self.sm)
-            self.opti.set_value(self.ey_lb, -ey[1:]*self.sm)
+            self.opti.set_value(self.ey_ub*self.sm, ey[1:]*self.sm)
+            self.opti.set_value(self.ey_lb*self.sm, -ey[1:]*self.sm)
 
         # update model variables
         for j in range (0,self.N):
@@ -507,4 +508,4 @@ class Planner_Eud:
 
         data = [x,du,slack_agent,slack] #return the data
 
-        return status, x, slack, data # the 0 is a placeholder to the generated planes, which do not exist here
+        return status, x, data # the 0 is a placeholder to the generated planes, which do not exist here

@@ -12,5 +12,6 @@ LIST OF COMMENTED FILES
 * PathFollowingLPVMPV_independent_hyperplanes
 
 TODO LIST  
-* Compare perfomance and check that the refactoring did indeed work 
+* Compare perfomance and check that the refactoring did indeed work (probs NL_EU_N not working and LPV does weird things)
 * Make one experiment with LPV to show Vicens 
+* None of them works at it should yikes

@@ -10,11 +10,15 @@ sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/DistributedPlanner')
 
-from NL_Planner_Eu import PathFollowingNL_MPC
+from NL_Planner_Hp import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
+plot = False
+plot_end = True
+it_conv = 1
+n_agents = 4
 
 class agent():
 
@@ -183,7 +187,7 @@ def main():
 
     maps = [Map(),Map(),Map(),Map()]
     agents,data = initialise_agents([x0_0,x0_1,x0_2,x0_3],N,dt,maps)
-
+    n_agents = len(data)
     planes = np.zeros((N,n_agents,n_agents,3))
     states_hist = [agents]
 

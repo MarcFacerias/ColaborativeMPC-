@@ -8,9 +8,9 @@ import os
 sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/Config/NL_EU')
+sys.path.append(sys.path[0]+'/Config/NL_HP')
 
-from NL_Planner_Eu import NL_Planner_EU
+from NL_Planner_Hp import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 from utilities import checkEnd, initialise_agents
@@ -18,7 +18,7 @@ from config import *
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-class agent(initialiserNL_EU):
+class agent(initialiserNL_HP):
 
     def __init__(self, N, Map, dt, x0, id, dth):
         super().__init__()
@@ -26,7 +26,7 @@ class agent(initialiserNL_EU):
         self.dt = dt
         self.N = N
         self.x0 = x0
-        self.Controller = NL_Planner_EU(self.Q, self.R, N, dt, Map, id, dth)
+        self.Controller = PathFollowingNL_MPC(self.Q,self.Qs, self.R, N, dt, Map, id, dth, self.model_param, self.sys_lim)
         self.states = []
         self.u = []
         self.time_op = []
@@ -35,20 +35,18 @@ class agent(initialiserNL_EU):
         self.data_collec = []
         self.id = id
 
-    def one_step(self, lambdas, agents, agents_id, uPred = None, xPred = None):
+    def one_step(self, lambdas, agents, agents_id, uPred = None, xPred = None, planes_fixed = None):
 
         tic = time.time()
-        feas, Solution, planes, slack, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
+        feas, Solution, planes, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, planes_fixed, agents_id, self.data_collec)
         self.time_op.append(time.time() - tic)
         self.status.append(feas)
-
-        return feas, self.Controller.uPred, self.Controller.xPred, planes, slack, Solution
+        return feas, self.Controller.uPred, self.Controller.xPred, planes, Solution
 
     def plot_experiment(self):
 
         disp = plotter_offline(self.map)
         disp.add_agent_ti(self)
-        disp.add_planes_ti(self)
 
     def save(self, xPred, uPred):
 
@@ -75,9 +73,9 @@ class agent(initialiserNL_EU):
 
         np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
 
-def eval_constraint(x1, x2, D):
+def eval_constraint(x2, planes, D):
 
-    cost1 = D - np.sqrt(sum((x1-x2)**2)) # the OCD update depends on on the diference between the minimum D and the euclidean dist
+    cost1 = -planes[0] * x2[0] - planes[1] * x2[1] - planes[2] + D/2
 
     return np.array(cost1)
 
@@ -107,9 +105,10 @@ def main():
     feas   = [None] * n_agents
     raws   = [None] * n_agents
     rs     = [None] * n_agents
-    lsack  = [None] * n_agents
-    planes = [None] * n_agents
     data   = [None] * n_agents
+    planes_raw = [None] * n_agents
+    planes_old = None
+    planes = np.zeros((N,n_agents,n_agents,3))
 
     if plot:
         disp = plotter(maps[0],n_agents)
@@ -143,7 +142,7 @@ def main():
             # run an instance of the optimisation problems
 
             for i, r in enumerate(rs):
-                feas[i], u_pred[i], x_pred[i], planes[i], lsack[i], raws[i] = r.one_step( lambdas[[i],ns[i],:], agents[:,ns[i],:], ns[i], u_old[i], raws[i])
+                feas[i], u_pred[i], x_pred[i], planes_raw[i], raws[i] = r.one_step( lambdas[[i],ns[i],:], agents[:,ns[i],:], ns[i], u_old[i], raws[i], planes_old)
 
             for j,r in enumerate(rs):
                 r.data_collec = [rs[i].data_opti for i in ns[j]]
@@ -158,7 +157,8 @@ def main():
                     for j in range(0,n_agents):
 
                         if (i != j) and i<j:
-                            cost[i,j,k-1] = eval_constraint(agents[k,i,:],agents[k,j,:],dth)
+                            planes[k - 1, i, j, :] = planes_raw[i][k - 1, :, j]
+                            cost[i,j,k-1]= eval_constraint(agents[k,j,:], planes[k-1,i,j,:],dth)
 
             alpha = get_alpha()
             lambdas += alpha*cost
@@ -176,6 +176,7 @@ def main():
             # store values from current iteration into the following one
             x_old = x_pred
             cost_old = cost
+            planes_old = planes_raw[0]
 
             if not finished_ph :
                 itc = 0
