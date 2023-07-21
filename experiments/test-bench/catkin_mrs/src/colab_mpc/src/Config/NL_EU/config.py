@@ -58,6 +58,6 @@ class initialiserNL_EU():
             self.sys_lim = None
             self.model_param = None
 
-        self.Qs = 10000000 * np.eye(3)
+        self.Qs = np.diag([10000000,1,1000000])
         self.Q = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0])
         self.R = 1000 * np.diag([1, 1])

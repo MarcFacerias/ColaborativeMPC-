@@ -9,37 +9,67 @@ from utilities import Curvature, get_ey
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 # slack weight constants
-model_slack = 10000000
-control_slack = 1
-obs_slack = 1000000
 
-class NL_Planner_EU:
+
+class Planner_Eud:
     """Create the Path Following LMPC controller with LTV model
     Attributes:
         solve: given ini_xPredicted computes the control action
     """
-    def __init__(self, Q, R, N, dt, map, id, dth):
+    def __init__(self, Q, Qs, R, N, dt, map, id, dth, model_param = None, sys_lim = None):
 
         # system parameters:
-        self.n_exp = 9
+        self.n_s = 9
+        self.n_u = 2
+        self.n_sl = 3
         self.dth = dth
-        self.lf = 0.12
-        self.lr = 0.14
-        self.m  = 2.250
-        self.I  = 0.06
-        self.Cf = 60.0
-        self.Cr = 60.0
-        self.mu = 0.0
-        self.vx_ref = 4.5
         self.id = id
         self.initialised = False # Flag to instantiate the optimisation problem
-        self.g  = 9.81
-        self.max_vel = 10
-        self.min_vel = -10
+        self.g = 9.81
+
+        # Vehicle parameters:
+        if model_param is None:
+            self.lf = 0.12
+            self.lr = 0.14
+            self.m  = 2.250
+            self.I  = 0.06
+            self.Cf = 60.0
+            self.Cr = 60.0
+            self.mu = 0.0
+
+        else:
+            self.lf = model_param["lf"]
+            self.lr = model_param["lr"]
+            self.m  = model_param["m"]
+            self.I  = model_param["I"]
+            self.Cf = model_param["Cf"]
+            self.Cr = model_param["Cr"]
+            self.mu = model_param["mu"]
+
+        if sys_lim is None:
+            self.vx_ref = 6.0
+            self.max_vel = 10
+            self.min_vel = 0.2
+            self.max_rs = 0.45
+            self.max_ls = 0.45
+            self.max_ac = 8.0
+            self.max_dc = 8.0
+            self.sm     = 0.9
+
+        else:
+            self.vx_ref  = sys_lim["vx_ref"]
+            self.max_vel = sys_lim["max_vel"]
+            self.min_vel = sys_lim["min_vel"]
+            self.max_rs  = sys_lim["max_rs"]
+            self.max_ls  = sys_lim["max_ls"]
+            self.max_ac  = sys_lim["max_ac"]
+            self.max_dc  = sys_lim["max_dc"]
+            self.sm      = sys_lim["sm"]
+
 
         # declaration of the optimisation variables
         self.opti = casadi.Opti()
-        self.x = self.opti.variable(self.n_exp*(N+1)) # x0, ..., xN
+        self.x = self.opti.variable(self.n_s*(N+1)) # x0, ..., xN
         self.u  = self.opti.variable(2 * (N))  # u1, ..., uN
         self.du = self.opti.variable(2 * (N))  # du1, ..., duN
         self.slack_agent = self.opti.variable(N,4)  # s00, s10, s20, s30, ..., s0N, s1N, s2N, s3N,
@@ -50,23 +80,43 @@ class NL_Planner_EU:
         self.A    = []
         self.B    = []
         self.C    = []
+
+        if Q.shape[0] == self.n_s:
+            self.Q    = Q
+        else:
+            msg = 'Q has not the correct shape!, defaulting to identity of ' + str(self.n_s)
+            warnings.warn(msg)
+            self.Q = np.eye(self.n_s)
+
+        if Qs.shape[0] == self.n_sl:
+            self.model_slack   = Qs[0,0]
+            self.control_slack = Qs[1,1]
+            self.obs_slack     = Qs[2,2]
+        else:
+            msg = "Qs has not the correct shape!, defaulting to inf of " + str(self.n_sl)
+            warnings.warn(msg)
+            self.model_slack   = 1000000
+            self.control_slack = 1000000
+            self.obs_slack     = 1000000
+
+        if R.shape[0] == self.n_u:
+            self.R   = R
+        else:
+            msg = "Qs has not the correct shape!, defaulting to identity of " + str(self.n_u)
+            warnings.warn(msg)
+            self.R = np.eye(self.n_u)
+
         self.N    = N
-        self.n    = Q.shape[0]
-        self.d    = R.shape[0]
-        self.Q    = Q
-        self.R    = R
         self.dt = dt              # Sample time
         self.map = map            # Used for getting the road curvature
-        self.planes_param = []    # neighbouring planes
         self.pose_param = []      # neighbour x,y
+        self.states_param = []      # neighbour x,y
         self.du_param = []        # neighbour du
-        self.states_param = []    # neighbour states
         self.s_agent_param = []   # neighbour states slack
         self.param_slack_dis = [] # distance constraint slack
-        self._cost = 0 # cost logging
 
         # parameters
-        self.initial_states = self.opti.parameter(self.n_exp)
+        self.initial_states = self.opti.parameter(self.n_s)
 
         # LPV placeholders
         # vx
@@ -109,13 +159,13 @@ class NL_Planner_EU:
         # parametric generation cost function
         J  = 0
         for j in range (1,self.N+1):
-            mod = j * self.n_exp
-            mod_u = (j-1) * 2
+            mod = j * self.n_s
+            mod_u = (j-1) * self.n_u
 
             # cost asociated to the current agent
             J += self.Q[0,0]*(self.x[0+mod] - self.vx_ref)**2 + self.Q[1,1]*self.x[1+mod]**2 + self.Q[2,2]*self.x[2+mod]**2 +\
                  self.Q[3,3]*self.x[3+mod]**2 + self.Q[4,4]*self.x[4+mod]**2 + self.Q[5,5]*self.x[5+mod]**2 + self.Q[6,6]*self.x[6+mod]**2 + self.Q[7,7]*self.x[7+mod]**2 \
-                 + self.Q[8,8]*self.x[8+mod]**2 + self.R[0,0]*self.du[0+(mod_u)]**2 + self.R[1,1]*self.du[1+mod_u]**2 + model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2)**2 + control_slack*(self.slack_agent[j-1,2]**2 + self.slack_agent[j-1,3]**2)
+                 + self.Q[8,8]*self.x[8+mod]**2 + self.R[0,0]*self.du[0+(mod_u)]**2 + self.R[1,1]*self.du[1+mod_u]**2 + self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2)**2 + self.control_slack*(self.slack_agent[j-1,2]**2 + self.slack_agent[j-1,3]**2)
 
             for i, el in enumerate(self.agent_list):
 
@@ -124,17 +174,17 @@ class NL_Planner_EU:
                 # cost asociated to the neighbouring agents
                 J += self.Q[0,0] * (self.states_param[i][0 + mod] - self.vx_ref)** 2+ self.Q[1,1] * self.states_param[i][1 + mod] ** 2 + self.Q[2,2] * self.states_param[i][2 + mod] ** 2 + \
                      self.Q[3,3] * self.states_param[i][3 + mod] ** 2 + self.Q[4,4] * self.states_param[i][4 + mod] ** 2 + self.Q[5,5] * self.states_param[i][5 + mod] ** 2 + self.Q[6,6] * self.states_param[i][6 + mod] ** 2 + \
-                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.R[0,0]*self.du_param[i][0 + (mod_u)] ** 2 + self.R[1,1]*self.du_param[i][1 + mod_u] ** 2  + model_slack * (
-                     self.s_agent_param[i][j-1,0] ** 2 + self.s_agent_param[i][j-1,1]**2) + control_slack*(self.s_agent_param[i][j-1,2]**2 + self.s_agent_param[i][j-1,3] ** 2)
+                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.R[0,0]*self.du_param[i][0 + (mod_u)] ** 2 + self.R[1,1]*self.du_param[i][1 + mod_u] ** 2  + self.model_slack * (
+                     self.s_agent_param[i][j-1,0] ** 2 + self.s_agent_param[i][j-1,1]**2) + self.control_slack*(self.s_agent_param[i][j-1,2]**2 + self.s_agent_param[i][j-1,3] ** 2)
 
                 # add cost depending on if you are a follower or an ego vehicle in the pair
 
                 if self.id < el:
                     J+= self.lambdas[i,j-1]*(self.param_slack_dis[i][j-1,self.id] + self.dth - sqrt((self.x[7+mod] - self.pose_param[i][j-1,0])**2 + (self.x[8+mod]
-                         - self.pose_param[i][j-1,1])**2)) + obs_slack*(self.param_slack_dis[i][j-1,self.id]**2)
+                         - self.pose_param[i][j-1,1])**2)) + self.obs_slack*(self.param_slack_dis[i][j-1,self.id]**2)
 
                 else:
-                    J += obs_slack * (self.slack_dis[slack_idx] ** 2)
+                    J += self.obs_slack * (self.slack_dis[slack_idx] ** 2)
 
         return J
 
@@ -142,8 +192,8 @@ class NL_Planner_EU:
         #parametric definition of inequality constraints along the horizon
 
         for j in range(1, self.N + 1):
-            mod = j * self.n_exp
-            mod_u = (j-1) * 2
+            mod = j * self.n_s
+            mod_u = (j-1) * self.n_u
 
             # bound linear velocity
             self.opti.subject_to(self.opti.bounded(self.min_vel,self.x[0+mod] + self.slack_agent[j-1,0],self.max_vel))
@@ -151,8 +201,8 @@ class NL_Planner_EU:
             self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1], self.x[4+mod] + self.slack_agent[j-1,1], self.ey_ub[j-1]))
 
             # bound control actions
-            self.opti.subject_to(self.opti.bounded(-0.45,self.u[0+mod_u], 0.45))
-            self.opti.subject_to(self.opti.bounded(-8.00, self.u[1 + mod_u], 8.0))
+            self.opti.subject_to(self.opti.bounded(-self.max_ls,self.u[0+mod_u], self.max_rs))
+            self.opti.subject_to(self.opti.bounded(-self.max_dc, self.u[1 + mod_u], self.max_ac))
 
             for i,el in enumerate(self.agent_list):
                 slack_idx = (j - 1) * self.aux + i
@@ -163,7 +213,7 @@ class NL_Planner_EU:
     def eq_constraints(self):
 
         # set initial states
-        for i in range(0, self.n_exp):
+        for i in range(0, self.n_s):
 
             self.opti.subject_to(
                 self.x[i] == self.initial_states[i]
@@ -171,8 +221,8 @@ class NL_Planner_EU:
 
         # add the model
         for j in range(1, self.N + 1):
-            mod = j * self.n_exp
-            mod_prev = (j-1) * self.n_exp
+            mod = j * self.n_s
+            mod_prev = (j-1) * self.n_s
             mod_u    = (j-1) * 2
 
             # vx
@@ -238,11 +288,11 @@ class NL_Planner_EU:
         ey = get_ey(states[:, 6], self.map) # update lateral error limits
 
         try:
-            self.opti.set_value(self.ey_ub, ey)
-            self.opti.set_value(self.ey_lb, -ey)
+            self.opti.set_value(self.ey_ub, ey*self.sm)
+            self.opti.set_value(self.ey_lb, -ey*self.sm)
         except:
-            self.opti.set_value(self.ey_ub, ey[1:])
-            self.opti.set_value(self.ey_lb, -ey[1:])
+            self.opti.set_value(self.ey_ub, ey[1:]*self.sm)
+            self.opti.set_value(self.ey_lb, -ey[1:]*self.sm)
 
         # update model variables
         for j in range (0,self.N):
@@ -296,7 +346,7 @@ class NL_Planner_EU:
             self.opti.set_value(self.pose_param[i][-1, 1], self.states_fixed[-1, i, 1])
 
         # update initial states
-        for i in range(0, self.n_exp):
+        for i in range(0, self.n_s):
             self.opti.set_value(self.initial_states[i] ,states[0,i])
 
     def solve(self, ini_xPredicted = None, Last_xPredicted = None, uPred = None, lambdas = None, x_agents = None, agents_id = None, data = None):
@@ -326,7 +376,7 @@ class NL_Planner_EU:
                 placeholder_pose = self.opti.parameter(self.N, 2)
                 self.pose_param.append(placeholder_pose)
 
-                placeholder_states = self.opti.parameter(self.n_exp * (self.N + 1))
+                placeholder_states = self.opti.parameter(self.n_s * (self.N + 1))
                 self.states_param.append(placeholder_states)
 
                 placeholder_u = self.opti.parameter(2 * (self.N))
@@ -380,7 +430,7 @@ class NL_Planner_EU:
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         if x_agents is None:
-            x_agents = np.zeros((10,self.n_neighbours,2))
+            x_agents = np.zeros((self.N,self.n_neighbours,2))
 
         self.states_fixed = x_agents
 
@@ -404,7 +454,6 @@ class NL_Planner_EU:
             x = sol.value(self.x)
             u = sol.value(self.u)
             du = sol.value(self.du)
-            self._cost = sol.stats()['iterations']['obj'][-1]
 
             # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -438,14 +487,14 @@ class NL_Planner_EU:
 
 
         # Create the output values TODO: is this necesary?
-        idx = np.arange(0, 9)
-        d = 2
+        idx = np.arange(0, self.n_s)
+
         for i in range(1, self.N + 1):
-            aux = np.arange(0, 9) + i * self.n_exp
+            aux = np.arange(0, self.n_s) + i * self.n_s
             idx = np.hstack((idx, aux))
 
-        self.xPred = np.reshape((x)[idx], (self.N + 1, self.n_exp)) # retrieve states
-        self.uPred = np.reshape(u, (self.N, d)) # retrieve control actions
+        self.xPred = np.reshape((x)[idx], (self.N + 1, self.n_s)) # retrieve states
+        self.uPred = np.reshape(u, (self.N, self.n_u)) # retrieve control actions
 
         self.solverTime = time.time() - startTimer # keep the solver
 
@@ -458,4 +507,4 @@ class NL_Planner_EU:
 
         data = [x,du,slack_agent,slack] #return the data
 
-        return status, x, 0, slack, data # the 0 is a placeholder to the generated planes, which do not exist here
+        return status, x, slack, data # the 0 is a placeholder to the generated planes, which do not exist here
