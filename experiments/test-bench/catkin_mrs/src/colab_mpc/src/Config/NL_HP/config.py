@@ -30,7 +30,7 @@ def get_alpha():
     return alpha
 
 class initialiserNL_HP():
-    def __init__(self, model = "SCALED CAR"):
+    def __init__(self, model = "CAR"):
         if model == "SCALED CAR":
             self.model_param = {
                 "lf" : 0.12,
@@ -43,15 +43,14 @@ class initialiserNL_HP():
             }
 
             self.sys_lim     = {
-                "vx_ref" : 6.0,
-                "radius" : 0.45,
-                "max_vel"  : 10,
-                "min_vel"  : 0.2,
+                "vx_ref" : 4.5,
+                "max_vel"  : 6,
+                "min_vel"  : -6,
                 "max_rs" : 0.45,
                 "max_ls" : 0.45,
                 "max_ac" : 8.0,
                 "max_dc" : 8.0,
-                "sm"     : 0.8
+                "sm"     : 0.9
             }
 
         else:
@@ -59,5 +58,5 @@ class initialiserNL_HP():
             self.model_param = None
 
         self.Qs = np.diag([10000000,1000000,1000000,1000000])
-        self.Q = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0])
-        self.R = 1000 * np.diag([1, 1])
+        self.Q =  np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0])
+        self.R =  0.01 * np.diag([1, 1])

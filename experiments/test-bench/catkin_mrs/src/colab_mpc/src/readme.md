@@ -4,14 +4,8 @@ Controller Distributed Object: WIP Versions of the ROS controller
 deprecated: Old tests/codes 
 Utilities: code that Euge wrote regarding general useful techniques 
 
-LIST OF COMMENTED FILES 
-
-* dc_4ih_Corridor
-* dc_hp_4LPVds_CASADI
-* PathFollowingCASADI_param_LPVds_NOROS
-* PathFollowingLPVMPV_independent_hyperplanes
+LIST OF COMMENTED FILES
 
 TODO LIST  
-* Compare perfomance and check that the refactoring did indeed work (probs NL_EU_N not working and LPV does weird things)
-* Make one experiment with LPV to show Vicens 
-* None of them works at it should yikes
+* Make one experiment with LPV to show Vicens -> diumenge
+* None of them works at it should yikes, fer repasada als del CASADI a FONDO dilluns

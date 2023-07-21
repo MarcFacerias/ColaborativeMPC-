@@ -174,8 +174,11 @@ class PathFollowingNL_MPC:
 
                 J += self.Q[0,0] * (self.states_param[i][0 + mod] - self.vx_ref) ** 2 + self.Q[1,1] * self.states_param[i][1 + mod] ** 2 + self.Q[2,2] * self.states_param[i][2 + mod] ** 2 + \
                      self.Q[3,3] * self.states_param[i][3 + mod] ** 2 + self.Q[4,4] * self.states_param[i][4 + mod] ** 2 + self.Q[5,5] * self.states_param[i][5 + mod] ** 2 + self.Q[6,6] * self.states_param[i][6 + mod] ** 2 + \
-                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 + self.R[0,0] * self.du_param[i][0 + mod_u] ** 2 + self.R[1,1] * self.du_param[i][1 + mod_u] ** 2 + self.model_slack * (
-                     self.s_agent_param[i][j-1,0] ** 2 + self.s_agent_param[i][j-1,1]**2) + self.control_slack * (self.s_agent_param[i][j-1,2]**2 + self.s_agent_param[i][j-1,3] ** 2)
+                     self.Q[7,7] * self.states_param[i][7 + mod] ** 2 \
+                     + self.R[0,0] * self.du_param[i][0 + mod_u] ** 2 + self.R[1,1] * self.du_param[i][1 + mod_u] ** 2 \
+                     + self.model_slack * (self.s_agent_param[i][j-1,0] ** 2 + self.s_agent_param[i][j-1,1]**2) \
+                     + self.control_slack * (self.s_agent_param[i][j-1,2]**2 + self.s_agent_param[i][j-1,3] ** 2) \
+                     + self.planes_slack*(self.slack_params_master[i][j-1,self.id]**2) + self.planes_slack*(self.slack_params_slave[i][j-1,self.id]**2)
 
                 if self.id < el:
 
@@ -201,8 +204,8 @@ class PathFollowingNL_MPC:
             self.opti.subject_to(self.opti.bounded(self.ey_lb[j-1], self.x[4+mod] + self.slack_agent[j-1,1], self.ey_ub[j-1]))
 
             # bound control actions
-            self.opti.subject_to(self.opti.bounded(-self.max_ls,self.u[0+mod_u], self.max_rs))
-            self.opti.subject_to(self.opti.bounded(-self.max_dc, self.u[1 + mod_u], self.max_ac))
+            self.opti.subject_to(self.opti.bounded(-self.max_ls, self.u[0+mod_u] + self.slack_agent[j-1,2], self.max_rs))
+            self.opti.subject_to(self.opti.bounded(-self.max_dc, self.u[1+mod_u] + self.slack_agent[j-1,3], self.max_ac))
 
             if j < self.N:
 
@@ -372,7 +375,6 @@ class PathFollowingNL_MPC:
         """
         startTimer              = time.time()
 
-        # TODO: make an array of parameters mimiquing the 3 index
         if not self.initialised:
 
             self.agent_list = np.asarray(agents_id)
@@ -451,7 +453,7 @@ class PathFollowingNL_MPC:
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         if x_agents is None:
-            x_agents = np.zeros((N,self.n_neighbours,2))
+            x_agents = np.zeros((self.N,self.n_neighbours,2))
 
         self.states_fixed = x_agents
 
@@ -459,7 +461,7 @@ class PathFollowingNL_MPC:
 
         if planes_fixed is None:
 
-            self.planes_fixed = self.plane_comp.compute_hyperplane(x_agents, ini_xPredicted[:,7:8], self.id, agents_id)
+            self.planes_fixed = self.plane_comp.compute_hyperplane(x_agents, ini_xPredicted[:,[7, 8]], self.id, agents_id)
 
         else:
             self.planes_fixed = planes_fixed
@@ -545,7 +547,6 @@ class PathFollowingNL_MPC:
                 slack_agent = None
 
         idx = np.arange(0, self.n_s)
-        d = 2
         for i in range(1, self.N + 1):
             aux = np.arange(0, self.n_s) + i * self.n_s
             idx = np.hstack((idx, aux))

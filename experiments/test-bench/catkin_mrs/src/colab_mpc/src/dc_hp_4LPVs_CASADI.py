@@ -29,7 +29,7 @@ class agent():
         self.dt = dt
         self.Q  = np.diag([120.0, 1.0, 1.0, 70.0, 0.0, 1500.0])   #[vx ; vy ; psiDot ; e_psi ; s ; e_y]
         self.R  = 0.01* np.diag([1, 1])                         #[delta ; a]
-        self.Controller = PathFollowingNL_MPC(self.Q, self.R, N, dt, Map, id, dth)
+        self.Controller = PathFollowingNL_MPC(self.Q,np.diag([10000000,1000000,1000000,1000000]), self.R, N, dt, Map, id, dth)
         self.x0 = x0
         self.states = []
         self.u = []
@@ -50,17 +50,17 @@ class agent():
         if x0 is None:
             x0 = xPred
 
-        feas, uPred, xPred, planes, lsack, Solution = self._solve(x0, agents, agents_id, pose, lambdas, xPred, uPred, planes_fixed, slack)
+        feas, uPred, xPred, planes, lsack, Solution = self._solve(x0, agents, agents_id, pose,lambdas, xPred, uPred, planes_fixed, slack)
 
         return feas,uPred, xPred, planes, lsack, Solution
 
     def _solve(self, x0, agents, agents_id, pose, lambdas, Xpred, uPred ,planes_fixed, slack):
 
         tic = time.time()
-        feas, Solution, planes, slack, self.data_opti = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, pose, slack, self.data_share)
+        feas, Solution, planes,  self.data_opti = self.Controller.solve(x0, Xpred, uPred, lambdas, agents, planes_fixed, agents_id, self.data_share)
         self.time.append(time.time() - tic)
         self.status.append(feas)
-        return feas, self.Controller.uPred, self.Controller.xPred, planes, slack, Solution
+        return feas, self.Controller.uPred, self.Controller.xPred, planes, "slack", Solution
 
     def plot_experiment(self):
 
@@ -103,7 +103,7 @@ def initialise_agents(data,Hp,dt,map, accel_rate=0):
         # agents[:,id,:] = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)[0][:,-4:-2] # with slack
         aux = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)
         agents[:,id,:] = aux[0][:,-2:] # without slack
-        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp+1,4)),np.zeros((Hp,len(data))),np.zeros((Hp,len(data)))]
+        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp,4)),np.zeros((Hp,len(data))),np.zeros((Hp,len(data)))]
     return agents, data_holder
 
 def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
@@ -300,8 +300,6 @@ def main():
             if it_OCD > 20:
                 print("max it reached")
                 finished = True
-
-
 
         r0.save(xPred0, uPred0, planes0)
         r1.save(xPred1, uPred1, planes1)
