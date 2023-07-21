@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import time
 import math
 
-sys.path.append(sys.path[0]+'/DistributedControllerObject')
-sys.path.append(sys.path[0]+'/DistributedControllerObject')
+sys.path.append(sys.path[0]+'/DistributedPlanner')
+sys.path.append(sys.path[0]+'/DistributedPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 
 from PathFollowingLPVMPC_distri import PathFollowingLPV_MPC, _buildMatEqConst, OneStepSim

@@ -8,7 +8,7 @@ import os
 sys.path.append(sys.path[0]+'/NonLinearControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/DistributedControllerObject')
+sys.path.append(sys.path[0]+'/DistributedPlanner')
 
 from PathFollowingCASADI_param_LPVs_NOROS import PathFollowingNL_MPC
 from trackInitialization import Map, wrap

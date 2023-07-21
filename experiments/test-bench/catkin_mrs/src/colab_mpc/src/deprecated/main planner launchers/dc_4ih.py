@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/DistributedControllerObject')
+sys.path.append(sys.path[0]+'/DistributedPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 
@@ -75,7 +75,7 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/TestsPaperL/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedPlanner/TestsPaperL/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -86,7 +86,7 @@ class agent():
 
     def save_var_to_csv(self,var, name):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/TestsPaperL/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedPlanner/TestsPaperL/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)

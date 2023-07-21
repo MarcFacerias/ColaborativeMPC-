@@ -6,7 +6,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import time
 
-sys.path.append(sys.path[0]+'/DistributedControllerObject')
+sys.path.append(sys.path[0]+'/DistributedPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 
 from PathFollowingLPVMPC_distri_hyper import PathFollowingLPV_MPC, _buildMatEqConst

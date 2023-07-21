@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/DistributedControllerObject') # folder containing the controller
+sys.path.append(sys.path[0]+'/DistributedPlanner') # folder containing the controller
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 
@@ -76,7 +76,7 @@ class agent():
     def save_to_csv(self):
         # save agent data in .dat (suitable for matlab plotting) in a hard coded path within the experimetn folder
         #TODO: automate this to have consequtive experiments not overwrite each other
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/corr/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedPlanner/corr/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -87,7 +87,7 @@ class agent():
 
     def save_var_to_csv(self,var, name):
         # save any data in .dat (suitable for matlab plotting) in a hard coded path within the experimetn folder
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/corr/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedPlanner/corr/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)

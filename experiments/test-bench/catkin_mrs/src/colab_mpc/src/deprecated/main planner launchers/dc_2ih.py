@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/DistributedControllerObject')
+sys.path.append(sys.path[0]+'/DistributedPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 
@@ -75,7 +75,7 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/DistributedControllerObject/vars"
+        path = "/DistributedPlanner/vars"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -86,7 +86,7 @@ class agent():
 
     def save_var_to_csv(self,var, name):
 
-        path = "/DistributedControllerObject/vars"
+        path = "/DistributedPlanner/vars"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
