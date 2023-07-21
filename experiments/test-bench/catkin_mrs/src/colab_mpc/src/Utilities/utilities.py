@@ -117,5 +117,60 @@ def wrap(angle):
 
     return w_angle
 
+def initialise_agents(data,Hp,dt,map, accel_rate=0):
+    n_agents = len(data)
+    agents = np.zeros((Hp+1,n_agents,2))
+    u_pred  = [None] * n_agents
+    x_pred  = [None] * n_agents
+
+    for id, el in enumerate(data):
+        x_pred[id],u_pred[id] = predicted_vectors_generation(Hp, el, dt, map[id], accel_rate)
+        agents[:,id,:] = x_pred[id][:,-2:]
+
+    return agents,x_pred,u_pred
+
+def predicted_vectors_generation(Hp, x0, dt, map, accel_rate = 0):
+    # We need a prediction of the states for the start-up proces of the controller (To instantiate the LPV variables)
+    # [vx vy psidot y_e thetae theta s x y ]
+
+    Vx      = np.zeros((Hp+1, 1))
+    Vx[0]   = x0[0]
+    S       = np.zeros((Hp+1, 1))
+    S[0]    = x0[6]
+    Vy      = np.zeros((Hp+1, 1))
+    Vy[0]   = x0[1]
+    W       = np.zeros((Hp+1, 1))
+    W[0]    = x0[2]
+    Ey      = np.zeros((Hp+1, 1))
+    Ey[0]   = x0[3]
+    Epsi    = np.zeros((Hp+1, 1))
+    Epsi[0] = x0[4]
+
+    aux = map.getGlobalPosition(S[0], Ey[0])
+    Theta = np.zeros((Hp+1, 1))
+    Theta[0] = aux[2]
+    X = np.zeros((Hp+1, 1))
+    X[0] = aux[0]
+    Y = np.zeros((Hp+1, 1))
+    Y[0] = aux[1]
+
+    Accel   = 1.0
+
+    for i in range(0, Hp):
+        Vy[i+1]      = x0[1]
+        W[i+1]       = x0[2]
+        Ey[i+1]      = x0[3]
+        Epsi[i+1]    = x0[4]
+
+    Accel   = Accel + np.array([ (accel_rate * i) for i in range(0, Hp)])
+
+    for i in range(0, Hp):
+        Vx[i+1]    = Vx[i] + Accel[i] * dt
+        S[i+1]      = S[i] + Vx[i] * dt
+        X[i+1], Y[i+1], Theta[i+1] = map.getGlobalPosition(S[i], Ey[i])
+
+    xx  = np.hstack([ Vx, Vy, W,Ey, Epsi, Theta ,S ,X,Y]) # [vx vy psidot y_e thetae theta s x y slack1 slack2]
+    uu = np.zeros(( Hp, 2 ))
+    return xx, uu
 
 

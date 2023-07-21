@@ -13,15 +13,15 @@ sys.path.append(sys.path[0]+'/Config/NL_EU')
 from NL_Planner_Eu import NL_Planner_EU
 from trackInitialization import Map, wrap
 from plot_vehicle import *
-from utilities import checkEnd
-from config import *  #Important!! Containts system definitions
+from utilities import checkEnd, initialise_agents
+from config import *
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 class agent(initialiserNL_EU):
 
     def __init__(self, N, Map, dt, x0, id, dth):
-        super().__init__()  # initialise the initialiser
+        super().__init__()
         self.map = Map
         self.dt = dt
         self.N = N
@@ -75,65 +75,6 @@ class agent(initialiserNL_EU):
 
         np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
 
-def initialise_agents(data,Hp,dt,map, accel_rate=0):
-    agents = np.zeros((Hp+1,len(data),2))
-    data_holder = [i for i in range(len(data))]
-    u_old  = [None] * n_agents
-    x_old  = [None] * n_agents
-
-    for id, el in enumerate(data):
-
-        aux = predicted_vectors_generation_V2(Hp, el, dt, map[id], accel_rate)
-        agents[:,id,:] = aux[0][:,-2:] # without slack
-        data_holder[id] = [aux[0].flatten(),aux[1].flatten(),np.zeros((Hp,4)),np.zeros((Hp,len(data)))] # we need to initialise the slack vars
-        x_old[id] = aux[0]
-        u_old[id] = aux[1]
-    return agents, data_holder, x_old,u_old
-
-def predicted_vectors_generation_V2(Hp, x0, dt, map, accel_rate = 0):
-    # We need a prediction of the states for the start-up proces of the controller (To instantiate the LPV variables)
-    # [vx vy psidot y_e thetae theta s x y ]
-
-    Vx      = np.zeros((Hp+1, 1))
-    Vx[0]   = x0[0]
-    S       = np.zeros((Hp+1, 1))
-    S[0]    = x0[6]
-    Vy      = np.zeros((Hp+1, 1))
-    Vy[0]   = x0[1]
-    W       = np.zeros((Hp+1, 1))
-    W[0]    = x0[2]
-    Ey      = np.zeros((Hp+1, 1))
-    Ey[0]   = x0[3]
-    Epsi    = np.zeros((Hp+1, 1))
-    Epsi[0] = x0[4]
-
-    aux = map.getGlobalPosition(S[0], Ey[0])
-    Theta = np.zeros((Hp+1, 1))
-    Theta[0] = aux[2]
-    X = np.zeros((Hp+1, 1))
-    X[0] = aux[0]
-    Y = np.zeros((Hp+1, 1))
-    Y[0] = aux[1]
-
-    Accel   = 1.0
-
-    for i in range(0, Hp):
-        Vy[i+1]      = x0[1]
-        W[i+1]       = x0[2]
-        Ey[i+1]      = x0[3]
-        Epsi[i+1]    = x0[4]
-
-    Accel   = Accel + np.array([ (accel_rate * i) for i in range(0, Hp)])
-
-    for i in range(0, Hp):
-        Vx[i+1]    = Vx[i] + Accel[i] * dt
-        S[i+1]      = S[i] + Vx[i] * dt
-        X[i+1], Y[i+1], Theta[i+1] = map.getGlobalPosition(S[i], Ey[i])
-
-    xx  = np.hstack([ Vx, Vy, W,Ey, Epsi, Theta ,S ,X,Y]) # [vx vy psidot y_e thetae theta s x y slack1 slack2]
-    uu = np.zeros(( Hp, 2 ))
-    return xx, uu
-
 def eval_constraint(x1, x2, D):
 
     cost1 = D - np.sqrt(sum((x1-x2)**2)) # the OCD update depends on on the diference between the minimum D and the euclidean dist
@@ -159,7 +100,7 @@ def main():
 
     # initialise data structures
     maps = [Map(map_type)]*n_agents
-    agents,data,x_old,u_old = initialise_agents(x0,N,dt,maps)
+    agents,x_old,u_old = initialise_agents(x0,N,dt,maps)
 
     x_pred = [None] * n_agents
     u_pred = [None] * n_agents
@@ -168,6 +109,7 @@ def main():
     rs     = [None] * n_agents
     lsack  = [None] * n_agents
     planes = [None] * n_agents
+    data   = [None] * n_agents
 
     if plot:
         disp = plotter(maps[0],n_agents)
@@ -175,7 +117,11 @@ def main():
     if plot_end:
         d = plotter_offline(maps[0])
 
-    # initialise controllers
+    for i in range(0, n_agents):
+        data[i] = [x_old[i].flatten(), u_old[i].flatten(), np.zeros((N, 4)), np.zeros((N, n_agents)),
+                    np.zeros((N, n_agents))]
+
+    # initialise controllers and data holders
     for i in range (0,n_agents):
         rs[i] = agent(N, maps[i], dt, x_old[i], i, dth)
         rs[i].data_collec = [data[j] for j in ns[i]]
