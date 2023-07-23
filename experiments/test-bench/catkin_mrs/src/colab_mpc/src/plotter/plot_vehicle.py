@@ -58,11 +58,13 @@ class plotter_offline():
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def plot_offline_experiment(self, agent, style_agent = ".b"):
+    def plot_offline_experiment(self, agent, style_agent = ".b", path = None):
         states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
         plt.plot(states[:, 7],states[:, 8], style_agent)
         self.fig.canvas.draw()
         plt.pause(0.001)
+        if not path is None:
+            plt.savefig(path + "track.png")
 
     def plot_map(self,path):
         plt.show()

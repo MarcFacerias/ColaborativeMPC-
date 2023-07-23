@@ -22,6 +22,13 @@ class PlannerLPV:
         self.n_u     = 2
         self.n_exp = self.n_s + self.slack
         self.id = id
+        self.dt = dt                # Sample time 33 ms
+        self.map = map              # Used for getting the road curvature
+        self.N = N
+        self.first_it = True
+        # previous values initialisation
+        self.OldSteering = [0.0]
+        self.OldAccelera = [0.0]*int(1)
 
         # Vehicle parameters:
         if model_param is None:
@@ -66,10 +73,13 @@ class PlannerLPV:
 
 
         # variable placeholders
-        self.A    = []
-        self.B    = []
-        self.C    = []
-        self.N    = N
+        self.A = []
+        self.B = []
+        self.C = []
+        self.G = []
+        self.E = []
+        self.L = []
+        self.Eu =[]
 
         if Q.shape[0] == self.n_s:
             self.Q    = Q
@@ -91,19 +101,6 @@ class PlannerLPV:
             msg = "Qs has not the correct shape!, defaulting to identity of " + str(self.n_u)
             warnings.warn(msg)
             self.R = np.eye(self.n_u)
-
-        self.dt = dt                # Sample time 33 ms
-        self.map = map              # Used for getting the road curvature
-        self.G = []
-        self.E = []
-        self.L = []
-        self.Eu =[]
-
-        self.first_it = True
-
-        # previous values initialisation
-        self.OldSteering = [0.0]
-        self.OldAccelera = [0.0]*int(1)
 
     def _buildQ(self):
         # funtion to build the Q, which is states Q and slack variables

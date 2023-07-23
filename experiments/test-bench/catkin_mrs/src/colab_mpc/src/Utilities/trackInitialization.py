@@ -50,7 +50,7 @@ class Map():
                              [4.0, 0],
                              [5.85, 5.85 / np.pi],
                              [2.0, 0]])
-            self.halfWidth = np.array([0.55,0.55,0.45,0.45,0.55,0.55])
+            self.halfWidth = np.array([0.55,0.55,0.55,0.55,0.55,0.55])
             self.open = False
 
 
@@ -103,7 +103,7 @@ class Map():
                              [5.0, 0],
                              [0.0, 0]])
 
-            self.halfWidth = HW * np.ones(spec.shape[0])
+            self.halfWidth = 0.75 * np.ones(spec.shape[0])
             self.open = True
 
         elif selectedTrack == "L_shape":

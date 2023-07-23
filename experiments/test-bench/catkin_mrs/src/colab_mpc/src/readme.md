@@ -7,5 +7,5 @@ Utilities: code that Euge wrote regarding general useful techniques
 LIST OF COMMENTED FILES
 
 TODO LIST  
-* Make one experiment with LPV to show Vicens -> diumenge
-* None of them works at it should yikes, fer repasada als del CASADI a FONDO dilluns
+* Only LPV IS WORKING 
+* Modify LPV so that the coverage of the track is improved -> maximise distance between agents? 

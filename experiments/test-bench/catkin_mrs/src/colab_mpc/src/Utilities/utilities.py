@@ -68,7 +68,7 @@ def Curvature(s, map):
     return curvature
     # return 0
 
-def get_ey(s_local, map, sm = 0.9):
+def get_ey(s_local, map, sm = 1.0):
     """curvature and desired velocity computation
     s: curvilinear abscissa at which the curvature has to be evaluated
     PointAndTangent: points and tangent vectors defining the map (these quantities are initialized in the map object)
@@ -136,7 +136,7 @@ def predicted_vectors_generation(Hp, x0, dt, map, accel_rate = 0):
     Vx      = np.zeros((Hp+1, 1))
     Vx[0]   = x0[0]
     S       = np.zeros((Hp+1, 1))
-    S[0]    = x0[6]
+    S[0]    = 0
     Vy      = np.zeros((Hp+1, 1))
     Vy[0]   = x0[1]
     W       = np.zeros((Hp+1, 1))

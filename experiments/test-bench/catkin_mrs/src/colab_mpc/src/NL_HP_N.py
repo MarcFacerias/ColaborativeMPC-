@@ -143,7 +143,7 @@ def main():
 
             for i, r in enumerate(rs):
                 feas[i], u_pred[i], x_pred[i], planes_raw[i], raws[i] = r.one_step( lambdas[[i],ns[i],:], agents[:,ns[i],:], ns[i], u_old[i], raws[i], planes_old)
-                print(i)
+
             for j,r in enumerate(rs):
                 r.data_collec = [rs[i].data_opti for i in ns[j]]
 

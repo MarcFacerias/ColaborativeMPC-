@@ -7,11 +7,14 @@ import matplotlib.pyplot as plt
 import time
 import os
 
+# sys.path.append(sys.path[0]+'/DistributedControllerObjectLegacy')
 sys.path.append(sys.path[0]+'/DistributedPlanner')
+
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/Config/LPV')
 
+# from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
 from LPV_Planner_Hp import PlannerLPV
 from trackInitialization import Map, wrap
 from plot_vehicle import *
@@ -29,6 +32,7 @@ class agent(initialiserLPV):
         self.map = Map
         self.N = N
         self.dt = dt
+        # self.Controller = PathFollowingLPV_MPC(self.Q, self.R, N, dt, Map, "OSQP", id)
         self.Controller = PlannerLPV(self.Q,self.Qs, self.R, N, dt, Map, id, self.model_param, self.sys_lim)
         self.x0 = x0
         self.states = []
@@ -63,7 +67,7 @@ class agent(initialiserLPV):
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedPlanner/TestsPaperL/" + str(self.id)
+        path = path_csv + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -74,7 +78,7 @@ class agent(initialiserLPV):
 
     def save_var_to_csv(self,var, name):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedPlanner/TestsPaperL/" + str(self.id)
+        path = path_csv + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -112,7 +116,7 @@ def main():
 
     for i in range (0,n_agents):
 
-        rs[i] = agent(N, maps[i], dt, x_old[i][0,:], i)
+        rs[i] = agent(N, maps[i], dt, x0[i], i)
 
     it = 0
 
@@ -122,9 +126,11 @@ def main():
         for i,r in enumerate(rs):
             feas[i], u_pred[i], x_pred[i], planes[i], raws[i] = r.one_step(agents[:, ns[i], :], ns[i], agents[:, i, :], u_old[i], x_old[i])
             r.x0 = x_pred[i][1, :]
-            x_old[i] = x_pred[i][1:, :]
 
         u_old = u_pred
+        for i in range(0,n_agents):
+            x_old[i] = x_pred[i][1:, :]
+
         agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:],0,1)
         states_hist.append(agents)
         toc = time.time()
@@ -153,9 +159,9 @@ def main():
 
     if plot_end:
         for j,r in enumerate(rs):
-            d.plot_offline_experiment(r, color_list[j])
+            d.plot_offline_experiment(r, color_list[j], path = path_img)
             r.save_to_csv()
-        input("Press enter to continue...")
+        # input("Press enter to continue...")
 
 def plot_performance( agent):
 
