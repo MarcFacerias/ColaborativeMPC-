@@ -1,0 +1,19 @@
+{
+    "ros.distro": "melodic",
+    "python.autoComplete.extraPaths": [
+        "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/devel/lib/python2.7/dist-packages",
+        "/opt/ros/melodic/lib/python2.7/dist-packages",
+        "/opt/carla-simulator/PythonAPI/carla/dist/carla-0.9.10-py2.7-linux-x86_64.egg.egg",
+        "/opt/carla-simulator/PythonAPI/carla",
+        "/opt/carla-simulator/PythonAPI/carla/dist/carla-0.9.10-py2.7-linux-x86_64.egg.egg",
+        "/opt/carla-simulator/PythonAPI/carla"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/devel/lib/python2.7/dist-packages",
+        "/opt/ros/melodic/lib/python2.7/dist-packages",
+        "/opt/carla-simulator/PythonAPI/carla/dist/carla-0.9.10-py2.7-linux-x86_64.egg.egg",
+        "/opt/carla-simulator/PythonAPI/carla",
+        "/opt/carla-simulator/PythonAPI/carla/dist/carla-0.9.10-py2.7-linux-x86_64.egg.egg",
+        "/opt/carla-simulator/PythonAPI/carla"
+    ]
+}
