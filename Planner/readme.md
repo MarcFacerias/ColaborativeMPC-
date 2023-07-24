@@ -4,10 +4,11 @@ Controller Distributed Object: WIP Versions of the ROS controller
 deprecated: Old tests/codes 
 Utilities: code that Euge wrote regarding general useful techniques 
 
-LIST OF COMMENTasdasdasdasdED FILES
+LIST OF COMMENTED FILES
 
 TODO LIST  
-* Only LPV IS WORKING 
+* Only LPV IS WORKING False lol 
 * Modify LPV so that the coverage of the track is improved -> maximise distance between agents? 
 * Migrate the code to python 3.9
-* Make a release branch -> Only with interesting code + simulator, clean all the old files or back them up elsewhere
+* repasar els models! El eugenio va fer la aproximacio dels angles petits amb Etheta cosa que no es trivial 
+* Canviar els constraints inicials si els vehicles estan massa junts

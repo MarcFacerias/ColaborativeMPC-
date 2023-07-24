@@ -23,6 +23,7 @@ from config import *  #Important!! Containts system definitions
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
+
 class agent(initialiserLPV):
     # Agents class, interfaces with the planner, saves data etc
     #  Q: [vx ; vy ; psiDot ; e_psi ; s ; e_y]
@@ -33,7 +34,7 @@ class agent(initialiserLPV):
         self.N = N
         self.dt = dt
         # self.Controller = PathFollowingLPV_MPC(self.Q, self.R, N, dt, Map, "OSQP", id)
-        self.Controller = PlannerLPV(self.Q,self.Qs, self.R, N, dt, Map, id, self.model_param, self.sys_lim)
+        self.Controller = PlannerLPV(self.Q, self.wq, self.Qs, self.R, N, dt, Map, id, self.model_param, self.sys_lim)
         self.x0 = x0
         self.states = []
         self.u = []
@@ -46,6 +47,10 @@ class agent(initialiserLPV):
 
         tic = time.time()
         feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, agents, agents_id, pose)
+
+        if (self.Controller.sPred[:,1] >= 0.1).any():
+            print("WARNING slack violated !")
+
         uPred, xPred = self.Controller.uPred, self.Controller.xPred
         self.time_op.append(time.time() - tic)
         self.status.append(feas)
@@ -90,11 +95,6 @@ def main():
 #########################################################
 #########################################################
     # set constants
-    x0 = x0_database[0:n_agents]
-    ns = [[i for i in range(0, n_agents)] for j in range(0, n_agents)]
-
-    for j,n in enumerate(ns):
-        n.remove(j)
 
     x_pred = [None] * n_agents
     u_pred = [None] * n_agents
@@ -102,6 +102,15 @@ def main():
     raws   = [None] * n_agents
     planes = [None] * n_agents
     rs     = [None] * n_agents
+
+    it = 0
+    error = False
+
+    x0 = x0_database[0:n_agents]
+    ns = [[i for i in range(0, n_agents)] for j in range(0, n_agents)]
+
+    for j, n in enumerate(ns):
+        n.remove(j)
 
     maps = [Map(map_type)]*n_agents
 
@@ -111,14 +120,10 @@ def main():
     if plot:
         disp = plotter(maps[0],n_agents)
 
-    if plot_end:
-        d = plotter_offline(maps[0])
-
     for i in range (0,n_agents):
 
-        rs[i] = agent(N, maps[i], dt, x0[i], i)
+        rs[i] = agent(N, maps[i], dt, x_old[i][0,:], i)
 
-    it = 0
 
     while(it<max_it and not checkEnd(x_pred, maps)):
 
@@ -130,6 +135,11 @@ def main():
         u_old = u_pred
         for i in range(0,n_agents):
             x_old[i] = x_pred[i][1:, :]
+
+
+        if not np.all(np.asarray(feas)):
+            error = True
+            break
 
         agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:],0,1)
         states_hist.append(agents)
@@ -144,24 +154,25 @@ def main():
 
             print("--------------------------------------------------------------")
             print("it: " + str(it))
-            print("agents x : " + str(agents[0,:,0]))
-            print("agents y : " + str(agents[0,:,1]))
+            print("agents x : " + str(agents[1,:,0]))
+            print("agents y : " + str(agents[1,:,1]))
 
             for i in range(0,n_agents):
                 print("---------------------Agents---------------------------------------")
 
-                print("Agent " + str(i) + " track s: " + str(x_pred[i][0,-3]) + "/" + str(maps[i].TrackLength[0]))
-                print("Agent " + str(i) + " u0: " + str(u_pred[i][0,0]) + " u1: " + str(u_pred[i][0,1]))
+                print("Agent " + str(i) + " track s: " + str(x_pred[i][1,-3]) + "/" + str(maps[i].TrackLength[0]))
+                print("Agent " + str(i) + " u0: " + str(u_pred[i][1,0]) + " u1: " + str(u_pred[i][1,1]))
+                print("Agent " + str(i) + " v: " + str(x_pred[i][1,0]) + " ey: " + str(x_pred[i][1,3]))
 
             print("---------------------END Agents---------------------------------------")
             print("avg computational time: " + str((toc-tic)/n_agents))
             print("--------------------------------------------------------------")
 
-    if plot_end:
+    if plot_end or error:
+        d = plotter_offline(maps[0])
         for j,r in enumerate(rs):
             d.plot_offline_experiment(r, color_list[j], path = path_img)
             r.save_to_csv()
-        # input("Press enter to continue...")
 
 def plot_performance( agent):
 

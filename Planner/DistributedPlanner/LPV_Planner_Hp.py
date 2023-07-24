@@ -15,7 +15,7 @@ class PlannerLPV:
     Attributes:
         solve: given x0 computes the control action
     """
-    def __init__(self, Q, Qs ,R, N, dt, map, id, model_param = None, sys_lim = None):
+    def __init__(self, Q, wq, Qs ,R, N, dt, map, id, model_param = None, sys_lim = None):
 
         self.n_s = 9
         self.slack = 3
@@ -88,6 +88,8 @@ class PlannerLPV:
             warnings.warn(msg)
             self.Q = np.eye(self.n_s)
 
+        self.wq = wq
+
         if Qs.shape[0] == self.slack:
             self.Qs   = Qs
         else:
@@ -157,12 +159,17 @@ class PlannerLPV:
 
         # rearange the solution, packed form is (x0 x9, s ... , u1 u2, du1, du2) for all N+1
         idx = np.arange(0,self.n_s)
+        idx_slack = np.empty(0,dtype = 'int64')
         for i in range(1,self.N+1):
             aux = np.arange(0,self.n_s) + i*self.n_exp
+            aux_s = np.arange(self.n_s, self.n_exp) + i*self.n_exp
             idx = np.hstack((idx,aux))
+            idx_slack = np.hstack((idx_slack,aux_s))
 
         self.xPred = np.reshape((Solution[idx]), (self.N+1, self.n_s))
         self.uPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.n_u * self.N)]), (self.N, self.n_u))
+        self.sPred = np.reshape((Solution[idx_slack]), (self.N, self.slack))
+
         self.OldSteering = [self.uPred[1,0]]
         self.OldAccelera = [self.uPred[1,1]]
 
@@ -229,6 +236,7 @@ def osqp_solve_qp(P, q, G=None, h=None, A=None, b=None, initvals=None):
 
     if res.info.status_val != 1:
         print("OSQP exited with status '%s'" % res.info.status)
+
     feasible = 0
     if res.info.status_val == 1 or res.info.status_val == 2 or  res.info.status_val == -2:
         feasible = 1
@@ -287,21 +295,23 @@ def _buildMatIneqConst(Controller,ey):
 
     # linear velocity constraints + slack variables
     Fx[0,0] = -1
-    Fx[1,0] = 1
     Fx[0,-3] = -1
+
+    Fx[1,0] = 1
     Fx[1,-3] = 1
 
     # limit lateral error with slack variables
-    Fx[2,3] = 1
-    Fx[3,3] = -1
-    Fx[2,-2] = 1
+    Fx[2,3] = -1
+    Fx[2,-2] = -1
+
+    Fx[3,3] = 1
     Fx[3,-2] = 1
 
     # generate the upper bounds of the velocity constraints
     bx_vel = np.tile(np.squeeze(np.array([[-min_vel],
                    [max_vel]])), N+1) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
-    # generate the upper bounds of the lateral error constraitns constraints
+    # generate the upper bounds of the lateral error constraints
     if ey.shape[0] < N+1:
         ey = np.append(ey, ey[-1])
 
@@ -333,25 +343,28 @@ def _buildMatIneqConst(Controller,ey):
 
 
     rep_a = [Fx] * (N+1) # expand the constraints for the whole horizon
-    k_list, lim_list = GenerateColisionAvoidanceConstraints(Controller)
 
     # smaill loop to rearange the constraints so that they are more readable
-    for j,_ in enumerate(rep_a):
-        rep_a[j] = np.vstack((rep_a[j],np.vstack(k_list[j])))
+
+    if Controller.n_agents != 0:
+        k_list, lim_list = GenerateColisionAvoidanceConstraints(Controller)
+        for j,_ in enumerate(rep_a):
+            rep_a[j] = np.vstack((rep_a[j],np.vstack(k_list[j])))
+
+        # smaill loop to rearange the constraints so that they are more readable
+        n = 5
+        bxtot = iter(bxtot)
+        res = []
+
+        for idx in range(0,len(lim_list),Controller.n_agents):
+            res.extend([next(bxtot) for _ in range(n - 1)])
+            res += lim_list[idx:idx+Controller.n_agents]
+        res.extend(bxtot)
+        bxtot = np.array(res)
+
 
     Mat = linalg.block_diag(*rep_a) # make a block diagonal where the elements of the diagonal are the matrices in the list
     Fxtot = Mat
-
-    # smaill loop to rearange the constraints so that they are more readable
-    n = 5
-    bxtot = iter(bxtot)
-    res = []
-
-    for idx in range(0,len(lim_list),Controller.n_agents):
-        res.extend([next(bxtot) for _ in range(n - 1)])
-        res += lim_list[idx:idx+Controller.n_agents]
-    res.extend(bxtot)
-    bxtot = np.array(res)
 
     # repeat the control actions along the horizon to constraint it in all time instants
     rep_b = [Fu] * (N)
@@ -400,6 +413,21 @@ def _buildMatCost(Controller):
     Px = np.zeros(Controller.n_exp)
     Px[0] = -Controller.vx_ref*Controller.Q[0,0] # added to represent vx - vref in a quadratic fashion
     Px_total = np.tile(Px, N+1) # expand p along the horizon
+
+    # # Add constraints to maximise distance. Note that sign is changed wrt to the resular criteria !
+    # for t in range(1, Controller.N + 1):
+    #
+    #     idx = t * Controller.n_exp
+    #     for i, el in enumerate(Controller.agent_list):
+    #
+    #         if Controller.id < el:  # if master
+    #             Px_total[idx + 7] += Controller.wq * Controller.planes[t - 1, 0, i]
+    #             Px_total[idx + 8] += Controller.wq * Controller.planes[t - 1, 1, i]
+    #
+    #         else:  # if slave
+    #             Px_total[idx + 7] -= Controller.wq * Controller.planes[t - 1, 0, i]
+    #             Px_total[idx + 8] -= Controller.wq * Controller.planes[t - 1, 1, i]
+
     P= 2*np.hstack((Px_total, Pu, Pdu)) # padd missing values
 
     return 2 * M0, P
@@ -514,14 +542,17 @@ def _EstimateABC(Controller,states, u):
 
             A11 = -mu
 
-            A51 = (1 / (1 - ey * cur)) * (-cur)
+            A41 = np.sin(epsi)
+            A42 = np.cos(epsi)
+
+            A42b = 1
+            A45b = vx
+
+            A51 = (1 / (1 - ey * cur)) * (np.cos(epsi) * cur)
             A52 = (1 / (1 - ey * cur)) * (np.sin(epsi) * cur)
 
             A61 = np.cos(epsi) / (1 - ey * cur)
             A62 = -np.sin(epsi) / (1 - ey * cur)
-
-            A7 = 1
-            A8 = vx
 
             A81 = np.cos(theta)
             A82 = -np.sin(theta)
@@ -535,8 +566,9 @@ def _EstimateABC(Controller,states, u):
             Ai = np.array([[A11, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
                            [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
                            [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
-                           [0, A7, 0, 0., A8, 0., 0., 0., 0.],    # [ey]
-                           [A51, A52, 1.,0., 0., 0., 0., 0., 0.],  # [epsi]
+                           [A41, A42, 0, 0., 0, 0., 0., 0., 0.],    # [ey]
+                           # [0, A42b, 0, 0., A45b, 0., 0., 0., 0.],  # [ey]
+                           [-A51, A52, 1.,0., 0., 0., 0., 0., 0.],  # [epsi]
                            [0, 0, 1.,0., 0., 0., 0., 0., 0.],  # [theta]
                            [A61, A62, 0, 0., 0., 0., 0., 0., 0.],  # [s]
                            [A81, A82, 0, 0., 0., 0., 0., 0., 0.],  # [x]

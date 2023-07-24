@@ -1,8 +1,11 @@
 # Imports
 import matplotlib.colors as mcolors
 import numpy as np
-plot = False
-plot_end = True
+
+
+
+plot = True
+plot_end = False
 verb = True
 color_list = list(mcolors.TABLEAU_COLORS)
 n_agents = 2
@@ -16,11 +19,12 @@ x0_database[3] = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot
 max_it = 1000
 N = 25
 dt = 0.01
-map_type = "Highway"
-# map_type = "oval"
 
-path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedPlanner/TestsPaperL/"
-path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedPlanner/TestsPaperL/"
+# map_type = "Highway"
+map_type = "oval"
+
+path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL"
+path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL"
 
 class initialiserLPV():
     def __init__(self, model = "SCALED CAR"):
@@ -36,14 +40,14 @@ class initialiserLPV():
             }
 
             self.sys_lim     = {
-                "vx_ref" : 6.0,
+                "vx_ref" : 3.5,
                 "radius" : 0.2,
                 "max_vel"  : 10,
-                "min_vel"  : 0.2,
+                "min_vel"  : 1.1,
                 "max_rs" : 0.45,
                 "max_ls" : 0.45,
-                "max_ac" : 8.0,
-                "max_dc" : 8.0,
+                "max_ac" : 6.0,
+                "max_dc" : 4.0,
                 "sm"     : 1.0
             }
 
@@ -52,5 +56,6 @@ class initialiserLPV():
             self.model_param = None
 
         self.Qs = 10000000 * np.eye(3)
-        self.Q = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0])
-        self.R = 1000 * np.diag([1, 1])
+        self.Q  = np.diag([120.0, 1.0, 1.0, 500.0, 70.0, 0.0, 0.0, 0, 0])
+        self.R  = 1000 * np.diag([1, 1])
+        self.wq = 1000.0

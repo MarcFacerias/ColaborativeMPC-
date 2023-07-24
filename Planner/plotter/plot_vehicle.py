@@ -21,6 +21,7 @@ import matplotlib.colors as mcolors
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import os
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 
@@ -63,22 +64,30 @@ class plotter_offline():
         plt.plot(states[:, 7],states[:, 8], style_agent)
         self.fig.canvas.draw()
         plt.pause(0.001)
+
         if not path is None:
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=True)
+
             plt.savefig(path + "track.png")
 
-    def plot_map(self,path):
+    def plot_map(self,path = None):
         plt.show()
         self.fig.canvas.draw()
         plt.pause(0.001)
-        plt.savefig(path)
+        if not path is None:
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=True)
+
+            plt.savefig(path + "track.png")
 
 
 class plotter():
 
     def __init__(self,map, n_agents):
         ( self.fig, self.axtr, self.rec, self.rec_sim ) = _initializeFigure_xy(map, n_agents)
-        self.l = 0.2
-        self.w = 0.2
+        self.l = 0.15
+        self.w = 0.15
 
     def plot_step(self,x_sim,y_sim, psi_sim, i = 0):
 
@@ -91,10 +100,15 @@ class plotter():
 
 
 def getCarPosition(x, y, psi, w, l):
+    # Square
     car_x = [ x + l * np.cos(psi) - w * np.sin(psi), x + l * np.cos(psi) + w * np.sin(psi),
               x - l * np.cos(psi) + w * np.sin(psi), x - l * np.cos(psi) - w * np.sin(psi)]
     car_y = [ y + l * np.sin(psi) + w * np.cos(psi), y + l * np.sin(psi) - w * np.cos(psi),
               y - l * np.sin(psi) - w * np.cos(psi), y - l * np.sin(psi) + w * np.cos(psi)]
+
+    # Triangle
+    car_x = [ x + l * np.cos(psi), x - l * np.cos(psi) + w * np.sin(psi), x - l * np.cos(psi) - w * np.sin(psi)]
+    car_y = [ y + l * np.sin(psi), y - l * np.sin(psi) - w * np.cos(psi), y - l * np.sin(psi) + w * np.cos(psi)]
     return car_x, car_y
 
 # ===================================================================================================================================== #
