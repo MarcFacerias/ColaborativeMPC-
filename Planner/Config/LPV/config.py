@@ -23,8 +23,8 @@ dt = 0.01
 # map_type = "Highway"
 map_type = "oval"
 
-path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL"
-path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL"
+path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL/"
+path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL/"
 
 class initialiserLPV():
     def __init__(self, model = "SCALED CAR"):
