@@ -10,3 +10,5 @@ TODO LIST
 * Finish LPV
 * Normalise cost functions (equisde)
 * Tunejar el tema de les velocitats maximes 
+* Comentar el codi be equisde
+* Arreglar els altres DOS MODELS 

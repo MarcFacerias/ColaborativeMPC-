@@ -4,12 +4,8 @@ from casadi import *
 import numpy as np
 from utilities import Curvature, get_ey
 
-# TODO Arreglar el cost funcion
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
-
-# slack weight constants
-
 
 class Planner_Eud:
     """Create the Path Following LMPC controller with LTV model
@@ -135,7 +131,8 @@ class Planner_Eud:
         self.B31 = self.opti.parameter(self.N)
 
         # ey
-        self.A44 = self.opti.parameter(self.N)
+        self.A41 = self.opti.parameter(self.N)
+        self.A42 = self.opti.parameter(self.N)
 
         # epsi
         self.A51 = self.opti.parameter(self.N)
@@ -244,13 +241,13 @@ class Planner_Eud:
             # ey
 
             self.opti.subject_to(
-                self.x[3+mod] == self.x[3+mod_prev] + (self.x[1+mod_prev] + self.A44[j-1]*self.x[4+mod_prev])*self.dt
+                self.x[3+mod] == self.x[3+mod_prev] + (self.A41[j-1]*self.x[0+mod_prev] + self.A42[j-1]*self.x[1+mod_prev])*self.dt
             )
 
             # epsi
 
             self.opti.subject_to(
-                self.x[4+mod] == self.x[4+mod_prev] + (self.A51[j-1] * self.x[0+mod_prev] + self.A52[j-1] * self.x[1+mod_prev] + self.x[2+mod_prev])*self.dt
+                self.x[4+mod] == self.x[4+mod_prev] + (-self.A51[j-1] * self.x[0+mod_prev] + self.A52[j-1] * self.x[1+mod_prev] + self.x[2+mod_prev])*self.dt
             )
 
             # theta
@@ -317,21 +314,22 @@ class Planner_Eud:
             self.opti.set_value(self.A32[j], -(self.lf * self.Cf * np.cos(delta) - self.lr * self.Cr) / (self.I * vx))
             self.opti.set_value(self.A33[j], -(self.lf * self.lf * self.Cf * np.cos(delta) + self.lr * self.lr * self.Cr) / (self.I * vx))
 
-            self.opti.set_value(self.B11[j], -(np.sin(delta) * self.Cf) / self.m)
+            self.opti.set_value(self.A41[j], np.sin(epsi))
+            self.opti.set_value(self.A42[j], np.cos(epsi))
 
-            self.opti.set_value(self.A51[j], (1 / (1 - ey * cur)) * (-cur))
+            self.opti.set_value(self.A51[j], (1 / (1 - ey * cur)) * (np.cos(epsi) * cur))
             self.opti.set_value(self.A52[j], (1 / (1 - ey * cur)) * (np.sin(epsi) * cur))
 
             self.opti.set_value(self.A61[j], np.cos(epsi) / (1 - ey * cur))
             self.opti.set_value(self.A62[j], -np.sin(epsi) / (1 - ey * cur))
-
-            self.opti.set_value(self.A44[j], vx)
 
             self.opti.set_value(self.A81[j], np.cos(theta))
             self.opti.set_value(self.A82[j], -np.sin(theta))
 
             self.opti.set_value(self.A91[j], np.sin(theta))
             self.opti.set_value(self.A92[j], np.cos(theta))
+
+            self.opti.set_value(self.B11[j], -(np.sin(delta) * self.Cf) / self.m)
 
             self.opti.set_value(self.B21[j], (np.cos(delta) * self.Cf) / self.m)
             self.opti.set_value(self.B31[j], (self.lf * self.Cf * np.cos(delta)) / self.I)

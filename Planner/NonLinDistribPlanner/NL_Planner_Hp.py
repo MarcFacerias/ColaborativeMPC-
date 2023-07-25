@@ -5,11 +5,9 @@ import numpy as np
 from utilities import Curvature, get_ey
 from compute_plane import hyperplane_separator
 
-# TODO Arreglar els idx per a fer que es pugui fer la decomposicio amb mes vehicles
-
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-class PathFollowingNL_MPC:
+class Planner_Hp:
     """Create the Path Following LMPC controller with LTV model
     Attributes:
         solve: given x0 computes the control action
@@ -133,8 +131,9 @@ class PathFollowingNL_MPC:
         self.A33 = self.opti.parameter(self.N)
         self.B31 = self.opti.parameter(self.N)
 
-        # ey check
-        self.A44 = self.opti.parameter(self.N)
+        # ey
+        self.A41 = self.opti.parameter(self.N)
+        self.A42 = self.opti.parameter(self.N)
 
         # epsi check
         self.A51 = self.opti.parameter(self.N)
@@ -262,13 +261,13 @@ class PathFollowingNL_MPC:
             # ey
 
             self.opti.subject_to(
-                self.x[3+mod] == self.x[3+mod_prev] + (self.x[1+mod_prev] + self.A44[j-1]*self.x[4+mod_prev])*self.dt
+                self.x[3+mod] == self.x[3+mod_prev] + (self.A41[j-1]*self.x[0+mod_prev] + self.A42[j-1]*self.x[1+mod_prev])*self.dt
             )
 
             # epsi
 
             self.opti.subject_to(
-                self.x[4+mod] == self.x[4+mod_prev] + (self.A51[j-1] * self.x[0+mod_prev] + self.A52[j-1] * self.x[1+mod_prev] + self.x[2+mod_prev])*self.dt
+                self.x[4+mod] == self.x[4+mod_prev] + (-self.A51[j-1] * self.x[0+mod_prev] + self.A52[j-1] * self.x[1+mod_prev] + self.x[2+mod_prev])*self.dt
             )
 
             # theta
