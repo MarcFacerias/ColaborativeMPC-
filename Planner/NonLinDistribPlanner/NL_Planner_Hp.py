@@ -94,7 +94,7 @@ class PathFollowingNL_MPC:
             self.model_slack   = 1000000
             self.control_slack = 1000000
             self.obs_slack     = 1000000
-            self.planes_slack = 1000000
+            self.planes_slack  = 1000000
 
         if R.shape[0] == self.n_u:
             self.R   = R

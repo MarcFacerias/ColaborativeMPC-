@@ -1,18 +1,5 @@
 #!/usr/bin/env python
 
-# ---------------------------------------------------------------------------
-# Licensing Information: You are free to use or extend these projects for
-# education or reserach purposes provided that (1) you retain this notice
-# and (2) you provide clear attribution to UC Berkeley, including a link
-# to http://barc-project.com
-#
-# Author: J. Noonan
-# Email: jpnoonan@berkeley.edu
-#
-# This code provides a way to see the car's trajectory, orientation, and velocity profile in
-# real time with referenced to the track defined a priori.
-#
-# ---------------------------------------------------------------------------
 import sys
 sys.path.append(sys.path[0]+'/ControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
@@ -99,16 +86,21 @@ class plotter():
 
 
 
-def getCarPosition(x, y, psi, w, l):
-    # Square
-    car_x = [ x + l * np.cos(psi) - w * np.sin(psi), x + l * np.cos(psi) + w * np.sin(psi),
-              x - l * np.cos(psi) + w * np.sin(psi), x - l * np.cos(psi) - w * np.sin(psi)]
-    car_y = [ y + l * np.sin(psi) + w * np.cos(psi), y + l * np.sin(psi) - w * np.cos(psi),
-              y - l * np.sin(psi) - w * np.cos(psi), y - l * np.sin(psi) + w * np.cos(psi)]
+def getCarPosition(x, y, psi, w, l, shape = "triangle"):
 
-    # Triangle
-    car_x = [ x + l * np.cos(psi), x - l * np.cos(psi) + w * np.sin(psi), x - l * np.cos(psi) - w * np.sin(psi)]
-    car_y = [ y + l * np.sin(psi), y - l * np.sin(psi) - w * np.cos(psi), y - l * np.sin(psi) + w * np.cos(psi)]
+    if shape == "square":
+        car_x = [ x + l * np.cos(psi) - w * np.sin(psi), x + l * np.cos(psi) + w * np.sin(psi),
+                  x - l * np.cos(psi) + w * np.sin(psi), x - l * np.cos(psi) - w * np.sin(psi)]
+        car_y = [ y + l * np.sin(psi) + w * np.cos(psi), y + l * np.sin(psi) - w * np.cos(psi),
+                  y - l * np.sin(psi) - w * np.cos(psi), y - l * np.sin(psi) + w * np.cos(psi)]
+
+    else:
+        # Triangle
+        car_x = [ x + 1.2*l * np.cos(psi), x - l * np.cos(psi) + w * np.sin(psi), x - l * np.cos(psi) - w * np.sin(psi)]
+        car_y = [ y + 1.2*l * np.sin(psi), y - l * np.sin(psi) - w * np.cos(psi), y - l * np.sin(psi) + w * np.cos(psi)]
+
+
+
     return car_x, car_y
 
 # ===================================================================================================================================== #
@@ -163,3 +155,22 @@ def _initializeFigure_xy(map, n_agents):
 # ========================================================= End of Internal Functions ================================================= #
 # ===================================================================================================================================== #
 
+def plot_performance( agent):
+
+    fig_status = plt.figure()
+    fig_status.add_subplot(2, 1, 1)
+    x = np.arange(0,len(agent.status))
+    plt.scatter(x, np.array(agent.status))
+    fig_status.add_subplot(2, 1, 2)
+    plt.scatter(x, np.array(agent.time_op))
+    plt.show()
+    plt.pause(0.001)
+
+def plot_distance( distance_hist, th):
+
+    fig_status = plt.figure(3)
+    x = np.arange(0,len(distance_hist))
+    plt.scatter(x, np.array(distance_hist))
+    plt.plot(x, th*np.ones(len(distance_hist)), "-r")
+    plt.show()
+    plt.pause(0.001)

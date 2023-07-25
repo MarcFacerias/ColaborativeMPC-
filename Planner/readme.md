@@ -8,6 +8,5 @@ LIST OF COMMENTED FILES
 
 TODO LIST  
 * Finish LPV
-* repasar els models! El eugenio va fer la aproximacio dels angles petits amb Etheta cosa que no es trivial 
-* Canviar els constraints inicials si els vehicles estan massa junts
-* Normalise cost functions
+* Normalise cost functions (equisde)
+* Tunejar el tema de les velocitats maximes 

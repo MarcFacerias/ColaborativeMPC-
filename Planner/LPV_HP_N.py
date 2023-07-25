@@ -2,22 +2,19 @@
 # Global Variables
 import sys
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import time
 import os
+import warnings
 
-# sys.path.append(sys.path[0]+'/DistributedControllerObjectLegacy')
 sys.path.append(sys.path[0]+'/DistributedPlanner')
-
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/Config/LPV')
 
-# from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
 from LPV_Planner_Hp import PlannerLPV
 from trackInitialization import Map, wrap
-from plot_vehicle import *
+from plot_tools import *
 from utilities import checkEnd, initialise_agents
 from config import *  #Important!! Containts system definitions
 
@@ -33,8 +30,7 @@ class agent(initialiserLPV):
         self.map = Map
         self.N = N
         self.dt = dt
-        # self.Controller = PathFollowingLPV_MPC(self.Q, self.R, N, dt, Map, "OSQP", id)
-        self.Controller = PlannerLPV(self.Q, self.wq, self.Qs, self.R, N, dt, Map, id, self.model_param, self.sys_lim)
+        self.Controller = PlannerLPV(self.Q, self.wq, self.Qs, self.R, self.dR, N, dt, Map, id, self.model_param, self.sys_lim)
         self.x0 = x0
         self.states = []
         self.u = []
@@ -48,8 +44,13 @@ class agent(initialiserLPV):
         tic = time.time()
         feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, agents, agents_id, pose)
 
-        if (self.Controller.sPred[:,1] >= 0.1).any():
-            print("WARNING slack violated !")
+        if not feas:
+            return feas,uPred, xPred, planes, raw
+
+
+        if (self.Controller.sPred[:,1:] >= 0.1).any():
+            msg = "WARNING slack violated !"
+            warnings.warn(msg)
 
         uPred, xPred = self.Controller.uPred, self.Controller.xPred
         self.time_op.append(time.time() - tic)
@@ -92,8 +93,8 @@ class agent(initialiserLPV):
 
 def main():
 
-#########################################################
-#########################################################
+    #########################################################
+    #########################################################
     # set constants
 
     x_pred = [None] * n_agents
@@ -130,16 +131,19 @@ def main():
         tic = time.time()
         for i,r in enumerate(rs):
             feas[i], u_pred[i], x_pred[i], planes[i], raws[i] = r.one_step(agents[:, ns[i], :], ns[i], agents[:, i, :], u_old[i], x_old[i])
+
+            if not feas[i]:
+                error = True
+                break
+
             r.x0 = x_pred[i][1, :]
+
+        if error:
+            break
 
         u_old = u_pred
         for i in range(0,n_agents):
             x_old[i] = x_pred[i][1:, :]
-
-
-        if not np.all(np.asarray(feas)):
-            error = True
-            break
 
         agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:],0,1)
         states_hist.append(agents)
@@ -158,6 +162,7 @@ def main():
             print("agents y : " + str(agents[1,:,1]))
 
             for i in range(0,n_agents):
+
                 print("---------------------Agents---------------------------------------")
 
                 print("Agent " + str(i) + " track s: " + str(x_pred[i][1,-3]) + "/" + str(maps[i].TrackLength[0]))
@@ -170,29 +175,14 @@ def main():
 
     if plot_end or error:
         d = plotter_offline(maps[0])
+
         for j,r in enumerate(rs):
             d.plot_offline_experiment(r, color_list[j], path = path_img)
-            r.save_to_csv()
 
-def plot_performance( agent):
+            if save_data or error:
+                r.save_to_csv()
 
-    fig_status = plt.figure()
-    fig_status.add_subplot(2, 1, 1)
-    x = np.arange(0,len(agent.status))
-    plt.scatter(x, np.array(agent.status))
-    fig_status.add_subplot(2, 1, 2)
-    plt.scatter(x, np.array(agent.time_op))
-    plt.show()
-    plt.pause(0.001)
 
-def plot_distance( distance_hist, th):
-
-    fig_status = plt.figure(3)
-    x = np.arange(0,len(distance_hist))
-    plt.scatter(x, np.array(distance_hist))
-    plt.plot(x, th*np.ones(len(distance_hist)), "-r")
-    plt.show()
-    plt.pause(0.001)
 
 if __name__ == "__main__":
 

@@ -15,8 +15,9 @@ class PlannerLPV:
     Attributes:
         solve: given x0 computes the control action
     """
-    def __init__(self, Q, wq, Qs ,R, N, dt, map, id, model_param = None, sys_lim = None):
+    def __init__(self, Q, wq, Qs ,R, dR, N, dt, map, id, model_param = None, sys_lim = None):
 
+        self.dR = dR
         self.n_s = 9
         self.slack = 3
         self.n_u     = 2
@@ -100,7 +101,7 @@ class PlannerLPV:
         if R.shape[0] == self.n_u:
             self.R   = R
         else:
-            msg = "Qs has not the correct shape!, defaulting to identity of " + str(self.n_u)
+            msg = "R has not the correct shape!, defaulting to identity of " + str(self.n_u)
             warnings.warn(msg)
             self.R = np.eye(self.n_u)
 
@@ -166,12 +167,13 @@ class PlannerLPV:
             idx = np.hstack((idx,aux))
             idx_slack = np.hstack((idx_slack,aux_s))
 
-        self.xPred = np.reshape((Solution[idx]), (self.N+1, self.n_s))
-        self.uPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.n_u * self.N)]), (self.N, self.n_u))
-        self.sPred = np.reshape((Solution[idx_slack]), (self.N, self.slack))
+        self.xPred  = np.reshape((Solution[idx]), (self.N+1, self.n_s))
+        self.uPred  = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.n_u * self.N)]), (self.N, self.n_u))
+        self.duPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.n_u * self.N) + np.arange(self.n_u * self.N)]),(self.N, self.n_u))
+        self.sPred  = np.reshape((Solution[idx_slack]), (self.N, self.slack))
 
-        self.OldSteering = [self.uPred[1,0]]
-        self.OldAccelera = [self.uPred[1,1]]
+        self.OldSteering = [self.uPred[0,0]]
+        self.OldAccelera = [self.uPred[0,1]]
 
         return feasible, Solution, self.planes
 
@@ -250,8 +252,8 @@ def GenerateColisionAvoidanceConstraints(Controller):
     Lim_list = [] # list of constraint limtis
 
     # we add the first elements to match dimensions, 0 as the initial state is fixed and not constrained
-    K_list.append(np.zeros((len(Controller.agent_list), Controller.n_exp)))
-    Lim_list.extend(np.zeros(len(Controller.agent_list)))
+    # K_list.append(np.zeros((len(Controller.agent_list), Controller.n_exp)))
+    # Lim_list.extend(np.zeros(len(Controller.agent_list)))
 
     # we will add a block of constraints from 1 to N
     for t in range(1,Controller.N + 1):
@@ -309,15 +311,17 @@ def _buildMatIneqConst(Controller,ey):
 
     # generate the upper bounds of the velocity constraints
     bx_vel = np.tile(np.squeeze(np.array([[-min_vel],
-                   [max_vel]])), N+1) # vx min; vx max; ey min; ey max; t1 min ... tn min
+                   [max_vel]])), N) # vx min; vx max; ey min; ey max; t1 min ... tn min
 
     # generate the upper bounds of the lateral error constraints
-    if ey.shape[0] < N+1:
+    if ey.shape[0] < N:
         ey = np.append(ey, ey[-1])
+    else:
+        ey = ey[0:N]
 
     bx_ey = np.repeat(np.array(ey),2).tolist()
 
-    # piece of code used to rearenge the constraitns so that (v_ub, v_lb, ey_ub, ey_lb) for all horizon
+    # piece of code used to rearenge the constraitns so that (v_ub, v_lb, ey_ub, ey_lb) for 1 to N horizon, keep in mind 0 is fixed is fixed and thus unconstrained !
 
     bxtot = iter(bx_vel)
     res = []
@@ -342,7 +346,7 @@ def _buildMatIneqConst(Controller,ey):
                    [max_dc]])  # Max DesAcceleration
 
 
-    rep_a = [Fx] * (N+1) # expand the constraints for the whole horizon
+    rep_a = [Fx] * (N) # expand the constraints for the whole horizon
 
     # smaill loop to rearange the constraints so that they are more readable
 
@@ -353,13 +357,13 @@ def _buildMatIneqConst(Controller,ey):
 
         # smaill loop to rearange the constraints so that they are more readable
         n = 5
-        bxtot = iter(bxtot)
+        bxtot_it = iter(bxtot)
         res = []
 
         for idx in range(0,len(lim_list),Controller.n_agents):
-            res.extend([next(bxtot) for _ in range(n - 1)])
+            res.extend([next(bxtot_it) for _ in range(n - 1)])
             res += lim_list[idx:idx+Controller.n_agents]
-        res.extend(bxtot)
+        res.extend(bxtot_it)
         bxtot = np.array(res)
 
 
@@ -377,7 +381,7 @@ def _buildMatIneqConst(Controller,ey):
     Dummy1 = np.hstack((Fxtot, np.zeros((rFxtot, cFutot))))
     Dummy2 = np.hstack((np.zeros((rFutot, cFxtot)), Futot))
     F = np.vstack((Dummy1, Dummy2))
-    F = np.hstack((F,np.zeros((np.shape(F)[0], cFutot))))
+    F = np.hstack((np.zeros((np.shape(F)[0],n_exp)),F,np.zeros((np.shape(F)[0], cFutot))))
     b = np.hstack((bxtot, butot))
 
     return F, b
@@ -390,6 +394,7 @@ def _buildMatCost(Controller):
 
     # copy some varaibles for clarity purposes
     R  = Controller.R
+    dR = Controller.dR
     N  = Controller.N
 
     # expand the q along the horizon
@@ -397,8 +402,8 @@ def _buildMatCost(Controller):
 
     Mx = linalg.block_diag(*d)  # generate a diagonal matrix with the expanded Qs
 
-    cu = [np.zeros((2,2))] * (N) # we consider no penalty to the control action so it's weight is 0
-    c = [R] * (N) # we penalise it's change rate to prevent an agresive behaviour
+    cu = [R] * (N) # we consider no penalty to the control action so it's weight is 0
+    c = [dR] * (N) # we penalise it's change rate to prevent an agresive behaviour
 
     # once this is done we generate block diagonal matrices with each list along the horizon
     Mu = linalg.block_diag(*cu)
@@ -467,14 +472,14 @@ def _buildMatEqConst(Controller):
 
     for i in range(1, N+1):
         Gx[i * (n_exp):i * (n_exp) + n_s, (i-1) * n_exp:(i-1) * n_exp + n_s] = -A[i-1]
-        Gu[i * (n_exp):i * (n_exp) + n_s, (i - 1) * n_u: (i - 1) * n_u + n_u] = -B[i-1]
+        Gu[i * (n_exp):i * (n_exp) + n_s, (i-1) * n_u: (i-1) * n_u + n_u] = -B[i-1]
 
     Gdu[0: n_u, n_exp * (N + 1) : n_exp * (N + 1) + n_u] = np.eye(2)
-
+    Gdu[0: n_u, n_exp * (N + 1) + n_u * (N):  n_exp * (N + 1) + n_u * (N) + n_u] = -np.eye(2)
     for i in range(1, N ):
         Gdu[ i * n_u: i * n_u + n_u,  n_exp * (N+1) + (i - 1) * n_u : n_exp * (N+1) + (i - 1) * n_u + n_u] = np.eye(2)
         Gdu[ i * n_u: i * n_u + n_u,  n_exp * (N+1) + i * n_u : n_exp * (N+1) + i * n_u + n_u] = -np.eye(2)
-        Gdu[ i * n_u: i * n_u + n_u,  n_exp * (N+1) + n_u * (N) + (i - 1) * n_u :  n_exp * (N+1) + n_u * (N) + (i - 1) * n_u + n_u] = np.eye(2)
+        Gdu[ i * n_u: i * n_u + n_u,  n_exp * (N+1) + n_u * (N) + (i) * n_u :  n_exp * (N+1) + n_u * (N) + (i) * n_u + n_u] = np.eye(2)
 
     G = np.hstack((Gx, Gu, Gdu_aux))
     G = np.vstack((G, Gdu))
@@ -545,9 +550,6 @@ def _EstimateABC(Controller,states, u):
             A41 = np.sin(epsi)
             A42 = np.cos(epsi)
 
-            A42b = 1
-            A45b = vx
-
             A51 = (1 / (1 - ey * cur)) * (np.cos(epsi) * cur)
             A52 = (1 / (1 - ey * cur)) * (np.sin(epsi) * cur)
 
@@ -567,7 +569,6 @@ def _EstimateABC(Controller,states, u):
                            [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
                            [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
                            [A41, A42, 0, 0., 0, 0., 0., 0., 0.],    # [ey]
-                           # [0, A42b, 0, 0., A45b, 0., 0., 0., 0.],  # [ey]
                            [-A51, A52, 1.,0., 0., 0., 0., 0., 0.],  # [epsi]
                            [0, 0, 1.,0., 0., 0., 0., 0., 0.],  # [theta]
                            [A61, A62, 0, 0., 0., 0., 0., 0., 0.],  # [s]
