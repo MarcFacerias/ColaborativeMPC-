@@ -3,26 +3,29 @@ import matplotlib.colors as mcolors
 import numpy as np
 plot = False
 plot_end = True
-verb = False
+verb = True
 verb_OCD = False
 color_list = list(mcolors.TABLEAU_COLORS)
-n_agents = 4
+n_agents = 2
 it_conv = 1
 
-max_it = 500
+max_it = 1000
 max_it_OCD = 10
-N = 10
+N = 25
 dt = 0.01
 dth = 0.25
 
 x0_database = [""] * 4
-x0_database[0] = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
+x0_database[0] = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
 x0_database[1] = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 x0_database[2] = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
 x0_database[3] = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
 # map_type = "Highway"
-map_type = "Oval2"
+map_type = "oval"
+
+path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL4/"
+path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL4/"
 
 def get_alpha():
 
@@ -58,6 +61,6 @@ class initialiserNL_EU():
             self.sys_lim = None
             self.model_param = None
 
-        self.Qs = np.diag([10000000,1,1000000])
-        self.Q = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0])
-        self.R = 1000 * np.diag([1, 1])
+        self.Qs = np.diag([10000000,1000000,1000000])
+        self.Q = np.diag([50.0, 1.0, 1.0, 500.0, 25.0, 0.0, 0.0, 0, 0])
+        self.R = 10 * np.diag([1, 1])

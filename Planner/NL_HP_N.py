@@ -12,7 +12,7 @@ sys.path.append(sys.path[0]+'/Config/NL_HP')
 
 from NL_Planner_Hp import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
-from plot_vehicle import *
+from plot_tools import *
 from utilities import checkEnd, initialise_agents
 from config import *
 

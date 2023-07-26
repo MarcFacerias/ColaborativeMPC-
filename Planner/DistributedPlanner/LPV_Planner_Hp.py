@@ -17,10 +17,10 @@ class PlannerLPV:
     """
     def __init__(self, Q, wq, Qs ,R, dR, N, dt, map, id, model_param = None, sys_lim = None):
 
-        self.dR = dR
-        self.n_s = 9
-        self.slack = 3
-        self.n_u     = 2
+        self.dR = dR # derivative cost
+        self.n_s = 9 # states
+        self.slack = 3 # slack
+        self.n_u   = 2 # control actions
         self.n_exp = self.n_s + self.slack
         self.id = id
         self.dt = dt                # Sample time 33 ms
@@ -133,10 +133,11 @@ class PlannerLPV:
         if x_agents is None:
             self.planes = np.zeros((self.N,self.n_agents,3))
             self.weights = np.ones((self.N,self.n_agents))
+            self.dist    = -self.weights
 
         else:
-            self.planes  = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id, keep_sign = True)
-            self.weights = compute_weights(pose,x_agents, self.min_dist)
+            self.planes  = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
+            self.weights, self.dist = compute_weights(pose,x_agents, self.min_dist)
 
         # update system matrices
         self.A, self.B, self.C, ey = _EstimateABC(self, Last_xPredicted, uPred)
@@ -265,22 +266,22 @@ def GenerateColisionAvoidanceConstraints(Controller):
 
         for i,el in enumerate(Controller.agent_list):
 
-            K[i, 7] = Controller.planes[t - 1, 0, i]
-            K[i, 8] = Controller.planes[t - 1, 1, i]
-            K[i, -1] = -1
-            Lim_list.append(- Controller.min_dist / 2 - Controller.planes[t - 1, 2, i])
+            # K[i, 7] = Controller.planes[t - 1, 0, i]
+            # K[i, 8] = Controller.planes[t - 1, 1, i]
+            # K[i, -1] = -1
+            # Lim_list.append(- Controller.min_dist / 2 - Controller.planes[t - 1, 2, i])
 
-            # if Controller.id < el: # if master
-            #     K[i, 7] = Controller.planes[t-1, 0, i]
-            #     K[i, 8] = Controller.planes[t-1, 1, i]
-            #     K[i, -1] = -1
-            #     Lim_list.append(- Controller.min_dist/2 - Controller.planes[t-1, 2, i] )
-            #
-            # else: # if slave
-            #     K[i, 7] = - Controller.planes[t-1, 0, i]
-            #     K[i, 8] = - Controller.planes[t-1, 1, i]
-            #     K[i, -1] = -1
-            #     Lim_list.append(Controller.planes[t-1, 2, i] - Controller.min_dist/2 )
+            if Controller.id < el: # if master
+                K[i, 7] = Controller.planes[t-1, 0, i]
+                K[i, 8] = Controller.planes[t-1, 1, i]
+                K[i, -1] = -1
+                Lim_list.append(- Controller.min_dist/2 - Controller.planes[t-1, 2, i] )
+
+            else: # if slave
+                K[i, 7]  = - Controller.planes[t-1, 0, i]
+                K[i, 8]  = - Controller.planes[t-1, 1, i]
+                K[i, -1] = -1
+                Lim_list.append(Controller.planes[t-1, 2, i] - Controller.min_dist/2 )
 
         K_list.append(K) # append the block of constraints to the list
 

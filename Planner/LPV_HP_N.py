@@ -51,6 +51,9 @@ class agent(initialiserLPV):
         if (self.Controller.sPred[:,1:] >= 0.1).any():
             msg = "WARNING slack violated !"
             warnings.warn(msg)
+            # print(self.Controller.sPred[:,1:])
+            input("Press enter to continue...")
+
 
         uPred, xPred = self.Controller.uPred, self.Controller.xPred
         self.time_op.append(time.time() - tic)
@@ -168,6 +171,8 @@ def main():
                 print("Agent " + str(i) + " track s: " + str(x_pred[i][1,-3]) + "/" + str(maps[i].TrackLength[0]))
                 print("Agent " + str(i) + " u0: " + str(u_pred[i][1,0]) + " u1: " + str(u_pred[i][1,1]))
                 print("Agent " + str(i) + " v: " + str(x_pred[i][1,0]) + " ey: " + str(x_pred[i][1,3]))
+                dist_str = [(str(el) + " m;") for el in rs[i].Controller.dist[0,:]]
+                print("Disctances: " + "".join(dist_str))
 
             print("---------------------END Agents---------------------------------------")
             print("avg computational time: " + str((toc-tic)/n_agents))
@@ -184,7 +189,7 @@ def main():
 
                 print("Agent " + str(i) + " track s: " + str(x_pred[i][1,-3]) + "/" + str(maps[i].TrackLength[0]))
 
-                dist_str = [(str(1/el) + " m;") for el in rs[i].Controller.weights[0,:]]
+                dist_str = [(str(el) + " m;") for el in rs[i].Controller.dist[0,:]]
                 print("Disctances: " + "".join(dist_str))
 
             print("---------------------END Agents---------------------------------------")
@@ -200,6 +205,7 @@ def main():
             if save_data or error:
                 r.save_to_csv()
 
+    input("Press enter to exit...")
 
 
 if __name__ == "__main__":

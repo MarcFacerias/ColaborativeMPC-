@@ -3,13 +3,15 @@ import numpy as np
 
 def compute_weights(agent, neigh, D):
 
-    weights = np.empty((agent.shape[0]-1,neigh.shape[1]))
+    weights = np.empty((agent.shape[0]-1, neigh.shape[1]))
+    dist    = np.empty((agent.shape[0]-1, neigh.shape[1]))
 
     for i in range (0,neigh.shape[1]):
 
-        weights[:,i] =  EuDistance(agent[1:],neigh[1:,i,:].squeeze()) - 2*D
+        dist[:,i] = EuDistance(agent[1:],neigh[1:,i,:].squeeze())
+        weights[:,i] = (2*D - dist[:,i]) / neigh.shape[1]
 
-    return weights
+    return weights, dist
 
 def EuDistance(p1,p2):
 

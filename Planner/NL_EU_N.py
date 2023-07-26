@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import os
+import warnings
 
 sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
@@ -12,7 +13,7 @@ sys.path.append(sys.path[0]+'/Config/NL_EU')
 
 from NL_Planner_Eu import Planner_Eud
 from trackInitialization import Map, wrap
-from plot_vehicle import *
+from plot_tools import *
 from utilities import checkEnd, initialise_agents
 from config import *
 
@@ -38,11 +39,11 @@ class agent(initialiserNL_EU):
     def one_step(self, lambdas, agents, agents_id, uPred = None, xPred = None):
 
         tic = time.time()
-        feas, Solution, slack, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
+        feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
         self.time_op.append(time.time() - tic)
         self.status.append(feas)
 
-        return feas, self.Controller.uPred, self.Controller.xPred, slack, Solution
+        return feas, self.Controller.uPred, self.Controller.xPred, Solution
 
     def plot_experiment(self):
 
@@ -67,7 +68,7 @@ class agent(initialiserNL_EU):
 
     def save_var_to_csv(self,var, name):
 
-        path = "/NonLinDistribPlanner/TestsPaperNLss/"
+        path = path_csv + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -106,7 +107,6 @@ def main():
     feas   = [None] * n_agents
     raws   = [None] * n_agents
     rs     = [None] * n_agents
-    lsack  = [None] * n_agents
     data   = [None] * n_agents
 
     if plot:
@@ -141,7 +141,7 @@ def main():
             # run an instance of the optimisation problems
 
             for i, r in enumerate(rs):
-                feas[i], u_pred[i], x_pred[i], lsack[i], raws[i] = r.one_step( lambdas[[i],ns[i],:], agents[:,ns[i],:], ns[i], u_old[i], raws[i])
+                feas[i], u_pred[i], x_pred[i], raws[i] = r.one_step( lambdas[[i],ns[i],:], agents[:,ns[i],:], ns[i], u_old[i], raws[i])
 
             for j,r in enumerate(rs):
                 r.data_collec = [rs[i].data_opti for i in ns[j]]

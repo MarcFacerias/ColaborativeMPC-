@@ -10,5 +10,5 @@ TODO LIST
 * Finish LPV
 * Normalise cost functions (equisde)
 * Comentar el codi be equisde
-* Propose something like variable weight for the distance
-* Preparar matlab
+* Propose something like variable weight for the distance (WIP)
+* Preparar matlab (TARDA)

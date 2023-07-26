@@ -53,7 +53,7 @@ class hyperplane_separator():
                 a = a / np.sqrt(a[0] ** 2 + a[1] ** 2) #normalise
                 b = - 0.5 * a@(x_ego + x_neg).T
 
-                if ego_id < agents_id[n] or keep_sign:
+                if ego_id < agents_id[n]:
                     sign = 1
                 else:
                     sign = -1
