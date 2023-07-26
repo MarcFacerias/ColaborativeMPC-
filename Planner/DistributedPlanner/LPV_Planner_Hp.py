@@ -52,7 +52,7 @@ class PlannerLPV:
 
         if sys_lim is None:
             self.vx_ref = 6.0
-            self.radius = 0.45
+            self.min_dist = 0.45
             self.max_vel = 10
             self.min_vel = 0.2
             self.max_rs = 0.45
@@ -63,7 +63,7 @@ class PlannerLPV:
 
         else:
             self.vx_ref  = sys_lim["vx_ref"]
-            self.radius  = sys_lim["radius"]
+            self.min_dist = sys_lim["min_dist"]
             self.max_vel = sys_lim["max_vel"]
             self.min_vel = sys_lim["min_vel"]
             self.max_rs  = sys_lim["max_rs"]
@@ -136,7 +136,7 @@ class PlannerLPV:
 
         else:
             self.planes  = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id, keep_sign = True)
-            self.weights = np.ones((self.N,self.n_agents)) #compute_weights(pose,x_agents)
+            self.weights = compute_weights(pose,x_agents, self.min_dist)
 
         # update system matrices
         self.A, self.B, self.C, ey = _EstimateABC(self, Last_xPredicted, uPred)
@@ -268,19 +268,19 @@ def GenerateColisionAvoidanceConstraints(Controller):
             K[i, 7] = Controller.planes[t - 1, 0, i]
             K[i, 8] = Controller.planes[t - 1, 1, i]
             K[i, -1] = -1
-            Lim_list.append(- Controller.radius / 2 - Controller.planes[t - 1, 2, i])
+            Lim_list.append(- Controller.min_dist / 2 - Controller.planes[t - 1, 2, i])
 
             # if Controller.id < el: # if master
             #     K[i, 7] = Controller.planes[t-1, 0, i]
             #     K[i, 8] = Controller.planes[t-1, 1, i]
             #     K[i, -1] = -1
-            #     Lim_list.append(- Controller.radius/2 - Controller.planes[t-1, 2, i] )
+            #     Lim_list.append(- Controller.min_dist/2 - Controller.planes[t-1, 2, i] )
             #
             # else: # if slave
             #     K[i, 7] = - Controller.planes[t-1, 0, i]
             #     K[i, 8] = - Controller.planes[t-1, 1, i]
             #     K[i, -1] = -1
-            #     Lim_list.append(Controller.planes[t-1, 2, i] - Controller.radius/2 )
+            #     Lim_list.append(Controller.planes[t-1, 2, i] - Controller.min_dist/2 )
 
         K_list.append(K) # append the block of constraints to the list
 
@@ -427,14 +427,14 @@ def _buildMatCost(Controller):
     Px[0] = -Controller.vx_ref*Controller.Q[0,0] # added to represent vx - vref in a quadratic fashion
     Px_total = np.tile(Px, N+1) # expand p along the horizon
 
-    # # Add constraints to maximise distance. Note that sign is changed wrt to the resular criteria !
-    for t in range(1, Controller.N + 1):
-
-        idx = t * Controller.n_exp
-        for i, el in enumerate(Controller.agent_list):
-
-            Px_total[idx + 7] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 0, i]
-            Px_total[idx + 8] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 1, i]
+    # # # Add constraints to maximise distance. Note that sign is changed wrt to the resular criteria !
+    # for t in range(1, Controller.N + 1):
+    #
+    #     idx = t * Controller.n_exp
+    #     for i, el in enumerate(Controller.agent_list):
+    #
+    #         Px_total[idx + 7] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 0, i]
+    #         Px_total[idx + 8] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 1, i]
 
 
     P= 2*np.hstack((Px_total, Pu, Pdu)) # padd missing values

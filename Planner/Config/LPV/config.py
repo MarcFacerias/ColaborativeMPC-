@@ -5,7 +5,7 @@ import numpy as np
 plot = False
 plot_end = True
 save_data = False
-verb_level = 1
+verb_level = 2
 color_list = list(mcolors.TABLEAU_COLORS)
 n_agents = 4
 
@@ -13,7 +13,7 @@ x0_database = [""] * 4
 x0_database[0] = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
 x0_database[1] = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 x0_database[2] = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
-x0_database[3] = [2.5, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
+x0_database[3] = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
 
 max_it = 1000
@@ -25,8 +25,8 @@ dt = 0.01
 map_type = "SL"
 
 
-path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL2/"
-path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL2/"
+path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL3/"
+path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL3/"
 
 class initialiserLPV():
     def __init__(self, model = "SCALED CAR"):
@@ -43,7 +43,7 @@ class initialiserLPV():
 
             self.sys_lim     = {
                 "vx_ref" : 3.5,
-                "radius" : 0.35,
+                "min_dist" : 0.35,
                 "max_vel"  : 4,
                 "min_vel"  : 1.1,
                 "max_rs" : 0.45,
