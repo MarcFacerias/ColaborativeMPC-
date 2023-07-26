@@ -9,6 +9,6 @@ LIST OF COMMENTED FILES
 TODO LIST  
 * Finish LPV
 * Normalise cost functions (equisde)
-* Tunejar el tema de les velocitats maximes 
 * Comentar el codi be equisde
-* Arreglar els altres DOS MODELS 
+* Propose something like variable weight for the distance
+* Preparar matlab

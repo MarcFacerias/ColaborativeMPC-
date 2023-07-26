@@ -38,7 +38,7 @@ class hyperplane_separator():
         self.slack_vars = 1
         self.planer_states = self.plane_states+self.slack_vars * (n_agents-1)
 
-    def compute_hyperplane(self, agents, pose, ego_id, agents_id):
+    def compute_hyperplane(self, agents, pose, ego_id, agents_id, keep_sign = False):
         # Case with only 1 neighbour
         placeholder = np.zeros(((self.horizon, 3, self.n_agents)))
 
@@ -53,7 +53,7 @@ class hyperplane_separator():
                 a = a / np.sqrt(a[0] ** 2 + a[1] ** 2) #normalise
                 b = - 0.5 * a@(x_ego + x_neg).T
 
-                if ego_id < agents_id[n]:
+                if ego_id < agents_id[n] or keep_sign:
                     sign = 1
                 else:
                     sign = -1

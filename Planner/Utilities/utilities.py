@@ -1,5 +1,23 @@
 import numpy as np
 
+
+def compute_weights(agent, neigh):
+
+    weights = np.empty((agent.shape[0]-1,neigh.shape[1]))
+
+    for i in range (0,neigh.shape[1]):
+
+        weights[:,i] =  EuDistance(agent[1:],neigh[1:,i,:].squeeze()) ** (-1)
+
+    return weights
+
+def EuDistance(p1,p2):
+
+    try:
+        return np.sqrt((p1[:,0] - p2[:,0])**2 + (p1[:,1] - p2[:,1])**2)
+    except:
+        return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
 def checkEnd(x, maps):
 
     status = False

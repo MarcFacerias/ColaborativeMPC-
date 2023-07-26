@@ -28,17 +28,22 @@ class plotter_offline():
             Points1 = np.zeros((Points, 3))
             Points2 = np.zeros((Points, 3))
             Points0 = np.zeros((Points, 3))
+            Points3 = np.zeros((Points, 3))
+            Points4 = np.zeros((Points, 3))
 
             for i in range(0, int(Points)):
                 Points1[i, :] = map.getGlobalPosition(i * 0.1, map.halfWidth, j)
                 Points2[i, :] = map.getGlobalPosition(i * 0.1, -map.halfWidth, j)
                 Points0[i, :] = map.getGlobalPosition(i * 0.1, 0, j)
+                Points3[i, :] = map.getGlobalPosition(i * 0.1, map.halfWidth*0.8, j)
+                Points4[i, :] = map.getGlobalPosition(i * 0.1, -map.halfWidth*0.8, j)
 
             plt.plot(map.PointAndTangent[:, 0, j], map.PointAndTangent[:, 1, j], 'o')
             plt.plot(Points0[:, 0], Points0[:, 1], linestyle='dashed')
             plt.plot(Points1[:, 0], Points1[:, 1], '-b')
             plt.plot(Points2[:, 0], Points2[:, 1], '-b')
-
+            plt.plot(Points3[:, 0], Points3[:, 1], '-b', linestyle='dashed')
+            plt.plot(Points4[:, 0], Points4[:, 1], '-b', linestyle='dashed')
     def add_agent(self, agent, style):
 
         states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
