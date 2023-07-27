@@ -54,6 +54,10 @@ class plotter_offline():
     def plot_offline_experiment(self, agent, style_agent = ".b", path = None):
         states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
         plt.plot(states[:, 7],states[:, 8], style_agent)
+
+        for j in range(0,states.shape[0],50):
+            plt.plot(states[j, 7], states[j, 8], 'k', marker='x')
+            # plt.scatter(states[j, 7], states[j, 8], c=j/states.shape[0], cmap='Greys', marker='+')
         # self.fig.canvas.draw()
         # plt.pause(0.001)
 

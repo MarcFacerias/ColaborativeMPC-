@@ -52,7 +52,7 @@ class agent(initialiserLPV):
             msg = "WARNING slack violated !"
             warnings.warn(msg)
             # print(self.Controller.sPred[:,1:])
-            input("Press enter to continue...")
+            # input("Press enter to continue...")
 
 
         uPred, xPred = self.Controller.uPred, self.Controller.xPred
@@ -194,6 +194,12 @@ def main():
 
             print("---------------------END Agents---------------------------------------")
             print("avg computational time: " + str((toc-tic)/n_agents))
+            print("--------------------------------------------------------------")
+
+        elif verb_level == 0:
+
+            print("--------------------------------------------------------------")
+            print("it: " + str(it))
             print("--------------------------------------------------------------")
 
     if plot_end or error:

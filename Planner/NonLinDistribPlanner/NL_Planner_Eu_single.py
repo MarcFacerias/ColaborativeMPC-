@@ -43,7 +43,7 @@ class Planner_Eud:
             self.mu = model_param["mu"]
 
         if sys_lim is None:
-            self.vx_ref = 4
+            self.vx_ref = 4.5
             self.max_vel = 5
             self.min_vel = 0.2
             self.max_rs = 0.45
@@ -132,8 +132,7 @@ class Planner_Eud:
         self.B31 = self.opti.parameter(self.N)
 
         # ey
-        self.A41 = self.opti.parameter(self.N)
-        self.A42 = self.opti.parameter(self.N)
+        self.A44 = self.opti.parameter(self.N)
 
         # epsi
         self.A51 = self.opti.parameter(self.N)
@@ -214,13 +213,13 @@ class Planner_Eud:
             # ey
 
             self.opti.subject_to(
-                self.x[j,3] == self.x[mod_prev,3] + (self.A41[j-1]*self.x[mod_prev,0] + self.A42[j-1]*self.x[mod_prev,1])*self.dt
+                self.x[j,3] == self.x[mod_prev,3] + (self.x[mod_prev,1] + self.A44[j-1]*self.x[mod_prev,4])*self.dt
             )
 
             # epsi
 
             self.opti.subject_to(
-                self.x[j,4] == self.x[mod_prev,4] + (-self.A51[j-1] * self.x[mod_prev,0] + self.A52[j-1] * self.x[mod_prev,1] + self.x[mod_prev,2])*self.dt
+                self.x[j,4] == self.x[mod_prev,4] + (self.A51[j-1] * self.x[mod_prev,0] + self.A52[j-1] * self.x[mod_prev,1] + self.x[mod_prev,2])*self.dt
             )
 
             # theta
@@ -291,10 +290,9 @@ class Planner_Eud:
             self.opti.set_value(self.A32[j], -(self.lf * self.Cf * np.cos(delta) - self.lr * self.Cr) / (self.I * vx))
             self.opti.set_value(self.A33[j], -(self.lf * self.lf * self.Cf * np.cos(delta) + self.lr * self.lr * self.Cr) / (self.I * vx))
 
-            self.opti.set_value(self.A41[j], np.sin(epsi))
-            self.opti.set_value(self.A42[j], np.cos(epsi))
+            self.opti.set_value(self.A44[j], vx)
 
-            self.opti.set_value(self.A51[j], (1 / (1 - ey * cur)) * (np.cos(epsi) * cur))
+            self.opti.set_value(self.A51[j], (1 / (1 - ey * cur)) * (-cur))
             self.opti.set_value(self.A52[j], (1 / (1 - ey * cur)) * (np.sin(epsi) * cur))
 
             self.opti.set_value(self.A61[j], np.cos(epsi) / (1 - ey * cur))

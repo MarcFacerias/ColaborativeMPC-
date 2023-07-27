@@ -109,10 +109,21 @@ class Map():
         elif selectedTrack == "SL":
             self.slack = 0.15
             scale = 2
-            spec = np.empty((2, 2, 1))
-            spec[:, :, 0] = scale * np.array([[0.0, 0], [8.0, 0]])
+            spec = np.empty((12, 2, 1))
+            spec[:, :, 0] = scale * np.array([[0.0, 0],
+                                              [3.0, 0],
+                                              [1.0, 0],
+                                              [1.0, 0],
+                                              [1.0, 0],
+                                              [1.0, 0],
+                                              [1.0, 0],
+                                              [1.0, 0],
+                                              [1.0, 0],
+                                              [1.0, 0],
+                                              [2.0, 0],
+                                              [3.0, 0]])
 
-            self.halfWidth = 0.75 * np.ones(spec.shape[0])
+            self.halfWidth = np.asarray([0.75,0.75,0.65,0.65,0.55,0.35,0.35,0.55,0.65,0.65,0.75,0.75])
             self.open = True
 
 

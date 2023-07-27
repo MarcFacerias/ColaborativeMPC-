@@ -11,7 +11,7 @@ it_conv = 1
 
 max_it = 1000
 max_it_OCD = 10
-N = 25
+N = 10
 dt = 0.01
 dth = 0.25
 
@@ -62,5 +62,5 @@ class initialiserNL_EU():
             self.model_param = None
 
         self.Qs = np.diag([10000000,1000000,1000000])
-        self.Q = np.diag([50.0, 1.0, 1.0, 500.0, 25.0, 0.0, 0.0, 0, 0])
-        self.R = 10 * np.diag([1, 1])
+        self.Q = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0])
+        self.R = 1000 * np.diag([1, 1])

@@ -136,7 +136,7 @@ class PlannerLPV:
             self.dist    = -self.weights
 
         else:
-            self.planes  = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id)
+            self.planes  = self.plane_comp.compute_hyperplane(x_agents, pose, self.id, agents_id, keep_sign = True)
             self.weights, self.dist = compute_weights(pose,x_agents, self.min_dist)
 
         # update system matrices
@@ -266,22 +266,22 @@ def GenerateColisionAvoidanceConstraints(Controller):
 
         for i,el in enumerate(Controller.agent_list):
 
-            # K[i, 7] = Controller.planes[t - 1, 0, i]
-            # K[i, 8] = Controller.planes[t - 1, 1, i]
-            # K[i, -1] = -1
-            # Lim_list.append(- Controller.min_dist / 2 - Controller.planes[t - 1, 2, i])
+            K[i, 7] = Controller.planes[t - 1, 0, i]
+            K[i, 8] = Controller.planes[t - 1, 1, i]
+            K[i, -1] = -1
+            Lim_list.append(- Controller.min_dist / 2 - Controller.planes[t - 1, 2, i])
 
-            if Controller.id < el: # if master
-                K[i, 7] = Controller.planes[t-1, 0, i]
-                K[i, 8] = Controller.planes[t-1, 1, i]
-                K[i, -1] = -1
-                Lim_list.append(- Controller.min_dist/2 - Controller.planes[t-1, 2, i] )
-
-            else: # if slave
-                K[i, 7]  = - Controller.planes[t-1, 0, i]
-                K[i, 8]  = - Controller.planes[t-1, 1, i]
-                K[i, -1] = -1
-                Lim_list.append(Controller.planes[t-1, 2, i] - Controller.min_dist/2 )
+            # if Controller.id < el: # if master
+            #     K[i, 7] = Controller.planes[t-1, 0, i]
+            #     K[i, 8] = Controller.planes[t-1, 1, i]
+            #     K[i, -1] = -1
+            #     Lim_list.append(- Controller.min_dist/2 - Controller.planes[t-1, 2, i] )
+            #
+            # else: # if slave
+            #     K[i, 7]  = - Controller.planes[t-1, 0, i]
+            #     K[i, 8]  = - Controller.planes[t-1, 1, i]
+            #     K[i, -1] = -1
+            #     Lim_list.append(Controller.planes[t-1, 2, i] - Controller.min_dist/2 )
 
         K_list.append(K) # append the block of constraints to the list
 
@@ -429,13 +429,13 @@ def _buildMatCost(Controller):
     Px_total = np.tile(Px, N+1) # expand p along the horizon
 
     # # # Add constraints to maximise distance. Note that sign is changed wrt to the resular criteria !
-    # for t in range(1, Controller.N + 1):
-    #
-    #     idx = t * Controller.n_exp
-    #     for i, el in enumerate(Controller.agent_list):
-    #
-    #         Px_total[idx + 7] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 0, i]
-    #         Px_total[idx + 8] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 1, i]
+    for t in range(1, Controller.N + 1):
+
+        idx = t * Controller.n_exp
+        for i, el in enumerate(Controller.agent_list):
+
+            Px_total[idx + 7] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 0, i]
+            Px_total[idx + 8] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 1, i]
 
 
     P= 2*np.hstack((Px_total, Pu, Pdu)) # padd missing values
@@ -504,7 +504,7 @@ def _EstimateABC(Controller,states, u):
         Btv = []
         Ctv = []
 
-        ey_hor = get_ey(states[:, 6], Controller.map, Controller.sm)
+        ey_hor = get_ey(states[:, 6], Controller.map)
 
         for i in range(0, Controller.N):
 
@@ -552,14 +552,14 @@ def _EstimateABC(Controller,states, u):
 
             A11 = -mu
 
-            A41 = np.sin(epsi)
-            A42 = np.cos(epsi)
-
-            A51 = (1 / (1 - ey * cur)) * (np.cos(epsi) * cur)
+            A51 = (1 / (1 - ey * cur)) * (-cur)
             A52 = (1 / (1 - ey * cur)) * (np.sin(epsi) * cur)
 
             A61 = np.cos(epsi) / (1 - ey * cur)
             A62 = -np.sin(epsi) / (1 - ey * cur)
+
+            A7 = 1
+            A8 = vx
 
             A81 = np.cos(theta)
             A82 = -np.sin(theta)
@@ -573,8 +573,8 @@ def _EstimateABC(Controller,states, u):
             Ai = np.array([[A11, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
                            [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
                            [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
-                           [A41, A42, 0, 0., 0, 0., 0., 0., 0.],    # [ey]
-                           [-A51, A52, 1.,0., 0., 0., 0., 0., 0.],  # [epsi]
+                           [0, A7, 0, 0., A8, 0., 0., 0., 0.],    # [ey]
+                           [A51, A52, 1.,0., 0., 0., 0., 0., 0.],  # [epsi]
                            [0, 0, 1.,0., 0., 0., 0., 0., 0.],  # [theta]
                            [A61, A62, 0, 0., 0., 0., 0., 0., 0.],  # [s]
                            [A81, A82, 0, 0., 0., 0., 0., 0., 0.],  # [x]
