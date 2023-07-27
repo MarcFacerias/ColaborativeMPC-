@@ -58,7 +58,7 @@ class initialiserLPV():
             self.model_param = None
 
         self.Qs = 10000000 * np.eye(3)
-        self.Q  = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0])
+        self.Q  = np.diag([100.0, 1.0, 1.0, 200.0, 70.0, 0.0, 0.0, 0, 0])
         self.R  = 0 * np.diag([1, 1])
         self.dR = 1000 * np.diag([1, 1])
         self.wq = 1.0

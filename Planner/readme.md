@@ -20,8 +20,9 @@ TODO DEL DESASTRE
             Pujan les weights per a que ey i etheta siguin mes petits millora la performance
 
     Quins testos fer: 
-            Mirar el model i veure els Etheta, es bastant problema que no es puguin asumir angles petits
+            Mirar el model i veure els Etheta, NO es podem asumir angles petits
             Un cop resolt aixo mirar com respon en el cas de baixar el reward de ey
+            escriure el model totalment no linear al CASADI
 
     Quins improvements voldria fer
 
