@@ -12,7 +12,7 @@ class Map():
     """
 
 
-    def __init__(self, selectedTrack = "Oval2"):
+    def __init__(self, selectedTrack = "oval"):
         """Initialization
         Modify the vector spec to change the geometry of the track
         """
@@ -56,7 +56,7 @@ class Map():
                              [4.0, 0],
                              [5.85, 5.85 / np.pi],
                              [2.0, 0]])
-            self.halfWidth = np.array([0.55,0.55,0.45,0.45,0.55,0.55])
+            self.halfWidth = np.array([0.55,0.55,0.55,0.55,0.55,0.55])
             self.open = False
 
 

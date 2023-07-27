@@ -9,7 +9,7 @@ sys.path.append(sys.path[0]+'/DistributedControllerObject')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 
-from PathFollowingLPVMPC_independent_hyperplanes import PathFollowingLPV_MPC
+from PathFollowingLPVMPC_ih1 import PathFollowingLPV_MPC
 from trackInitialization import Map, wrap
 from plot_vehicle import *
 
@@ -27,7 +27,7 @@ def compute_hyper(x_ego,x_neg):
 class agent():
 
     #TODO: define Q and R
-    def __init__(self, N, Map, dt, x0, id, Q=np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0]), R=1000 * np.diag([1, 1])):
+    def __init__(self, N, Map, dt, x0, id, Q=np.diag([100.0, 1.0, 1.0, 100.0, 70.0, 0.0, 0.0, 0, 0]), R=50 * np.diag([1, 1])):
         self.map = Map
         self.N = N
         self.dt = dt
@@ -71,7 +71,7 @@ class agent():
 
         self.states.append(xPred[0,:])
         self.u.append(uPred[0,:])
-        self.planes.append(planes[0,:])
+        # self.planes.append(planes[0,:])
 
     def save_to_csv(self):
 
@@ -156,22 +156,10 @@ def main():
     N = 25
     dt = 0.01
 
-    # define neighbours
-    n_0 = [1,2,3]
-    n_1 = [0,2,3]
-    n_2 = [0,1,3]
-    n_3 = [0,1,2]
-
     x0_0 = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
-    x0_1 = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
-    x0_2 = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
-    x0_3 = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
     # maps = [Map("Highway"),Map("Highway"),Map("Highway"),Map("Highway")]
     maps = [Map(),Map(),Map(),Map()]
-
-    agents = initialise_agents([x0_0,x0_1,x0_2,x0_3],N,dt,maps)
-    states_hist = [agents]
 
     if plot:
         disp = plotter(maps[0],2)
@@ -180,19 +168,10 @@ def main():
         d = plotter_offline(maps[0])
 
     r0 = agent(N, maps[0], dt, x0_0, 0)
-    r1 = agent(N, maps[1], dt, x0_1, 1)
-    r2 = agent(N, maps[2], dt, x0_2, 2)
-    r3 = agent(N, maps[3], dt, x0_3, 3)
 
     x_old0 = None
-    x_old1 = None
-    x_old2 = None
-    x_old3 = None
-
     u_old0 = None
-    u_old1 = None
-    u_old2 = None
-    u_old3 = None
+
     it = 0
 
     dist_hist = []
@@ -202,65 +181,30 @@ def main():
         tic = time.time()
 
         # TODO acces the subset of lambdas of our problem
-        f0, uPred0, xPred0, planes0, raw0 = r0.one_step(agents[:,n_0,:], n_0, agents[:,0,:], u_old0, x_old0)
-        f1, uPred1, xPred1, planes1, raw1 = r1.one_step(agents[:,n_1,:], n_1, agents[:,1,:], u_old1, x_old1)
-        f2, uPred2, xPred2, planes2, raw2 = r2.one_step(agents[:,n_2,:], n_2, agents[:,2,:], u_old2, x_old2)
-        f3, uPred3, xPred3, planes3, raw3 = r3.one_step(agents[:,n_3,:], n_3, agents[:,3,:], u_old3, x_old3)
+        f0, uPred0, xPred0, planes0, raw0 = r0.one_step(0, 0, 0, u_old0, x_old0)
+
         if not (f0 and 1):
             break
         # print(uPred0[0,:])
         print(xPred0[0,:])
-        print(xPred1[0,:])
-        print(xPred2[0,:])
-        print(xPred3[0,:])
-
-        agents[:, 0, :] = xPred0[:, -2:]
-        agents[:, 1, :] = xPred1[:, -2:]
-        agents[:, 2, :] = xPred2[:, -2:]
-        agents[:, 3, :] = xPred3[:, -2:]
-
-        states_hist.append(agents)
-        dist_hist.append( np.sqrt((xPred0[0,7] - xPred1[0,7])**2 + (xPred0[0,8] - xPred1[0,8])**2) )
 
         r0.save(xPred0, uPred0, planes0)
-        r1.save(xPred1, uPred1, planes1)
-        r2.save(xPred2, uPred2, planes2)
-        r3.save(xPred3, uPred3, planes3)
 
         r0.x0 = xPred0[1,:]
-        r1.x0 = xPred1[1,:]
-        r2.x0 = xPred2[1,:]
-        r3.x0 = xPred3[1,:]
 
         x_old0 = xPred0[1:,:]
-        x_old1 = xPred1[1:,:]
-        x_old2 = xPred2[1:,:]
-        x_old3 = xPred3[1:,:]
 
         u_old0 = uPred0
-        u_old1 = uPred1
-        u_old2 = uPred2
-        u_old3 = uPred3
-
-        if dist_hist[-1] < 0.2:
-            print("error minimum distance")
 
         print(time.time() - tic)
         it += 1
         if plot :
             disp.plot_step(xPred0[1, 7], xPred0[1, 8], xPred0[1, 5], 0)
-            disp.plot_step(xPred1[1, 7], xPred1[1, 8], xPred1[1, 5], 1)
 
 
     if plot_end:
         d.plot_offline_experiment(r0, "oc", "-y")
-        d.plot_offline_experiment(r1, "ob", "-y")
-        d.plot_offline_experiment(r2, "or", "-y")
-        d.plot_offline_experiment(r3, "oy", "-y")
-        # r0.save_to_csv()
-        # r1.save_to_csv()
-        # r2.save_to_csv()
-        # r3.save_to_csv()
+
         input("Press enter to continue...")
 
 def plot_performance( agent):

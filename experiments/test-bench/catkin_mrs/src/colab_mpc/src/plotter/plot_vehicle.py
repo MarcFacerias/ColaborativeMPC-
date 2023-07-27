@@ -61,8 +61,10 @@ class plotter_offline():
     def plot_offline_experiment(self, agent, style_agent = ".b", style_plane = "-r"):
         states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
         plt.plot(states[:, 7],states[:, 8], style_agent)
-        self.fig.canvas.draw()
-        plt.pause(0.001)
+        # self.fig.canvas.draw()
+        # plt.pause(0.001)
+        path = "/home/marc/git_personal/colab_mpc_old/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/DistributedControllerObject/TestsPaperL"
+        plt.savefig(path + "track.png")
 
     def plot_map(self,path):
         plt.show()
