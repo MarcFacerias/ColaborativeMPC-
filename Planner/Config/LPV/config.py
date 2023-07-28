@@ -7,7 +7,7 @@ plot_end = True
 save_data = False
 verb_level = 0
 color_list = list(mcolors.TABLEAU_COLORS)
-n_agents = 4
+n_agents = 1
 
 x0_database = [""] * 4
 x0_database[3] = [1.3, -0.16, 0.00, 0.25, 0, 0.0, 0.25, 0.0, 1.5]  # [vx vy psidot y_e thetae theta s x y]
@@ -58,7 +58,7 @@ class initialiserLPV():
             self.model_param = None
 
         self.Qs = 10000000 * np.eye(3)
-        self.Q  = np.diag([100.0, 1.0, 1.0, 200.0, 70.0, 0.0, 0.0, 0, 0])
+        self.Q  = np.diag([10.0, 0.0, 0.0, 200.0, 50.0, 0.0, 0.0, 0, 0])
         self.R  = 0 * np.diag([1, 1])
-        self.dR = 1000 * np.diag([1, 1])
+        self.dR = 50 * np.diag([1, 1])
         self.wq = 1.0

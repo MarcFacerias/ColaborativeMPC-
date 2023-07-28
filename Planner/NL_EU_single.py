@@ -11,6 +11,7 @@ sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/Config/NL_EU')
 
+# from NL_Planner_Eu_singleNM import Planner_Eud
 from NL_Planner_Eu_single import Planner_Eud
 from trackInitialization import Map, wrap
 from plot_tools import *
@@ -39,11 +40,11 @@ class agent(initialiserNL_EU):
     def one_step(self, lambdas, agents, agents_id, uPred = None, xPred = None):
 
         tic = time.time()
-        feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
+        feas, xPred, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
         self.time_op.append(time.time() - tic)
         self.status.append(feas)
 
-        return feas, self.Controller.uPred, self.Controller.xPred, Solution
+        return feas, self.Controller.uPred, xPred
 
     def plot_experiment(self):
 
@@ -57,7 +58,7 @@ class agent(initialiserNL_EU):
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinDistribPlanner/TestsPaperNLcs/" + str(self.id)
+        path = path_csv + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -95,7 +96,7 @@ def main():
     rs = agent(N, maps, dt, x_old, 0, dth)
 
     x_pred = [None]
-    raws   = [None]
+    raws   = x_old[0]
 
     if plot:
         disp = plotter(maps[0],n_agents)
@@ -107,7 +108,10 @@ def main():
 
     while(it<max_it and not checkEndS(x_pred, maps)):
 
-        feas, u_pred, x_pred, raws = rs.one_step( 0, 0, 0, u_old, raws)
+        feas, u_pred, x_pred = rs.one_step( 0, 0, 0, u_old, x_pred)
+
+        if not feas:
+            break
 
         rs.save(x_pred, u_pred)
         rs.x0 = [x_pred[1:, :]]
@@ -121,6 +125,7 @@ def main():
 
             print("--------------------------------------------------------------")
             print(x_pred)
+            print(u_pred)
             print("--------------------------------------------------------------")
 
     if plot_end:

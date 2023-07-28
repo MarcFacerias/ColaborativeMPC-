@@ -296,7 +296,7 @@ class Map():
     def set_lane(self,lane):
         self.lane = lane
 
-    def getGlobalPosition(self, s, ey, lane = None):
+    def getGlobalPosition(self, s, ey, lane = None, plotting = False):
         """coordinate transformation from curvilinear reference frame (e, ey) to inertial reference frame (X, Y)
         (s, ey): position in the curvilinear reference frame
         """
@@ -341,9 +341,13 @@ class Map():
             deltaL = PointAndTangent[i, 4]
             reltaL = s - PointAndTangent[i, 3]
 
+            if plotting and i < self.PointAndTangent[:, :, lane].shape[0]-1 and PointAndTangent[i, 4] != 0:
+                dey = (ey[i+1] - ey[i]) * (s - PointAndTangent[i, 3]) /  PointAndTangent[i, 4] + ey[i]
+            else:
+                dey = ey[i]
             # Do the linear combination
-            x = (1 - reltaL / deltaL) * xs + reltaL / deltaL * xf + ey[i] * np.cos(psi + np.pi / 2)
-            y = (1 - reltaL / deltaL) * ys + reltaL / deltaL * yf + ey[i] * np.sin(psi + np.pi / 2)
+            x = (1 - reltaL / deltaL) * xs + reltaL / deltaL * xf + dey * np.cos(psi + np.pi / 2)
+            y = (1 - reltaL / deltaL) * ys + reltaL / deltaL * yf + dey * np.sin(psi + np.pi / 2)
             theta = psi
         else:
             r = 1 / PointAndTangent[i, 5]  # Extract curvature
@@ -364,9 +368,14 @@ class Map():
             angleNormal = wrap((direction * np.pi / 2 + ang))
             angle = -(np.pi - np.abs(angleNormal)) * (sign(angleNormal))
 
-            x = CenterX + (np.abs(r) - direction * ey[i]) * np.cos(
+            if plotting and i < self.PointAndTangent[:, :, lane].shape[0] and PointAndTangent[i, 4] != 0:
+                dey = (ey[i+1] - ey[i]) * (s - PointAndTangent[i, 3]) /  PointAndTangent[i, 4] + ey[i]
+            else:
+                dey = ey[i]
+
+            x = CenterX + (np.abs(r) - direction * dey) * np.cos(
                 angle + direction * spanAng)  # x coordinate of the last point of the segment
-            y = CenterY + (np.abs(r) - direction * ey[i]) * np.sin(
+            y = CenterY + (np.abs(r) - direction * dey) * np.sin(
                 angle + direction * spanAng)  # y coordinate of the last point of the segment
             theta = ang + direction * spanAng
 

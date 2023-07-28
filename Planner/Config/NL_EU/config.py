@@ -62,5 +62,5 @@ class initialiserNL_EU():
             self.model_param = None
 
         self.Qs = np.diag([10000000,1000000,1000000])
-        self.Q = np.diag([120.0, 1.0, 1.0, 1500.0, 70.0, 0.0, 0.0, 0, 0])
-        self.R = 1000 * np.diag([1, 1])
+        self.Q = np.diag([10.0, 0.0, 0.0, 200.0, 50.0, 0.0, 0.0, 0, 0])
+        self.R = 50 * np.diag([1, 1])

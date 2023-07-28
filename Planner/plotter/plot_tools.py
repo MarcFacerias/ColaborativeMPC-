@@ -32,11 +32,11 @@ class plotter_offline():
             Points4 = np.zeros((Points, 3))
 
             for i in range(0, int(Points)):
-                Points1[i, :] = map.getGlobalPosition(i * 0.1, map.halfWidth, j)
-                Points2[i, :] = map.getGlobalPosition(i * 0.1, -map.halfWidth, j)
-                Points0[i, :] = map.getGlobalPosition(i * 0.1, 0, j)
-                Points3[i, :] = map.getGlobalPosition(i * 0.1, map.halfWidth*0.8, j)
-                Points4[i, :] = map.getGlobalPosition(i * 0.1, -map.halfWidth*0.8, j)
+                Points1[i, :] = map.getGlobalPosition(i * 0.1, map.halfWidth, j, True)
+                Points2[i, :] = map.getGlobalPosition(i * 0.1, -map.halfWidth, j, True)
+                Points0[i, :] = map.getGlobalPosition(i * 0.1, 0, j, True)
+                Points3[i, :] = map.getGlobalPosition(i * 0.1, map.halfWidth*0.8, j, True)
+                Points4[i, :] = map.getGlobalPosition(i * 0.1, -map.halfWidth*0.8, j, True)
 
             plt.plot(map.PointAndTangent[:, 0, j], map.PointAndTangent[:, 1, j], 'o')
             plt.plot(Points0[:, 0], Points0[:, 1], linestyle='dashed')
@@ -53,7 +53,7 @@ class plotter_offline():
 
     def plot_offline_experiment(self, agent, style_agent = ".b", path = None):
         states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
-        plt.plot(states[:, 7],states[:, 8], style_agent)
+        plt.plot(states[:, 7],states[:, 8], style_agent, marker='o')
 
         for j in range(0,states.shape[0],50):
             plt.plot(states[j, 7], states[j, 8], 'k', marker='x')

@@ -552,7 +552,10 @@ def _EstimateABC(Controller,states, u):
 
             A11 = -mu
 
-            A51 = (1 / (1 - ey * cur)) * (-cur)
+            A41 = np.sin(epsi)
+            A42 = np.cos(epsi)
+
+            A51 = (1 / (1 - ey * cur)) * (-np.cos(epsi)*cur)
             A52 = (1 / (1 - ey * cur)) * (np.sin(epsi) * cur)
 
             A61 = np.cos(epsi) / (1 - ey * cur)
@@ -573,7 +576,7 @@ def _EstimateABC(Controller,states, u):
             Ai = np.array([[A11, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
                            [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
                            [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
-                           [0, A7, 0, 0., A8, 0., 0., 0., 0.],    # [ey]
+                           [A41, A42, 0, 0., 0, 0., 0., 0., 0.],    # [ey]
                            [A51, A52, 1.,0., 0., 0., 0., 0., 0.],  # [epsi]
                            [0, 0, 1.,0., 0., 0., 0., 0., 0.],  # [theta]
                            [A61, A62, 0, 0., 0., 0., 0., 0., 0.],  # [s]

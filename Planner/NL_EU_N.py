@@ -57,7 +57,7 @@ class agent(initialiserNL_EU):
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinDistribPlanner/TestsPaperNLcs/" + str(self.id)
+        path = path_csv + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
