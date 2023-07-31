@@ -27,7 +27,7 @@ def compute_hyper(x_ego,x_neg):
 class agent():
 
     #TODO: define Q and R
-    def __init__(self, N, Map, dt, x0, id, Q=np.diag([100.0, 1.0, 1.0, 100.0, 70.0, 0.0, 0.0, 0, 0]), R=50 * np.diag([1, 1])):
+    def __init__(self, N, Map, dt, x0, id, Q=np.diag([10.0, 0.0, 0.0, 200.0, 50.0, 0.0, 0.0, 0, 0]), R=50 * np.diag([1, 1])):
         self.map = Map
         self.N = N
         self.dt = dt
@@ -153,7 +153,7 @@ def main():
 #########################################################
     # set constants
 
-    N = 25
+    N = 10
     dt = 0.01
 
     x0_0 = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
@@ -185,8 +185,8 @@ def main():
 
         if not (f0 and 1):
             break
-        # print(uPred0[0,:])
-        print(xPred0[0,:])
+        print(uPred0)
+        print(xPred0)
 
         r0.save(xPred0, uPred0, planes0)
 

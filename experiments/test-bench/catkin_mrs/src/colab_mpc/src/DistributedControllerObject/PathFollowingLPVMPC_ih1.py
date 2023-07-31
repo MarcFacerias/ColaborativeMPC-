@@ -386,126 +386,102 @@ def _buildMatEqConst(Controller):
     G = np.vstack((G, Gdu))
     return G, E, L, Eu, Eoa
 
-def _EstimateABC(Controller,states, u):
 
-        lf = Controller.lf
-        lr = Controller.lr
-        m = Controller.m
-        I = Controller.I
-        Cf = Controller.Cf
-        Cr = Controller.Cr
-        mu = Controller.mu
+def _EstimateABC(Controller, states, u):
+    lf = Controller.lf
+    lr = Controller.lr
+    m = Controller.m
+    I = Controller.I
+    Cf = Controller.Cf
+    Cr = Controller.Cr
+    mu = Controller.mu
 
-        Atv = []
-        Btv = []
-        Ctv = []
+    Atv = []
+    Btv = []
+    Ctv = []
 
-        ey_hor = get_ey(states[:, 6], Controller.map)
+    ey_hor = get_ey(states[:, 6], Controller.map)
 
-        for i in range(0, Controller.N):
+    for i in range(0, Controller.N):
+        vx = states[i, 0]
+        vy = states[i, 1]
+        ey = states[i, 3]
+        epsi = states[i, 4]
+        theta = states[i, 5]
+        s = states[i, 6]
 
-            vx = states[i,0]
-            vy = states[i,1]
-            ey = states[i,3]
-            epsi = states[i,4]
-            theta = states[i,5]
-            s = states[i,6]
+        cur = Curvature(s, Controller.map)
+        delta = u[i, 0]  # EA: steering angle at K-1
 
-            cur = Curvature(s, Controller.map)
-            delta = u[i, 0]  # EA: steering angle at K-1
+        # standard model
+        A12 = ((np.sin(delta) * Cf) / (m * vx))
+        A13 = ((np.sin(delta) * Cf * lf) / (m * vx) + vy)
 
-            if vx < 0:
+        A22 = (-(Cr + Cf * np.cos(delta)) / (m * vx))
+        A23 = (-(lf * Cf * np.cos(delta) - lr * Cr) / (m * vx) - vx)
 
-                # low vel model: straight line .
-                A12 = 0
-                A13 = 0
+        A32 = (-(lf * Cf * np.cos(delta) - lr * Cr) / (I * vx))
+        A33 = (-(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I * vx))
 
-                A22 = 0
-                A23 = 0
+        A41 = np.sin(epsi)
+        A42 = np.cos(epsi)
 
-                A32 = 0
-                A33 = 0
+        A51 = ((1 / (1 - ey * cur)) * (-np.cos(epsi) * cur))
+        A52 = ((1 / (1 - ey * cur)) * (np.sin(epsi) * cur))
 
-                B11 = 0
-                B12 = 1
+        A61 = (np.cos(epsi) / (1 - ey * cur))
+        A62 = (-np.sin(epsi) / (1 - ey * cur))
 
+        A81 = np.cos(theta)
+        A82 = -np.sin(theta)
 
-            else:
+        A91 = np.sin(theta)
+        A92 = np.cos(theta)
 
-                # standard model
+        B11 = (-(np.sin(delta) * Cf) / m)
+        B21 = ((np.cos(delta) * Cf) / m)
+        B31 = ((lf * Cf * np.cos(delta)) / I)
 
-                A12 = (np.sin(delta) * Cf) / (m * vx)
-                A13 = (np.sin(delta) * Cf * lf) / (m * vx) + vy
+        Ai = np.array([[-mu, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
+                       [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
+                       [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
+                       [A41, A42, 0, 0., 0, 0., 0., 0., 0.],  # [ey]
+                       [A51, A52, 1., 0., 0., 0., 0., 0., 0.],  # [epsi]
+                       [0, 0, 1., 0., 0., 0., 0., 0., 0.],  # [theta]
+                       [A61, A62, 0, 0., 0., 0., 0., 0., 0.],  # [s]
+                       [A81, A82, 0, 0., 0., 0., 0., 0., 0.],  # [x]
+                       [A91, A92, 0, 0., 0., 0., 0., 0., 0.],  # [y]
+                       ])
 
-                A22 = -(Cr + Cf * np.cos(delta)) / (m * vx)
-                A23 = -(lf * Cf * np.cos(delta) - lr * Cr) / (m * vx) - vx
+        Bi = np.array([[B11, 1],  # [delta, a]
+                       [B21, 0],
+                       [B31, 0],
+                       [0, 0],
+                       [0, 0],
+                       [0, 0],
+                       [0, 0],
+                       [0, 0],
+                       [0, 0]])
 
-                A32 = -(lf * Cf * np.cos(delta) - lr * Cr) / (I * vx)
-                A33 = -(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I * vx)
+        Ci = np.array([[0],
+                       [0],
+                       [0],
+                       [0],
+                       [0],
+                       [0],
+                       [0],
+                       [0],
+                       [0]])
 
-                B11 = -(np.sin(delta) * Cf) / m
-                B12 = 1
+        Ai = np.eye(len(Ai)) + Controller.dt * Ai
+        Bi = Controller.dt * Bi
+        Ci = Controller.dt * Ci
 
-            A11 = -mu
+        Atv.append(Ai)
+        Btv.append(Bi)
+        Ctv.append(Ci)
 
-            A51 = (1 / (1 - ey * cur)) * (-cur)
-            A52 = (1 / (1 - ey * cur)) * (np.sin(epsi) * cur)
-
-            A61 = np.cos(epsi) / (1 - ey * cur)
-            A62 = -np.sin(epsi) / (1 - ey * cur)
-
-            A7 = 1
-            A8 = vx
-
-            A81 = np.cos(theta)
-            A82 = -np.sin(theta)
-
-            A91 = np.sin(theta)
-            A92 = np.cos(theta)
-
-            B21 = (np.cos(delta) * Cf) / m
-            B31 = (lf * Cf * np.cos(delta)) / I
-
-            Ai = np.array([[A11, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
-                           [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
-                           [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
-                           [0, A7, 0, 0., A8, 0., 0., 0., 0.],    # [ey]
-                           [A51, A52, 1.,0., 0., 0., 0., 0., 0.],  # [epsi]
-                           [0, 0, 1.,0., 0., 0., 0., 0., 0.],  # [theta]
-                           [A61, A62, 0, 0., 0., 0., 0., 0., 0.],  # [s]
-                           [A81, A82, 0, 0., 0., 0., 0., 0., 0.],  # [x]
-                           [A91, A92, 0, 0., 0., 0., 0., 0., 0.],  # [y]
-                           ])
-
-            Bi = np.array([[B11, B12],  # [delta, a]
-                           [B21, 0],
-                           [B31, 0],
-                           [0, 0],
-                           [0, 0],
-                           [0, 0],
-                           [0, 0],
-                           [0, 0],
-                           [0, 0]])
-
-            Ci = np.array([[0],
-                           [0],
-                           [0],
-                           [0],
-                           [0],
-                           [0],
-                           [0],
-                           [0],
-                           [0]])
-
-            Ai = np.eye(len(Ai)) + Controller.dt * Ai
-            Bi = Controller.dt * Bi
-            Ci = Controller.dt * Ci
-
-            Atv.append(Ai)
-            Btv.append(Bi)
-            Ctv.append(Ci)
-
-        return Atv, Btv, Ctv, ey_hor
+    return Atv, Btv, Ctv, ey_hor
 
 
 
