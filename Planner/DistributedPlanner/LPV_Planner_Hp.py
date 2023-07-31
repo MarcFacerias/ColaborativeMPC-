@@ -39,7 +39,7 @@ class PlannerLPV:
             self.I  = 0.06
             self.Cf = 60.0
             self.Cr = 60.0
-            self.mu = 0.0
+            self.mu = 0.05
 
         else:
             self.lf = model_param["lf"]
@@ -53,12 +53,12 @@ class PlannerLPV:
         if sys_lim is None:
             self.vx_ref = 6.0
             self.min_dist = 0.45
-            self.max_vel = 10
+            self.max_vel = 5.5
             self.min_vel = 0.2
             self.max_rs = 0.45
             self.max_ls = 0.45
-            self.max_ac = 8.0
-            self.max_dc = 8.0
+            self.max_ac = 4.0
+            self.max_dc = 3.0
             self.sm     = 0.9
 
         else:
@@ -307,16 +307,14 @@ def _buildMatIneqConst(Controller,ey):
 
     # linear velocity constraints + slack variables
     Fx[0,0] = -1
-    Fx[0,-3] = -1
-
     Fx[1,0] = 1
+    Fx[0,-3] = -1
     Fx[1,-3] = 1
 
     # limit lateral error with slack variables
-    Fx[2,3] = -1
-    Fx[2,-2] = -1
-
-    Fx[3,3] = 1
+    Fx[2,3] = 1
+    Fx[3,3] = -1
+    Fx[2,-2] = 1
     Fx[3,-2] = 1
 
     # generate the upper bounds of the velocity constraints
@@ -430,7 +428,7 @@ def _buildMatCost(Controller):
     Px_total = np.tile(Px, N+1) # expand p along the horizon
 
     # # # Add constraints to maximise distance. Note that sign is changed wrt to the resular criteria !
-    for t in range(1, Controller.N + 1):
+    '''for t in range(1, Controller.N + 1):
 
         idx = t * Controller.n_exp
         for i, el in enumerate(Controller.agent_list):
@@ -438,7 +436,7 @@ def _buildMatCost(Controller):
             Px_total[idx + 7] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 0, i]
             Px_total[idx + 8] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 1, i]
 
-
+'''
     P= 2*np.hstack((Px_total, Pu, Pdu)) # padd missing values
 
     return 2 * M0, P

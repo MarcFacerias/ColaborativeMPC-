@@ -16,7 +16,7 @@ x0_database[2] = [1.3, -0.16, 0.00, 0.45, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot
 x0_database[0] = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot y_e thetae theta s x y]
 
 
-max_it = 300
+max_it = 30000
 N = 10
 dt = 0.01
 
@@ -25,8 +25,8 @@ map_type = "oval"
 # map_type = "SL"
 
 
-path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL4/"
-path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestsPaperL5/"
+path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestLPVPrePrint/"
+path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestLPVPrePrint/"
 
 class initialiserLPV():
     def __init__(self, model = "SCALED CAR"):
