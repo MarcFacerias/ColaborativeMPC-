@@ -48,10 +48,10 @@ class agent(initialiserLPV):
             return feas,uPred, xPred, planes, raw
 
 
-        if (self.Controller.sPred[:,1:] >= 0.1).any():
+        if (self.Controller.sPred[:,1] >= 0.1).any():
             msg = "WARNING slack violated !"
             warnings.warn(msg)
-            # print(self.Controller.sPred[:,1:])
+            print(self.Controller.sPred[:,1:])
             # input("Press enter to continue...")
 
 
@@ -200,6 +200,7 @@ def main():
 
             print("--------------------------------------------------------------")
             print("it: " + str(it))
+            print(rs[0].Controller.raw_States)
             print("--------------------------------------------------------------")
 
     if plot_end or error:

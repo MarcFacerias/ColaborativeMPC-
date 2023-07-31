@@ -176,6 +176,7 @@ class PlannerLPV:
         self.duPred = np.reshape((Solution[self.n_exp * (self.N+1) + np.arange(self.n_u * self.N) + np.arange(self.n_u * self.N)]),(self.N, self.n_u))
         self.sPred  = np.reshape((Solution[idx_slack]), (self.N, self.slack))
 
+        self.raw_States = Solution[0:self.n_exp*(self.N+1)].reshape(self.N+1,-1)
         self.OldSteering = [self.uPred[0,0]]
         self.OldAccelera = [self.uPred[0,1]]
 
@@ -518,51 +519,24 @@ def _EstimateABC(Controller,states, u):
             cur = Curvature(s, Controller.map)
             delta = u[i, 0]  # EA: steering angle at K-1
 
-            if vx < 0:
+            # standard model
+            A12 = ((np.sin(delta) * Cf) / (m * vx))
+            A13 = ((np.sin(delta) * Cf * lf) / (m * vx) + vy)
 
-                # low vel model: straight line .
-                A12 = 0
-                A13 = 0
+            A22 = (-(Cr + Cf * np.cos(delta)) / (m * vx))
+            A23 = (-(lf * Cf * np.cos(delta) - lr * Cr) / (m * vx) - vx)
 
-                A22 = 0
-                A23 = 0
-
-                A32 = 0
-                A33 = 0
-
-                B11 = 0
-                B12 = 1
-
-
-            else:
-
-                # standard model
-
-                A12 = (np.sin(delta) * Cf) / (m * vx)
-                A13 = (np.sin(delta) * Cf * lf) / (m * vx) + vy
-
-                A22 = -(Cr + Cf * np.cos(delta)) / (m * vx)
-                A23 = -(lf * Cf * np.cos(delta) - lr * Cr) / (m * vx) - vx
-
-                A32 = -(lf * Cf * np.cos(delta) - lr * Cr) / (I * vx)
-                A33 = -(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I * vx)
-
-                B11 = -(np.sin(delta) * Cf) / m
-                B12 = 1
-
-            A11 = -mu
+            A32 = (-(lf * Cf * np.cos(delta) - lr * Cr) / (I * vx))
+            A33 = (-(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I * vx))
 
             A41 = np.sin(epsi)
             A42 = np.cos(epsi)
 
-            A51 = (1 / (1 - ey * cur)) * (-np.cos(epsi)*cur)
-            A52 = (1 / (1 - ey * cur)) * (np.sin(epsi) * cur)
+            A51 = ((1 / (1 - ey * cur)) * (-np.cos(epsi) * cur))
+            A52 = ((1 / (1 - ey * cur)) * (np.sin(epsi) * cur))
 
-            A61 = np.cos(epsi) / (1 - ey * cur)
-            A62 = -np.sin(epsi) / (1 - ey * cur)
-
-            A7 = 1
-            A8 = vx
+            A61 = (np.cos(epsi) / (1 - ey * cur))
+            A62 = (-np.sin(epsi) / (1 - ey * cur))
 
             A81 = np.cos(theta)
             A82 = -np.sin(theta)
@@ -570,10 +544,11 @@ def _EstimateABC(Controller,states, u):
             A91 = np.sin(theta)
             A92 = np.cos(theta)
 
-            B21 = (np.cos(delta) * Cf) / m
-            B31 = (lf * Cf * np.cos(delta)) / I
+            B11 = (-(np.sin(delta) * Cf) / m)
+            B21 = ((np.cos(delta) * Cf) / m)
+            B31 = ((lf * Cf * np.cos(delta)) / I)
 
-            Ai = np.array([[A11, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
+            Ai = np.array([[-mu, A12, A13, 0., 0., 0., 0., 0., 0.],  # [vx]
                            [0., A22, A23, 0., 0., 0., 0., 0., 0.],  # [vy]
                            [0., A32, A33, 0., 0., 0., 0., 0., 0.],  # [wz]
                            [A41, A42, 0, 0., 0, 0., 0., 0., 0.],    # [ey]
@@ -584,7 +559,7 @@ def _EstimateABC(Controller,states, u):
                            [A91, A92, 0, 0., 0., 0., 0., 0., 0.],  # [y]
                            ])
 
-            Bi = np.array([[B11, B12],  # [delta, a]
+            Bi = np.array([[B11, 1],  # [delta, a]
                            [B21, 0],
                            [B31, 0],
                            [0, 0],

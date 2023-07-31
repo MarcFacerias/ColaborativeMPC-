@@ -13,7 +13,7 @@ class Planner_Eud:
         solve: given ini_xPredicted computes the control action
     """
 
-    def __init__(self, Q, Qs, R, N, dt, map, id, dth, model_param=None, sys_lim=None):
+    def __init__(self, Q, Qs, R, dR, N, dt, map, id, dth, model_param=None, sys_lim=None):
 
         # system parameters:
         self.n_s = 9
@@ -228,7 +228,7 @@ class Planner_Eud:
                 self.x[j,1] == self.x[mod_prev,1] + (
                         (-(self.Cr + self.Cf * np.cos(self.u[mod_prev, 0])) / (self.m * self.x[mod_prev, 0]))*self.x[mod_prev,1] +
                         (-(self.lf * self.Cf * np.cos(self.u[mod_prev, 0]) - self.lr * self.Cr) / (self.m * self.x[mod_prev, 0]) - self.x[mod_prev, 0])*self.x[mod_prev,2] +
-                        (-(np.sin(self.u[mod_prev, 0]) * self.Cf) / self.m)*self.u[mod_prev,0])*self.dt
+                        ((np.cos(self.u[mod_prev, 0]) * self.Cf) / self.m)*self.u[mod_prev,0])*self.dt
             )
 
             # --------------------------------------------------------------------------------------------------------------------------
@@ -387,6 +387,7 @@ class Planner_Eud:
 
         else:
             self.opti.set_initial(self.x, np.ones((11,9)))
+            print("deault to 1s")
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         # # set control actions

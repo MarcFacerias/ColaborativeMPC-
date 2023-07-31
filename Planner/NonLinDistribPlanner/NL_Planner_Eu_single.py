@@ -12,7 +12,7 @@ class Planner_Eud:
     Attributes:
         solve: given ini_xPredicted computes the control action
     """
-    def __init__(self, Q, Qs, R, N, dt, map, id, dth, model_param = None, sys_lim = None):
+    def __init__(self, Q, Qs, R, dR, N, dt, map, id, dth, model_param = None, sys_lim = None):
 
         # system parameters:
         self.n_s = 9
@@ -102,6 +102,13 @@ class Planner_Eud:
             warnings.warn(msg)
             self.R = np.eye(self.n_u)
 
+        if dR.shape[0] == self.n_u:
+            self.dR   = dR
+        else:
+            msg = "Qs has not the correct shape!, defaulting to identity of " + str(self.n_u)
+            warnings.warn(msg)
+            self.dR = np.eye(self.n_u)
+
         self.N    = N
         self.dt = dt              # Sample time
         self.map = map[0]            # Used for getting the road curvature
@@ -160,10 +167,12 @@ class Planner_Eud:
             mod_u = (j-1)
 
             # cost asociated to the current agent
-            J += self.Q[0,0]*(self.x[j,0] - self.vx_ref)**2 + self.Q[1,1]*self.x[j,1]**2 + self.Q[2,2]*self.x[j,2]**2 +\
+            J += (self.Q[0,0]*(self.x[j,0] - self.vx_ref)**2 + self.Q[1,1]*self.x[j,1]**2 + self.Q[2,2]*self.x[j,2]**2 +\
                  self.Q[3,3]*self.x[j,3]**2 + self.Q[4,4]*self.x[j,4]**2 + self.Q[5,5]*self.x[j,5]**2 + self.Q[6,6]*self.x[j,6]**2 + self.Q[7,7]*self.x[j,7]**2 +\
-                 self.Q[8,8]*self.x[j,8]**2 + self.R[0,0]*self.du[mod_u,0]**2 + self.R[1,1]*self.du[mod_u,1]**2 + \
-                 self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2 )
+                 self.Q[8,8]*self.x[j,8]**2 +
+                 self.dR[0,0]*self.du[mod_u,0]**2 + self.dR[1,1]*self.du[mod_u,1]**2 +
+                 self.R[0, 0] * self.u[mod_u, 0] ** 2 + self.R[1, 1] * self.u[mod_u, 1] ** 2 +
+                 self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2 ))
 
         return J
 

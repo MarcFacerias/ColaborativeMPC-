@@ -5,14 +5,15 @@ import matplotlib.pyplot as plt
 import time
 import os
 import warnings
+import pickle
 
 sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/Utilities')
 sys.path.append(sys.path[0]+'/plotter')
 sys.path.append(sys.path[0]+'/Config/NL_EU')
 
-# from NL_Planner_Eu_singleNM import Planner_Eud
-from NL_Planner_Eu_single import Planner_Eud
+from NL_Planner_Eu_singleNM import Planner_Eud
+# from NL_Planner_Eu_single import Planner_Eud
 from trackInitialization import Map, wrap
 from plot_tools import *
 from utilities import checkEnd, initialise_agents
@@ -28,7 +29,9 @@ class agent(initialiserNL_EU):
         self.dt = dt
         self.N = N
         self.x0 = x0
-        self.Controller = Planner_Eud(self.Q,self.Qs, self.R, N, dt, Map, id, dth)
+        self.uPred_hist = []
+        self.sPred_hist = []
+        self.Controller = Planner_Eud(self.Q,self.Qs, self.R, self.dR, N, dt, Map, id, dth)
         self.states = []
         self.u = []
         self.time_op = []
@@ -43,13 +46,10 @@ class agent(initialiserNL_EU):
         feas, xPred, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
         self.time_op.append(time.time() - tic)
         self.status.append(feas)
+        self.uPred_hist.append(self.Controller.uPred)
+        self.sPred_hist.append(xPred)
 
         return feas, self.Controller.uPred, xPred
-
-    def plot_experiment(self):
-
-        disp = plotter_offline(self.map)
-        disp.add_agent_ti(self)
 
     def save(self, xPred, uPred):
 
@@ -75,6 +75,32 @@ class agent(initialiserNL_EU):
             os.makedirs(path, exist_ok=True)
 
         np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
+
+    def save_var_pickle(self, vars = None, tags = None):
+        path = path_csv + str(self.id)
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
+        if vars is None:
+                with open(path + '/u.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
+                    pickle.dump(self.uPred_hist, f1)
+                with open(path + '/states.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
+                    pickle.dump(self.sPred_hist, f2)
+        else:
+
+            for i, var in enumerate(vars):
+
+                try:
+                    with open(path + '/' + tags[i] + '.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
+                        pickle.dump(var, f1)
+
+                except:
+                    with open(path +'/def' + str(i) + '.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
+                        pickle.dump(var, f2)
+                        msg = "WARNING no name asigned !"
+                        warnings.warn(msg)
+
 
 def eval_constraint(x1, x2, D):
 
@@ -132,6 +158,7 @@ def main():
 
         d.plot_offline_experiment(rs, color_list[0],path_csv)
         rs.save_to_csv()
+        rs.save_var_pickle()
 
         input("Press enter to continue...")
 
