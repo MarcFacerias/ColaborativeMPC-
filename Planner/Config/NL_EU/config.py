@@ -1,6 +1,11 @@
 # Imports
 import matplotlib.colors as mcolors
 import numpy as np
+import sys
+
+sys.path.append(sys.path[0]+'/Config')
+from base_class import experiment_utilities
+
 plot = False
 plot_end = True
 verb = True
@@ -32,8 +37,9 @@ def get_alpha():
     alpha = 0.25
     return alpha
 
-class initialiserNL_EU():
-    def __init__(self, model = "SCALED CAR"):
+class initialiserNL_EU(experiment_utilities):
+    def __init__(self, data, path, path_pickle, model = "SCALED CAR"):
+        super().__init__(data, path, path_pickle)
         if model == "SCALED CAR":
             self.model_param = {
                 "lf" : 0.125,

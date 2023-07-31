@@ -11,14 +11,12 @@ QUE SABEM
     QUE SABEM: 
         
         Tant LPV com CASADI funcionen amb el model arreglat per a agents independents
-
+        Els H llargs no es porten be amb el LPV, massa horitzo fa que peti
 
 COSES A FER
 
-
     Quins improvements voldria fer
-
-        Fer els codis de matlab per a plotejar cosetes maques -> Done 
+ 
         Pensar com millorar convergencia
         Tractar el cas on els hiperplans es calculen online 
 
@@ -29,8 +27,10 @@ TODO Paper
 
 TODO 
 
-    Canviar el plotter per a que tingui shades -> Faltara mirar com fer que els colors representin el temps + tunejar el spacing
     EL TEMA DELS SEPARATING HYPERPLANS AMB CASADI ESTA DESACTUALISAT!!! 
+    Actualitzar CASADI amb els nous templates de classe
+    fer un exemple d'experiment i escriure + plotejar els resultats
+    investigar pq no va amb horitzons llargs
 
 
     

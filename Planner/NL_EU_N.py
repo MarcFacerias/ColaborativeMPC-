@@ -16,12 +16,13 @@ from trackInitialization import Map, wrap
 from plot_tools import *
 from utilities import checkEnd, initialise_agents
 from config import *
+from plot_tools import *
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 class agent(initialiserNL_EU):
 
-    def __init__(self, N, Map, dt, x0, id, dth):
+    def __init__(self, N, Map, dt, x0, id, dth, n_agents):
         super().__init__()
         self.map = Map
         self.dt = dt
@@ -44,60 +45,8 @@ class agent(initialiserNL_EU):
         feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
         self.time_op.append(time.time() - tic)
         self.status.append(feas)
-        self.uPred_hist.append(self.Controller.uPred)
-        self.sPred_hist.append(xPred)
 
         return feas, self.Controller.uPred, self.Controller.xPred, Solution
-
-    def save(self, xPred, uPred):
-
-        self.states.append(xPred[0,:])
-        self.u.append(uPred[0,:])
-
-    def save_to_csv(self):
-
-        path = path_csv + str(self.id)
-
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
-
-        np.savetxt(path+'/states.dat', self.states, fmt='%.5e',delimiter=' ')
-        np.savetxt(path + '/u.dat', self.u, fmt='%.5e', delimiter=' ')
-        np.savetxt(path + '/time.dat', self.time_op, fmt='%.5e', delimiter=' ')
-
-    def save_var_to_csv(self,var, name):
-
-        path = path_csv + str(self.id)
-
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
-
-        np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
-
-    def save_var_pickle(self, vars = None, tags = None):
-        path = path_csv + str(self.id)
-
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
-
-        if vars is None:
-                with open(path + '/u.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
-                    pickle.dump(self.uPred_hist, f1)
-                with open(path + '/states.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
-                    pickle.dump(self.sPred_hist, f2)
-        else:
-
-            for i, var in enumerate(vars):
-
-                try:
-                    with open(path + '/' + tags[i] + '.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
-                        pickle.dump(var, f1)
-
-                except:
-                    with open(path +'/def' + str(i) + '.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
-                        pickle.dump(var, f2)
-                        msg = "WARNING no name asigned !"
-                        warnings.warn(msg)
 
 
 def eval_constraint(x1, x2, D):
@@ -134,12 +83,6 @@ def main():
     rs     = [None] * n_agents
     data   = [None] * n_agents
 
-    if plot:
-        disp = plotter(maps[0],n_agents)
-
-    if plot_end:
-        d = plotter_offline(maps[0])
-
     for i in range(0, n_agents):
         data[i] = [x_old[i].flatten(), u_old[i].flatten(), np.zeros((N, 4)), np.zeros((N, n_agents)),
                     np.zeros((N, n_agents))]
@@ -151,7 +94,6 @@ def main():
 
     cost_old = np.zeros((n_agents, n_agents, N))
     lambdas_hist = []
-    cost_hist = []
     it = 0
 
     while(it<max_it and not checkEnd(x_pred, maps)):
@@ -232,38 +174,6 @@ def main():
         time_OCD.append((toc - tic)/n_agents)
         it += 1
 
-        if plot :
-
-            for idx in range(0, n_agents):
-                disp.plot_step(x_pred[idx][1, 7], x_pred[idx][1, 8], x_pred[0][1, 5], idx)
-
-        if verb :
-
-            print("--------------------------------------------------------------")
-            print("it: " + str(it))
-            print("length " + str(it_OCD))
-            print(time.time() - tic)
-            print("agents x : " + str(agents[0,:,0]))
-            print("agents y : " + str(agents[0,:,1]))
-
-            for i in range(0,n_agents):
-                print("---------------------Agents---------------------------------------")
-                print("Agent " + str(i) + " track s: " + str(x_pred[i][0,-3]) + "/" + str(maps[i].TrackLength[0]))
-                print("Agent " + str(i) + " u0: " + str(u_pred[i][0,0]) + " u1: " + str(u_pred[i][0,1]))
-
-            print("---------------------END Agents---------------------------------------")
-            print("avg computational time: " + str((toc-tic)/n_agents))
-            print("--------------------------------------------------------------")
-
-    if plot_end:
-
-        for j,r in enumerate(rs):
-            d.plot_offline_experiment(r, color_list[j])
-            r.save_to_csv()
-
-        r[0].save_var_to_csv(time_OCD, "time_OCD")
-        r[0].save_var_to_csv(cost_hist, "cost_hist2")
-        input("Press enter to continue...")
 
 def plot_performance( agent):
 

@@ -15,9 +15,3 @@ Modelling language
 https://www.tandfonline.com/doi/epdf/10.1080/19401493.2022.2120631?needAccess=true&role=button
     Borin/Baron -> Mixed Integer non linear programming  
     ipopt -> non linear solver with quite good results here 
-
-Plan de la setmana que ve 
-
-    * Acabar de instalar el CASADI 
-    * Programar el solver no lineal de un MPC normalito
-    * Fer el codi no linear a partir del codi que tenim ara i testejar ad eternum 

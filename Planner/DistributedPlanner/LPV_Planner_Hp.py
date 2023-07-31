@@ -428,7 +428,7 @@ def _buildMatCost(Controller):
     Px_total = np.tile(Px, N+1) # expand p along the horizon
 
     # # # Add constraints to maximise distance. Note that sign is changed wrt to the resular criteria !
-    '''for t in range(1, Controller.N + 1):
+    for t in range(1, Controller.N + 1):
 
         idx = t * Controller.n_exp
         for i, el in enumerate(Controller.agent_list):
@@ -436,7 +436,7 @@ def _buildMatCost(Controller):
             Px_total[idx + 7] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 0, i]
             Px_total[idx + 8] += Controller.wq * Controller.weights[t-1,i] * Controller.planes[t - 1, 1, i]
 
-'''
+
     P= 2*np.hstack((Px_total, Pu, Pdu)) # padd missing values
 
     return 2 * M0, P
