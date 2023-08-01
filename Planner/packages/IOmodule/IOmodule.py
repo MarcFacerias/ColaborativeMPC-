@@ -9,7 +9,8 @@ class io_class():
 
         self.plot = settings["plot"]
         self.verb = settings["verb"]
-        self.verb_OCD = settings["verb_OCD"]
+        if "verb_OCD" in settings.keys():
+            self.verb_OCD = settings["verb_OCD"]
         self.n_agent = settings["n_agents"]
         self.color = settings["color_list"]
         self.save = settings["save_data"]

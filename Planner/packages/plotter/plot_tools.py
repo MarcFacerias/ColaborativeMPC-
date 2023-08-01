@@ -136,8 +136,6 @@ def _initializeFigure_xy(map, sm = 1):
         plt.plot(Points3[:, 0], Points3[:, 1], '-b', linestyle='dashed')
         plt.plot(Points4[:, 0], Points4[:, 1], '-b', linestyle='dashed')
 
-    plt.show()
-
     return fig, axtr
 
 

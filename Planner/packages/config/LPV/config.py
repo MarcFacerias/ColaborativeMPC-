@@ -10,7 +10,7 @@ settings = {
     "verb" : 0,
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 3,
-    "max_it" : 5000,
+    "max_it" : 3000,
     "N" : 15,
     "dt" : 0.01,
 
@@ -18,9 +18,13 @@ settings = {
     # map_type : "oval",
     # map_type : "SL",
 
-    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    # "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    # "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    # "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+
+    "path_csv": "I:\Marc\PhD\ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    "path_img": "I:\Marc\PhD\ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    "path_pck": "I:\Marc\PhD\ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
 
 }
 
