@@ -24,7 +24,7 @@ settings = {
     #OCD specific
     "it_conv" : 1,
     "max_it_OCD" : 10,
-    "verb_OCD" : 10,
+    "verb_OCD" : True,
     "LPV": True,
 }
 

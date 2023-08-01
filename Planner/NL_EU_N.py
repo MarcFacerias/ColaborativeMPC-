@@ -18,7 +18,7 @@ class agent(initialiserNL):
         self.dt = settings["dt"]
         self.N =  settings["N"]
         self.x0 = x0
-        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.dR, self.N, self.dt, Map, id, self.model_param, self.sys_lim)
+        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.dR, self.N, self.dt, maps, id, self.model_param, self.sys_lim)
         self.states = []
         self.u = []
         self.time_op = []
@@ -75,7 +75,7 @@ def main():
     data   = [None] * n_agents
 
     for i in range(0, n_agents):
-        data[i] = [x_old[i].flatten(), u_old[i].flatten(), np.zeros((N, 4)), np.zeros((N, n_agents)),
+        data[i] = [x_old[i], u_old[i], np.zeros((N, 2)), np.zeros((N, 2)), np.zeros((N, n_agents)),
                     np.zeros((N, n_agents))]
 
     # initialise controllers and data holders

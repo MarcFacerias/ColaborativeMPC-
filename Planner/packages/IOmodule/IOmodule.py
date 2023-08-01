@@ -9,6 +9,7 @@ class io_class():
 
         self.plot = settings["plot"]
         self.verb = settings["verb"]
+        self.verb_OCD = settings["verb_OCD"]
         self.n_agent = settings["n_agents"]
         self.color = settings["color_list"]
         self.save = settings["save_data"]
@@ -34,7 +35,7 @@ class io_class():
             print("length " + str(it_OCD))
             for i in range(0, self.n_agent):
                 print("---------------------Agents---------------------------------------")
-                print("Agent " + str(i) + " track s: " + x_pred[i][1, :])
+                print("Agent " + str(i) + " track s: " + str(x_pred[i][1, 6]))
             print("-------------------------------------------------")
 
     def update(self, x_pred, u_pred ,agents, it, error = False, OCD_ct = None, end = False):

@@ -40,16 +40,16 @@ class PlannerEu(base_nl_constr):
                       self.Q[6,6] * self.states_param[i][j,6] ** 2 + self.Q[7,7] * self.states_param[i][j,7] ** 2 +
                       self.Q[8,8] * self.states_param[i][j,8] ** 2 +
                       self.R[0,0] * self.u_param[i][j-1,0] ** 2 + self.R[1,1] * self.u_param[i][j-1,1] ** 2 +
-                      self.dR[0,0]*self.du_param[i][j-1,0] ** 2 + self.dR[1,1]*self.du_param[i][j-1,1] ** 2  +
+                      self.dR[0,0]* self.du_param[i][j-1,0] ** 2 + self.dR[1,1]*self.du_param[i][j-1,1] ** 2  +
                       self.model_slack * (self.s_agent_param[i][j-1,0] ** 2 + self.s_agent_param[i][j-1,1]**2))
 
 
                 if self.id < el:
                     J+= self.lambdas[i,j-1]*(self.param_slack_dis[i][j-1,self.id] + self.dth - sqrt((self.x[j,7] - self.pose_param[i][j-1,0])**2 + (self.x[j,8]
-                         - self.pose_param[i][j-1,1])**2)) + self.obs_slack*(self.param_slack_dis[i][j-1,self.id]**2)
+                         - self.pose_param[i][j-1,1])**2)) + self.obs_slack*(self.param_slack_dis[i][j-1,i]**2)
 
                 else:
-                    J += self.obs_slack * (self.slack_dis[slack_idx] ** 2)
+                    J += self.obs_slack * (self.slack_dis[j-1,i] ** 2)
 
         return J
 
@@ -68,10 +68,9 @@ class PlannerEu(base_nl_constr):
             self.opti.subject_to(self.opti.bounded(-self.max_dc, self.u[j-1,1], self.max_ac))
 
             for i,el in enumerate(self.agent_list):
-                slack_idx = (j - 1) * self.aux + i
                 if self.id > el:
                     #If ego vehicle add euclidean distance constraint, otherwise this will be part of the slave cost function
-                    self.opti.subject_to( sqrt((self.x[j,7] - self.pose_param[i][j-1,0])**2 + (self.x[j,8] - self.pose_param[i][j-1,1])**2) + self.slack_dis[slack_idx] > self.dth )
+                    self.opti.subject_to( sqrt((self.x[j,7] - self.pose_param[i][j-1,0])**2 + (self.x[j,8] - self.pose_param[i][j-1,1])**2) + self.slack_dis[j-1,i] > self.dth )
 
     def solve(self, ini_xPredicted = None, Last_xPredicted = None, uPred = None, lambdas = None, x_agents = None, agents_id = None, data = None):
         """Computes control action
@@ -100,11 +99,11 @@ class PlannerEu(base_nl_constr):
                 placeholder_pose = self.opti.parameter(self.N, 2)
                 self.pose_param.append(placeholder_pose)
 
-                placeholder_states = self.opti.parameter(self.n_s * (self.N + 1))
+                placeholder_states = self.opti.parameter(self.N + 1,self.n_s)
                 self.states_param.append(placeholder_states)
 
-                placeholder_du = self.opti.parameter(2,self.N)
-                placeholder_u = self.opti.parameter(2,self.N)
+                placeholder_du = self.opti.parameter(self.N,2)
+                placeholder_u = self.opti.parameter(self.N,2)
 
                 self.du_param.append(placeholder_du)
                 self.u_param.append(placeholder_u)
@@ -112,12 +111,12 @@ class PlannerEu(base_nl_constr):
                 placeholder_sa = self.opti.parameter(self.N,2)
                 self.s_agent_param.append(placeholder_sa)
 
-                placeholder_sp = self.opti.parameter((self.N), (self.n_neighbours+1))
+                placeholder_sp = self.opti.parameter(self.N,self.n_neighbours+1)
                 self.param_slack_dis.append(placeholder_sp)
 
             # if we are masters we will add a slack to the distance constraint
             if self.aux != 0:
-                self.slack_dis = self.opti.variable((self.N) * self.aux)
+                self.slack_dis = self.opti.variable(self.N,self.aux)
 
             # store constraint and cost function
             self.ineq_constraints()
@@ -128,13 +127,16 @@ class PlannerEu(base_nl_constr):
 
         # set initial statse
         if not Last_xPredicted is None:
-            self.opti.set_initial(self.x,Last_xPredicted.flatten())
+            self.opti.set_initial(self.x,Last_xPredicted)
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         # set control actions
         if not uPred is None:
-            self.opti.set_initial(self.u,uPred.flatten())
+            self.opti.set_initial(self.u,uPred)
+            self.opti.set_value(self.initial_u, uPred[0,:])
+        else:
+            self.opti.set_value(self.initial_u, np.zeros(1,self.n_u))
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -150,9 +152,10 @@ class PlannerEu(base_nl_constr):
         for i,agent in enumerate(data):
 
             self.opti.set_value(self.states_param[i], agent[0])
-            self.opti.set_value(self.du_param[i], agent[1])
-            self.opti.set_value(self.s_agent_param[i], agent[2])
-            self.opti.set_value(self.param_slack_dis[i], agent[3])
+            self.opti.set_value(self.u_param[i], agent[1])
+            self.opti.set_value(self.du_param[i], agent[2])
+            self.opti.set_value(self.s_agent_param[i], agent[3])
+            self.opti.set_value(self.param_slack_dis[i], agent[4])
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -212,16 +215,8 @@ class PlannerEu(base_nl_constr):
             if not self.aux == 0:
                 self._slack = self.opti.debug.value(self.slack_dis)
 
-
-        # Create the output values TODO: is this necesary?
-        idx = np.arange(0, self.n_s)
-
-        for i in range(1, self.N + 1):
-            aux = np.arange(0, self.n_s) + i * self.n_s
-            idx = np.hstack((idx, aux))
-
-        self.xPred = np.reshape((x)[idx], (self.N + 1, self.n_s)) # retrieve states
-        self.uPred = np.reshape(u, (self.N, self.n_u)) # retrieve control actions
+        self.xPred = x
+        self.uPred = u
 
         self.solverTime = time.time() - startTimer # keep the solver
 
@@ -230,8 +225,9 @@ class PlannerEu(base_nl_constr):
         slack = np.zeros(((self.N),(self.n_neighbours+1)))
 
         if not self.aux == 0:
-            slack[:,0:(self.id)] = self._slack.reshape((self.N, -1))
+            slack[:,0:(self.id)] = self._slack.reshape((self.N,-1))
 
-        data = [x,du,slack_agent,slack] #return the data
+
+        data = [x,u,du,slack_agent,slack] #return the data
 
         return status, x, data # the 0 is a placeholder to the generated planes, which do not exist here
