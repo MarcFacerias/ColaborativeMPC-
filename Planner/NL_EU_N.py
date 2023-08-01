@@ -1,36 +1,24 @@
 
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
-import time
-import os
-import warnings
 
-sys.path.append(sys.path[0]+'/nonLinDistribPlanner')
-sys.path.append(sys.path[0]+'/utilities')
-sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/config/NL_EU')
-
-from NL_Planner_Eu import Planner_Eud
-from trackInitialization import Map, wrap
-from plot_tools import *
-from utilities import checkEnd, initialise_agents
-from config import *
-from plot_tools import *
+from Planner.planners.nonLinDistribPlanner import PlannerEu
+from Planner.packages.mapManager import Map
+from Planner.packages.utilities import checkEnd, initialise_agents
+from Planner.packages.IOmodule import io_class
+from Planner.packages.config.NL import initialiserNL, x0_database, settings, eval_constraintEU,get_alpha
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-class agent(initialiserNL_EU):
+class agent(initialiserNL):
 
-    def __init__(self, N, Map, dt, x0, id, dth, n_agents):
-        super().__init__()
-        self.map = Map
-        self.dt = dt
-        self.N = N
+    def __init__(self, settings, maps, x0, id ):
+        super().__init__(self, settings['path_csv'], settings['path_pck']) # initialise the initialiser
+        self.map = maps
+        self.dt = settings["dt"]
+        self.N =  settings["N"]
         self.x0 = x0
-        self.uPred_hist = []
-        self.sPred_hist = []
-        self.Controller = Planner_Eud(self.Q,self.Qs, self.R, N, dt, Map, id, dth, self.model_param, self.sys_lim)
+        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.N, self.dt, Map, id, settings["min_dist"], self.model_param, self.sys_lim)
         self.states = []
         self.u = []
         self.time_op = []
@@ -41,29 +29,32 @@ class agent(initialiserNL_EU):
 
     def one_step(self, lambdas, agents, agents_id, uPred = None, xPred = None):
 
-        tic = time.time()
         feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
-        self.time_op.append(time.time() - tic)
-        self.status.append(feas)
+        self.save(self.Controller.xPred, self.Controller.uPred, feas)
+
 
         return feas, self.Controller.uPred, self.Controller.xPred, Solution
 
-
-def eval_constraint(x1, x2, D):
-
-    cost1 = D - np.sqrt(sum((x1-x2)**2)) # the OCD update depends on on the diference between the minimum D and the euclidean dist
-
-    return np.array(cost1)
 
 def main():
 
 #########################################################
 #########################################################
 
+    # Map settings
+
+    n_agents = settings["n_agents"]
+    map_type = settings["map_type"]
+    N = settings["N"]
+    dt = settings["dt"]
+    max_it = settings["max_it"]
+    dth = settings["min_dist"]
+    max_it_OCD = settings["max_it_OCD"]
+    it_conv = settings["it_conv"]
+
     # controller constants
     finished = False
     finished_ph = False
-    time_OCD = []
 
     # set constants
     x0 = x0_database[0:n_agents]
@@ -92,13 +83,14 @@ def main():
         rs[i] = agent(N, maps[i], dt, x_old[i], i, dth)
         rs[i].data_collec = [data[j] for j in ns[i]]
 
+    io = io_class(settings, rs)
+
     cost_old = np.zeros((n_agents, n_agents, N))
     lambdas_hist = []
     it = 0
 
     while(it<max_it and not checkEnd(x_pred, maps)):
 
-        tic = time.time()
         lambdas = np.zeros((n_agents, n_agents, N))
         it_OCD = 0
         itc = 0
@@ -123,7 +115,7 @@ def main():
                     for j in range(0,n_agents):
 
                         if (i != j) and i<j:
-                            cost[i,j,k-1] = eval_constraint(agents[k,i,:],agents[k,j,:],dth)
+                            cost[i,j,k-1] = eval_constraintEU(agents[k,i,:],agents[k,j,:],dth)
 
             alpha = get_alpha()
             lambdas += alpha*cost
@@ -153,25 +145,15 @@ def main():
                 print("max it reached")
                 finished = True
 
-            it_OCD += 1
-
-            if verb_OCD:
-
-                print("-------------------------------------------------")
-                print("length " + str(it_OCD))
-                for i in range(0, n_agents):
-                    print("---------------------Agents---------------------------------------")
-                    print("Agent " + str(i) + " track s: " + x_pred[i][1,:])
-                print("-------------------------------------------------")
+            io.updateOCD(x_pred, it_OCD)
 
         for j,r in enumerate(rs):
             r.save(x_pred[j], u_pred[j])
             r.x0 = x_pred[j][1:, :]
 
         u_old = u_pred
-        toc = time.time()
         finished = False
-        time_OCD.append((toc - tic)/n_agents)
+        io.update( x_pred, u_pred ,agents, it)
         it += 1
 
 

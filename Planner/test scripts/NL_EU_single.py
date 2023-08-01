@@ -10,7 +10,7 @@ import pickle
 sys.path.append(sys.path[0]+'/nonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/config/NL_EU')
+sys.path.append(sys.path[0]+'/config/NL')
 
 from NL_Planner_Eu_singleNM import Planner_Eud
 # from NL_Planner_Eu_single import Planner_Eud

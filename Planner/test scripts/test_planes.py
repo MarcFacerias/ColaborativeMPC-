@@ -1,21 +1,7 @@
 #!/usr/bin/env python27
 
-import sys
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-import time
-import math
-from math import isclose
-
-sys.path.append(sys.path[0]+'/distributedPlanner')
-sys.path.append(sys.path[0]+'/utilities')
-sys.path.append(sys.path[0]+'/plotter')
-
-from PathFollowingLPVMPC_distri import PathFollowingLPV_MPC, _buildMatEqConst
-from trackInitialization import Map, wrap
-from plot_vehicle import *
-from compute_plane import *
 
 plot = True
 it = True
@@ -51,8 +37,6 @@ def plot_hyperplanes(planes, pointX, pointY):
         x = np.arange(-1,1,0.1)
         y_hyperplane = (-a * x - c) / b
         plt.plot(x, y_hyperplane, color)
-    # Plot data points and hyperplane
-    # plt.scatter(x, y)
 
     plt.scatter(ego[0], ego[1], c=color,marker="o")
     plt.scatter(neighbour[0], neighbour[1], c=color,marker="o")

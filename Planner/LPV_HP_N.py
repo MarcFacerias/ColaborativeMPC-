@@ -1,20 +1,14 @@
 
 # Global Variables
-import sys
 import numpy as np
 import warnings
 
-sys.path.append(sys.path[0]+'/distributedPlanner')
-sys.path.append(sys.path[0]+'/utilities')
-sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/config/LPV')
-
-from LPV_Planner_Hp import PlannerLPV
-from trackInitialization import Map, wrap
-from plot_tools import *
-from utilities import checkEnd, initialise_agents
-from io_module import io_class
-from config import settings, initialiserLPV, x0_database
+from Planner.planners.distributedPlanner import PlannerLPV
+from Planner.packages.mapManager import Map
+from Planner.packages.utilities import checkEnd, initialise_agents
+from Planner.packages.IOmodule import io_class
+from Planner.packages.config.LPV import initialiserLPV, settings
+from Planner.packages.config import x0_database
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
@@ -50,7 +44,7 @@ class agent(initialiserLPV):
             print(self.Controller.sPred[:,1:])
 
         uPred, xPred = self.Controller.uPred, self.Controller.xPred
-        self.save(xPred, uPred, planes, feas)
+        self.save(xPred, uPred, feas, planes)
 
         return feas,uPred, xPred, planes, raw
 

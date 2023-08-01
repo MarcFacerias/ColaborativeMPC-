@@ -28,10 +28,14 @@ TODO Paper
 TODO 
 
     EL TEMA DELS SEPARATING HYPERPLANS AMB CASADI ESTA DESACTUALISAT!!! 
-    Actualitzar CASADI amb els nous templates de classe
+    Actualitzar CASADI amb els nous templates de classe Today
     fer un exemple d'experiment i escriure + plotejar els resultats
     investigar pq no va amb horitzons llargs
-    refactor names and folders
+    refactor names and folders Today
+
+    CASADI: 
+        preparar pel cas 1 agent
+        preparar el cas dels dos models         
 
 
     
