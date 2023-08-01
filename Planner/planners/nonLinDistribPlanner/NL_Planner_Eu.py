@@ -17,7 +17,6 @@ class PlannerEu(base_nl_constr):
         # parametric generation cost function
         J  = 0
         for j in range (1,self.N+1):
-            mod_u = (j-1)
 
             # cost asociated to the current agent
             J += (self.Q[0,0]*(self.x[j,0] - self.vx_ref)**2 + self.Q[1,1]*self.x[j,1]**2 +
@@ -25,13 +24,11 @@ class PlannerEu(base_nl_constr):
                   self.Q[4,4]*self.x[j,4]**2 + self.Q[5,5]*self.x[j,5]**2 +
                   self.Q[6,6]*self.x[j,6]**2 + self.Q[7,7]*self.x[j,7]**2 +\
                   self.Q[8,8]*self.x[j,8]**2 +
-                 self.dR[0,0]*self.du[mod_u,0]**2 + self.dR[1,1]*self.du[mod_u,1]**2 +
-                 self.R[0, 0] * self.u[mod_u, 0] ** 2 + self.R[1, 1] * self.u[mod_u, 1] ** 2 +
+                 self.dR[0,0]*self.du[j-1,0]**2 + self.dR[1,1]*self.du[j-1,1]**2 +
+                 self.R[0,0] * self.u[j-1,0] ** 2 + self.R[1,1] * self.u[j-1,1] ** 2 +
                  self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2 ))
 
             for i, el in enumerate(self.agent_list):
-
-                slack_idx = (j - 1) * self.aux + i
 
                 # cost asociated to the neighbouring agents
                 J += (self.Q[0,0] * (self.states_param[i][j,0] - self.vx_ref)** 2+ self.Q[1,1] * self.states_param[i][j,1] ** 2 +
@@ -136,7 +133,7 @@ class PlannerEu(base_nl_constr):
             self.opti.set_initial(self.u,uPred)
             self.opti.set_value(self.initial_u, uPred[0,:])
         else:
-            self.opti.set_value(self.initial_u, np.zeros(1,self.n_u))
+            self.opti.set_value(self.initial_u, np.zeros((self.n_u,1)))
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 

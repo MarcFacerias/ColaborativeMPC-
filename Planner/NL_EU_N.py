@@ -98,9 +98,12 @@ def main():
         while(not (it_OCD > 2 and finished)) :
             # OCD loop, we want to force at least 2 iterations + it_conv iterations without significant changes
             # run an instance of the optimisation problems
+            io.tic()
 
             for i, r in enumerate(rs):
                 feas[i], u_pred[i], x_pred[i], raws[i] = r.one_step( lambdas[[i],ns[i],:], agents[:,ns[i],:], ns[i], u_old[i], raws[i])
+
+            io.toc()
 
             for j,r in enumerate(rs):
                 r.data_collec = [rs[i].data_opti for i in ns[j]]
@@ -109,6 +112,9 @@ def main():
 
             # update the values of x,y for the obstacle avoidance constraints
             agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:], 0, 1)
+
+            if n_agents == 1:
+                break
 
             for k in range(1,N+1):
                 for i in range(0,n_agents):
@@ -130,10 +136,6 @@ def main():
                 finished_ph &= np.allclose(cost, cost_old, atol=0.01)
                 itc += 1
 
-            # store values from current iteration into the following one
-            x_old = x_pred
-            cost_old = cost
-
             if not finished_ph :
                 itc = 0
 
@@ -144,6 +146,10 @@ def main():
             if it_OCD > max_it_OCD:
                 print("max it reached")
                 finished = True
+
+            # store values from current iteration into the following one
+            x_old = x_pred
+            cost_old = cost
 
             io.updateOCD(x_pred, it_OCD)
 

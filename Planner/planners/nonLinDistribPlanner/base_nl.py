@@ -316,9 +316,9 @@ class base_nl_constr:
         else:
             self.NL_model()
 
-        for j in range(0, self.N-1):
-                self.opti.subject_to(self.u[j, 0] == self.u[j, 0] + self.du[j, 0])
-                self.opti.subject_to(self.u[j, 1] == self.u[j, 1] + self.du[j, 1])
+        for j in range(1, self.N-1):
+                self.opti.subject_to(self.u[j, 0] == self.u[j-1, 0] + self.du[j, 0])
+                self.opti.subject_to(self.u[j, 1] == self.u[j-1, 1] + self.du[j, 1])
 
     def update_parameters(self,states,u):
 

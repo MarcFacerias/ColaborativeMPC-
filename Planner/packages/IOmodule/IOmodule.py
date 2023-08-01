@@ -16,6 +16,8 @@ class io_class():
         self.path = settings["path_img"]
 
         self.sys  = system
+        self._tic = 0
+        self._toc = 0
 
         if self.plot == 1:
             self.disp = plotter(system[0].map, self.n_agent)
@@ -73,11 +75,9 @@ class io_class():
                 print("Agent " + str(i) + " track s: " + str(x_pred[i][0,-3]) + "/" + track_len)
                 print("Agent " + str(i) + " u0: " + str(u_pred[i][0,0]) + " u1: " + str(u_pred[i][0,1]))
                 print("Agent " + str(i) + " v: " + str(x_pred[i][1, 0]) + " ey: " + str(x_pred[i][1, 3]))
-                dist_str = [(str(el) + " m;") for el in self.sys[i].Controller.get_dist()]
-                print("Disctances: " + "".join(dist_str))
 
             print("---------------------END Agents---------------------------------------")
-            print("avg computational time: " + str((self._toc - self._tic)/self.sys.n_agents))
+            print("avg computational time: " + str((self._toc - self._tic)/self.n_agent))
             print("--------------------------------------------------------------")
 
         else:

@@ -7,9 +7,9 @@ from Planner.packages.config import experiment_utilities
 settings = {
     "plot" : -1, # 0: none, 1: online, 2: offline, -1: only save picture
     "save_data" : True,
-    "verb" : 0,
+    "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 3,
+    "n_agents" : 1,
     "max_it" : 5000,
     "min_dist": 0.25,
     "N" : 15,
@@ -17,9 +17,9 @@ settings = {
     "map_type" : "Highway",
     # map_type : "oval",
     # map_type : "SL",
-    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestNL/",
+    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestNL/",
+    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestNL/",
 
     #OCD specific
     "it_conv" : 1,
