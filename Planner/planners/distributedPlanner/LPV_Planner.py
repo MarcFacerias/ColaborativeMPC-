@@ -16,7 +16,7 @@ class PlannerLPV:
     Attributes:
         solve: given x0 computes the control action
     """
-    def __init__(self, Q, wq, Qs ,R, dR, N, dt, map, id, model_param = None, sys_lim = None):
+    def __init__(self, Q, Qs,R, dR , N, dt, map, id, wq = 0, model_param = None, sys_lim = None):
 
         self.dR = dR # derivative cost
         self.n_s = 9 # states

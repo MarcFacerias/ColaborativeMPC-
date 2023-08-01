@@ -18,9 +18,9 @@ settings = {
     # map_type : "oval",
     # map_type : "SL",
 
-    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
-    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
-    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
+    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
 
 }
 

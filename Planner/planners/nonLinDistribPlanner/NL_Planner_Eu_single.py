@@ -2,12 +2,12 @@
 import time
 from casadi import *
 import numpy as np
-from utilities import Curvature, get_ey
+from Planner.packages.utilities import curvature, get_ey
 
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-class Planner_Eud:
+class PlannerEu:
     """Create the Path Following LMPC controller with LTV model
     Attributes:
         solve: given ini_xPredicted computes the control action
@@ -164,14 +164,13 @@ class Planner_Eud:
         # parametric generation cost function
         J  = 0
         for j in range (1,self.N+1):
-            mod_u = (j-1)
 
             # cost asociated to the current agent
             J += (self.Q[0,0]*(self.x[j,0] - self.vx_ref)**2 + self.Q[1,1]*self.x[j,1]**2 + self.Q[2,2]*self.x[j,2]**2 +\
                  self.Q[3,3]*self.x[j,3]**2 + self.Q[4,4]*self.x[j,4]**2 + self.Q[5,5]*self.x[j,5]**2 + self.Q[6,6]*self.x[j,6]**2 + self.Q[7,7]*self.x[j,7]**2 +\
                  self.Q[8,8]*self.x[j,8]**2 +
-                 self.dR[0,0]*self.du[mod_u,0]**2 + self.dR[1,1]*self.du[mod_u,1]**2 +
-                 self.R[0, 0] * self.u[mod_u, 0] ** 2 + self.R[1, 1] * self.u[mod_u, 1] ** 2 +
+                 self.dR[0,0]*self.du[j-1,0]**2 + self.dR[1,1]*self.du[j-1,1]**2 +
+                 self.R[0, 0] * self.u[j-1, 0] ** 2 + self.R[1, 1] * self.u[j-1, 1] ** 2 +
                  self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2 ))
 
         return J
@@ -288,7 +287,7 @@ class Planner_Eud:
             theta = states[j,5]
             s = states[j,6]
 
-            cur = Curvature(s, self.map)
+            cur = curvature(s, self.map)
             delta = u[j, 0]  # EA: steering angle at K-1
 
             self.opti.set_value(self.A12[j], (np.sin(delta) * self.Cf) / (self.m * vx))

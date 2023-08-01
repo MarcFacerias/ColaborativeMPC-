@@ -6,7 +6,7 @@ from Planner.planners.nonLinDistribPlanner import PlannerEu
 from Planner.packages.mapManager import Map
 from Planner.packages.utilities import checkEnd, initialise_agents
 from Planner.packages.IOmodule import io_class
-from Planner.packages.config.NL import initialiserNL, x0_database, settings, eval_constraintEU,get_alpha
+from Planner.packages.config.NL import initialiserNL, x0_database, settings, eval_constraintEU, get_alpha
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
@@ -18,7 +18,7 @@ class agent(initialiserNL):
         self.dt = settings["dt"]
         self.N =  settings["N"]
         self.x0 = x0
-        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.N, self.dt, Map, id, settings["min_dist"], self.model_param, self.sys_lim)
+        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.dR, self.N, self.dt, Map, id, self.model_param, self.sys_lim)
         self.states = []
         self.u = []
         self.time_op = []
@@ -80,7 +80,7 @@ def main():
 
     # initialise controllers and data holders
     for i in range (0,n_agents):
-        rs[i] = agent(N, maps[i], dt, x_old[i], i, dth)
+        rs[i] = agent(settings, maps[i], x_old[i], i)
         rs[i].data_collec = [data[j] for j in ns[i]]
 
     io = io_class(settings, rs)

@@ -22,7 +22,7 @@ class agent(initialiserLPV):
         self.map = maps
         self.N = settings["N"]
         self.dt = settings["dt"]
-        self.Controller = PlannerLPV(self.Q, self.wq, self.Qs, self.R, self.dR, self.N, self.dt, self.map, id, self.model_param, self.sys_lim)
+        self.Controller = PlannerLPV(self.Q, self.Qs, self.R, self.dR, self.N, self.dt, self.map, id, self.wq, self.model_param, self.sys_lim)
         self.x0 = x0
         self.states = []
         self.u = []

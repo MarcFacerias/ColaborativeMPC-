@@ -11,19 +11,21 @@ settings = {
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 3,
     "max_it" : 5000,
+    "min_dist": 0.25,
     "N" : 15,
     "dt" : 0.01,
     "map_type" : "Highway",
     # map_type : "oval",
     # map_type : "SL",
-    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
-    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
-    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
+    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
+    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
 
     #OCD specific
     "it_conv" : 1,
     "max_it_OCD" : 10,
     "verb_OCD" : 10,
+    "LPV": True,
 }
 
 x0_database = [""] * 4

@@ -8,7 +8,7 @@ import os
 sys.path.append(sys.path[0]+'/nonLinDistribPlanner')
 sys.path.append(sys.path[0]+'/utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/distributedPlanner')
+sys.path.append(sys.path[0]+'/data')
 
 from NL_Planner_Hp import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
