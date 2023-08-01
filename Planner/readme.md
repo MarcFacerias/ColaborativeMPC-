@@ -31,6 +31,7 @@ TODO
     Actualitzar CASADI amb els nous templates de classe
     fer un exemple d'experiment i escriure + plotejar els resultats
     investigar pq no va amb horitzons llargs
+    refactor names and folders
 
 
     

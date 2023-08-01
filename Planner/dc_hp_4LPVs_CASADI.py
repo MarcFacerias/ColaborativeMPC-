@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
-sys.path.append(sys.path[0]+'/Utilities')
+sys.path.append(sys.path[0]+'/nonLinDistribPlanner')
+sys.path.append(sys.path[0]+'/utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/DistributedPlanner')
+sys.path.append(sys.path[0]+'/distributedPlanner')
 
 from NL_Planner_Hp import PathFollowingNL_MPC
 from trackInitialization import Map, wrap
@@ -77,7 +77,7 @@ class agent():
 
     def save_to_csv(self):
 
-        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/NonLinDistribPlanner/TestsPaperNLs/" + str(self.id)
+        path = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/experiments/test-bench/catkin_mrs/src/colab_mpc/src/nonLinDistribPlanner/TestsPaperNLs/" + str(self.id)
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -88,7 +88,7 @@ class agent():
 
     def save_var_to_csv(self,var, name):
 
-        path = "/NonLinDistribPlanner/TestsPaperNLs/"
+        path = "/nonLinDistribPlanner/TestsPaperNLs/"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)

@@ -8,8 +8,8 @@ import time
 import math
 from math import isclose
 
-sys.path.append(sys.path[0]+'/DistributedPlanner')
-sys.path.append(sys.path[0]+'/Utilities')
+sys.path.append(sys.path[0]+'/distributedPlanner')
+sys.path.append(sys.path[0]+'/utilities')
 sys.path.append(sys.path[0]+'/plotter')
 
 from PathFollowingLPVMPC_distri import PathFollowingLPV_MPC, _buildMatEqConst

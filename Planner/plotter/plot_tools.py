@@ -2,7 +2,7 @@
 
 import sys
 sys.path.append(sys.path[0]+'/ControllerObject')
-sys.path.append(sys.path[0]+'/Utilities')
+sys.path.append(sys.path[0]+'/utilities')
 
 import matplotlib.colors as mcolors
 import numpy as np

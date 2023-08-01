@@ -3,7 +3,7 @@ import matplotlib.colors as mcolors
 import numpy as np
 import sys
 
-sys.path.append(sys.path[0]+'/Config')
+sys.path.append(sys.path[0]+'/config')
 from base_class import experiment_utilities
 
 plot = False
@@ -29,8 +29,8 @@ x0_database[3] = [1.3, -0.16, 0.00, -0.25, 0, 0.0, 0, 0.0, 1.0]  # [vx vy psidot
 # map_type = "Highway"
 map_type = "oval"
 
-path_csv = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/NonLinDistribPlanner/TestEuPrePrint/"
-path_img = "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/NonLinDistribPlanner/TestEuPrePrint/"
+path_csv = "/Planner/nonLinDistribPlanner/TestEuPrePrint/"
+path_img = "/Planner/nonLinDistribPlanner/TestEuPrePrint/"
 
 def get_alpha():
 

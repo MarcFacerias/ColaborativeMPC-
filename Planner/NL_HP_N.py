@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
-sys.path.append(sys.path[0]+'/Utilities')
+sys.path.append(sys.path[0]+'/nonLinDistribPlanner')
+sys.path.append(sys.path[0]+'/utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/Config/NL_HP')
+sys.path.append(sys.path[0]+'/config/NL_HP')
 
 from NL_Planner_Hp import PathFollowingNL_MPC
 from trackInitialization import Map, wrap

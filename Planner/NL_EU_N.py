@@ -6,10 +6,10 @@ import time
 import os
 import warnings
 
-sys.path.append(sys.path[0]+'/NonLinDistribPlanner')
-sys.path.append(sys.path[0]+'/Utilities')
+sys.path.append(sys.path[0]+'/nonLinDistribPlanner')
+sys.path.append(sys.path[0]+'/utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/Config/NL_EU')
+sys.path.append(sys.path[0]+'/config/NL_EU')
 
 from NL_Planner_Eu import Planner_Eud
 from trackInitialization import Map, wrap

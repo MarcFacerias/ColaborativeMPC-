@@ -2,15 +2,11 @@
 # Global Variables
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
-import time
-import os
-import warnings
 
-sys.path.append(sys.path[0]+'/DistributedPlanner')
-sys.path.append(sys.path[0]+'/Utilities')
+sys.path.append(sys.path[0]+'/distributedPlanner')
+sys.path.append(sys.path[0]+'/utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/Config/LPV')
+sys.path.append(sys.path[0]+'/config/LPV')
 
 from LPV_model_val import LPV_Model
 from trackInitialization import Map, wrap

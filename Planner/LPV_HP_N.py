@@ -4,10 +4,10 @@ import sys
 import numpy as np
 import warnings
 
-sys.path.append(sys.path[0]+'/DistributedPlanner')
-sys.path.append(sys.path[0]+'/Utilities')
+sys.path.append(sys.path[0]+'/distributedPlanner')
+sys.path.append(sys.path[0]+'/utilities')
 sys.path.append(sys.path[0]+'/plotter')
-sys.path.append(sys.path[0]+'/Config/LPV')
+sys.path.append(sys.path[0]+'/config/LPV')
 
 from LPV_Planner_Hp import PlannerLPV
 from trackInitialization import Map, wrap

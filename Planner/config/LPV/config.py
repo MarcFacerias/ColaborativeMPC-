@@ -3,7 +3,7 @@ import matplotlib.colors as mcolors
 import numpy as np
 import sys
 
-sys.path.append(sys.path[0]+'/Config')
+sys.path.append(sys.path[0]+'/config')
 from base_class import experiment_utilities
 
 settings = {
@@ -20,9 +20,9 @@ settings = {
     # map_type : "oval",
     # map_type : "SL",
 
-    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestLPVPrePrint/",
-    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestLPVPrePrint/",
-    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/DistributedPlanner/TestLPVPrePrint/",
+    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
+    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
+    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/distributedPlanner/TestLPVPrePrint/",
 
 }
 

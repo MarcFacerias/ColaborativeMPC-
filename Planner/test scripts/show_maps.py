@@ -3,7 +3,7 @@ import sys
 import numpy as np
 
 
-sys.path.append(sys.path[0].strip("test scripts")+'Utilities')
+sys.path.append(sys.path[0].strip("test scripts")+'utilities')
 sys.path.append(sys.path[0].strip("test scripts")+'plotter')
 
 from trackInitialization import Map, wrap
