@@ -1,36 +1,34 @@
-plotter: script to plot shapes
-Controller Object: Original ROS Controller
-Controller Distributed Object: WIP Versions of the ROS controller 
-deprecated: Old tests/codes 
-Utilities: code that Euge wrote regarding general useful techniques 
-
-LIST OF COMMENTED FILES
-
-QUE SABEM
-
-    QUE SABEM: 
-        
-        Tant LPV com CASADI funcionen amb el model arreglat per a agents independents
-        Els H llargs no es porten be amb el LPV, massa horitzo fa que peti
-
-COSES A FER
-
-    Quins improvements voldria fer
- 
-        Pensar com millorar convergencia
-        Tractar el cas on els hiperplans es calculen online 
-
 TODO Paper 
     
     Continuar amb les revisions diaries
     Expandir una mica la biblio 
 
-TODO 
+TODO Esta setmana
 
-    EL TEMA DELS SEPARATING HYPERPLANS AMB CASADI ESTA DESACTUALISAT!!! 
-    fer un exemple d'experiment i escriure + plotejar els resultats
-    investigar pq no va amb horitzons llargs
- 
+    Dimecres
+        Mati: 
+            Fer tests aumentant el horitzo del model (com a matlab) 
+                Maxim un agent
+                Impacte multiples agents
+                Mesurar look ahead al plan local -> afegir a base_class
+            investigar pq no va amb horitzons llargs
+        
+        Tarda: 
+            Actualitzar pc casa casadi
+            Fer una mica de plannign de la propera recerca -> de cara a bibliografia tindriam que juntar coses
 
+    Dijous
+        Refinar el LPV + pendre les dades
+        Revisar CASADI + pendre les dades (tal com esta)
+        Bibliografia millora de la alpha
+
+    Divendres
+        fer seccio de experiments amb el cas LPV de cara a la setmana que ve
+
+TODO Setmana que ve 
+    
+    Parlar amb Vicenç seccio experiments
+    Plantejar com millorar convergencia OCD
+    Començar a llegir papers (3 dies estare fora, me puc imprimir uns pocs)
 
     
