@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 
 import numpy as np
-import pdb
 import numpy.linalg as la
 import warnings
+from math import floor
 
 class Map():
-    """map object
-    Attributes:
-        getGlobalPosition: convert position from (s, ey) to (X,Y)
-    """
-
 
     def __init__(self, selectedTrack = None):
         """Initialization
@@ -19,7 +14,6 @@ class Map():
 
         """ Nos interesa que el planner tenga una pista algo mas reducida de la real
         para conservar algo de robustez y no salirnos de la pista en el primer segundo. """
-        # HW            = rospy.get_param("/TrajectoryPlanner/halfWidth")+0.1
         HW            = 0.5
 
         self.lane = 0
@@ -306,6 +300,26 @@ class Map():
     def set_lane(self,lane):
         self.lane = lane
 
+    def wrap_s(self,s, lane = None):
+
+        if not self.open:
+            while (s >= self.TrackLength[lane]):
+                s = s - self.TrackLength[lane]
+
+        elif s >= self.TrackLength[self.lane]:
+            s = s - self.TrackLength[self.lane]
+
+        if s < 0:
+            s = 0
+
+        return s
+
+    def check_lap(self,s, lane = None):
+
+        lap = floor(s/self.TrackLength[lane])
+
+        return lap
+
     def getGlobalPosition(self, s, ey, lane = None, plotting = False):
         """coordinate transformation from curvilinear reference frame (e, ey) to inertial reference frame (X, Y)
         (s, ey): position in the curvilinear reference frame
@@ -322,17 +336,8 @@ class Map():
         except:
             ey = ey * np.ones(self.PointAndTangent[:, :, lane].shape[0])
 
-        # wrap s along the track
+        s = self.wrap_s(s)
 
-        if not self.open:
-            while (s >= self.TrackLength[lane]):
-                s = s - self.TrackLength[lane]
-
-        elif s >= self.TrackLength[lane]:
-            s = s - self.TrackLength[lane]
-
-        if s < 0:
-            s = 0
         # Compute the segment in which system is evolving
         PointAndTangent = self.PointAndTangent[:,:,lane]
 
@@ -439,8 +444,6 @@ class Map():
         PointAndTangent = self.PointAndTangent[:,:,lane]
         CompletedFlag = 0
 
-
-
         for i in range(0, PointAndTangent.shape[0]):
             if CompletedFlag == 1:
                 break
@@ -521,16 +524,11 @@ class Map():
                         if np.abs(ey) <= 3*self.halfWidth[i] + self.slack: # OUT OF TRACK!!
                             CompletedFlag = 1
 
-        # if epsi>1.0:
-        #     print "epsi Greater then 1.0"
-        #     pdb.set_trace()
-
         if CompletedFlag == 0:
             s    = 10000
             ey   = 10000
             epsi = 10000
-            #print "Error!! POINT OUT OF THE TRACK!!!! <=================="
-            # pdb.set_trace()
+
 
         return s, ey, epsi, CompletedFlag
 
@@ -580,33 +578,3 @@ def sign(a):
         res = -1
 
     return res
-
-
-def unityTestChangeOfCoordinates(map, ClosedLoopData):
-    """For each point in ClosedLoopData change (X, Y) into (s, ey) and back to (X, Y) to check accurancy
-    """
-    TestResult = 1
-    for i in range(0, ClosedLoopData.x.shape[0]):
-        xdat = ClosedLoopData.x
-        xglobdat = ClosedLoopData.x_glob
-
-        s, ey, _, _ = map.getLocalPosition(xglobdat[i, 4], xglobdat[i, 5], xglobdat[i, 3])
-        v1 = np.array([s, ey])
-        v2 = np.array(xdat[i, 4:6])
-        v3 = np.array(map.getGlobalPosition(v1[0], v1[1]))
-        v4 = np.array([xglobdat[i, 4], xglobdat[i, 5]])
-        # print v1, v2, np.dot(v1 - v2, v1 - v2), np.dot(v3 - v4, v3 - v4)
-
-        if np.dot(v3 - v4, v3 - v4) > 0.00000001:
-            TestResult = 0
-            print ("ERROR", v1, v2, v3, v4)
-            pdb.set_trace()
-            v1 = np.array(map.getLocalPosition(xglobdat[i, 4], xglobdat[i, 5]))
-            v2 = np.array(xdat[i, 4:6])
-            v3 = np.array(map.getGlobalPosition(v1[0], v1[1]))
-            v4 = np.array([xglobdat[i, 4], xglobdat[i, 5]])
-            print (np.dot(v3 - v4, v3 - v4))
-            pdb.set_trace()
-
-    if TestResult == 1:
-        print ("Change of coordinates test passed!")

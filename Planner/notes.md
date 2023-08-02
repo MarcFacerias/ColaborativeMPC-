@@ -27,21 +27,20 @@ TODO Esta setmana
 
     Divendres
         fer seccio de experiments amb el cas LPV de cara a la setmana que ve
+        Plantejar com millorar convergencia OCD
 
 TODO Setmana que ve 
     
     Parlar amb Vicenç seccio experiments
-    Plantejar com millorar convergencia OCD
-    Començar a llegir papers (3 dies estare fora, me puc imprimir uns pocs)
-
     Discutir tema condicions inicials amb el Vicenç -> amb horitzons llargs hi ha deadlocks
         Horitzons llargs -> mes realista com a aplicacio i menys freq de calcul f.e ( 3 segons endavant i 1s de computational time)
         Horitzons curts  -> dona menys problemes pero el look ahead es moolt curt 
 
         Exemple: experiment amb 3 vehicles sobre el mapa "gran" tarda uns 
+    
+    Dilluns/dimarts -> Fer vistazo a les practiques per portar algo el dia 8 
 
 TODO QoL
 
-    netejar dependencies
     Make more than one lap at a time
     

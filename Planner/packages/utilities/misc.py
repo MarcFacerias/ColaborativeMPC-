@@ -19,13 +19,14 @@ def EuDistance(p1,p2):
     except:
         return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
-def checkEnd(x, maps):
+def checkEnd(x, maps, laps = 1):
 
     status = False
     for i,agent in enumerate(x):
 
         if not agent is None:
-            if np.isclose(agent[0,-3],maps[i].TrackLength[maps[i].lane],atol=0.15) or (agent[0,-3] > maps[i].TrackLength[maps[i].lane]) :
+            cl = maps[i].check_lap(agent[0,-3])
+            if (np.isclose(agent[0,-3],maps[i].TrackLength[maps[i].lane],atol=0.15) or (agent[0,-3] > maps[i].TrackLength[maps[i].lane])) and (laps == cl):
                 status = True
                 return status
         else:

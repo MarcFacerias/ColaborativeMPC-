@@ -12,10 +12,7 @@ from Planner.packages.utilities import curvature, get_ey, compute_weights
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 class PlannerLPV:
-    """Create the Path Following LMPC controller with LTV model
-    Attributes:
-        solve: given x0 computes the control action
-    """
+
     def __init__(self, Q, Qs,R, dR , N, dt, map, id, wq = 0, model_param = None, sys_lim = None):
 
         self.dR = dR # derivative cost
@@ -118,9 +115,8 @@ class PlannerLPV:
         """Computes control action
         Arguments:
             x0: current state position
-            EA: Last_xPredicted: it is just used for the warm up
-            EA: uPred: set of last predicted control inputs used for updating matrix A LPV
-            EA: A_L, B_L ,C_L: Set of LPV matrices
+            Last_xPredicted: it is just used for the warm up
+            uPred: set of last predicted control inputs used for updating matrix A LPV
         """
 
         self.agent_list = agents_id # load the agent list
@@ -273,23 +269,10 @@ def GenerateColisionAvoidanceConstraints(Controller):
             K[i, -1] = -1
             Lim_list.append(- Controller.min_dist / 2 - Controller.planes[t - 1, 2, i])
 
-            # if Controller.id < el: # if master
-            #     K[i, 7] = Controller.planes[t-1, 0, i]
-            #     K[i, 8] = Controller.planes[t-1, 1, i]
-            #     K[i, -1] = -1
-            #     Lim_list.append(- Controller.min_dist/2 - Controller.planes[t-1, 2, i] )
-            #
-            # else: # if slave
-            #     K[i, 7]  = - Controller.planes[t-1, 0, i]
-            #     K[i, 8]  = - Controller.planes[t-1, 1, i]
-            #     K[i, -1] = -1
-            #     Lim_list.append(Controller.planes[t-1, 2, i] - Controller.min_dist/2 )
-
         K_list.append(K) # append the block of constraints to the list
 
     return K_list, Lim_list
 
-    '''END GENERATE HYPER CONSTRAITNS'''
 
 def _buildMatIneqConst(Controller,ey):
     # Build the set of inequality constraints note that all constaints are expressed as < for convenience
