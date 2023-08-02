@@ -1,4 +1,4 @@
-
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,7 +13,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 class agent(initialiserNL):
 
     def __init__(self, settings, maps, x0, id ):
-        super().__init__(self, settings['path_csv'], settings['path_pck']) # initialise the initialiser
+        super().__init__(self, settings) # initialise the initialiser
         self.map = maps
         self.dt = settings["dt"]
         self.N =  settings["N"]
@@ -28,8 +28,9 @@ class agent(initialiserNL):
         self.id = id
 
     def one_step(self, lambdas, agents, agents_id, uPred = None, xPred = None):
-
+        tic = time.time()
         feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
+        self.time_op.append(time.time() - tic)
         self.save(self.Controller.xPred, self.Controller.uPred, feas)
 
 

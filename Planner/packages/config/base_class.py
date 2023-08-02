@@ -14,13 +14,14 @@ class experiment_utilities():
         self.uPred_hist = []
         self.sPred_hist = []
         self.look_ahead = []
+        self.et = []
 
         if model == "SCALED CAR":
             self.model_param = {
                 "lf" : 0.125,
                 "lr" : 0.125,
                 "m"  : 1.98,
-                "I"  : 0.06,
+                "I"  : 0.09,
                 "Cf" : 70.0,
                 "Cr" : 70.0,
                 "mu" : 0.05
@@ -31,8 +32,8 @@ class experiment_utilities():
                 "min_dist" : 0.25,
                 "max_vel"  : 5.5,
                 "min_vel"  : 0.2,
-                "max_rs" : 0.45,
-                "max_ls" : 0.45,
+                "max_rs" : 0.3,
+                "max_ls" : 0.3,
                 "max_ac" : 5.0,
                 "max_dc" : 10.0,
                 "sm"     :0.9,
@@ -47,7 +48,7 @@ class experiment_utilities():
 
         self.data.states.append(xPred[0,:])
         self.sPred_hist.append(xPred)
-        self.look_ahead.append(sum(EuDistance(xPred[0:-2,[7,8]], xPred[1:-1,[7,8]])))
+        self.look_ahead.append(xPred[-1,6] - xPred[0,6])
 
         if uPred is not None:
             self.data.u.append(uPred[0,:])
@@ -58,6 +59,8 @@ class experiment_utilities():
 
         if feas is not None:
             self.data.status.append(feas)
+
+        self.et.append(self.data.time_op)
 
 
     def save_to_csv(self):
@@ -75,6 +78,7 @@ class experiment_utilities():
         np.savetxt(path + '/states.dat', self.data.states, fmt='%.5e',delimiter=' ')
         np.savetxt(path + '/u.dat', self.data.u, fmt='%.5e', delimiter=' ')
         np.savetxt(path + '/time.dat', self.data.time_op, fmt='%.5e', delimiter=' ')
+        np.savetxt(path + '/plan_dist.dat', self.data.look_ahead, fmt='%.5e', delimiter=' ')
 
     def save_var_to_csv(self,var, name):
 

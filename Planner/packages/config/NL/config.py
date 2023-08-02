@@ -1,8 +1,7 @@
 # Imports
 import matplotlib.colors as mcolors
 import numpy as np
-
-from Planner.packages.config import experiment_utilities
+from Planner.packages.config import experiment_utilities, path_gen
 
 settings = {
     "plot" : -1, # 0: none, 1: online, 2: offline, -1: only save picture
@@ -12,23 +11,22 @@ settings = {
     "n_agents" : 1,
     "max_it" : 5000,
     "min_dist": 0.25,
-    "N" : 15,
-    "dt" : 0.01,
-    "vx_ref": 4.5,
+    "N" : 75,
+    "dt" : 0.05,
+    "vx_ref": 3.0,
 
-    "map_type" : "Highway",
-    # map_type : "oval",
-    # map_type : "SL",
-    "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestNL/",
-    "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestNL/",
-    "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestNL/",
+    # "map_type" : "Highway",
+    "map_type" : "oval",
+    # "map_type" : "SL",
 
     #OCD specific
     "it_conv" : 1,
     "max_it_OCD" : 10,
     "verb_OCD" : True,
-    "LPV": True,
+    "LPV": False,
 }
+
+path_gen(settings, "test_saving")
 
 x0_database = [""] * 4
 x0_database[0] = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]
@@ -42,12 +40,13 @@ def get_alpha():
     return alpha
 
 class initialiserNL(experiment_utilities):
-    def __init__(self, data, path, path_pickle, model = "SCALED CAR"):
-        super().__init__(data, path, path_pickle, model)
+    def __init__(self, data, settings, model = "SCALED CAR"):
+        super().__init__(data, settings, model)
         self.Qs = np.diag([10000000,1000000,1000000])
-        self.Q = np.diag([10.0, 0.0, 0.0, 200.0, 50.0, 0.0, 0.0, 0, 0])
+        self.Q  = np.diag([5.0, 0.0, 0.0, 20.0, 5.0, 0.0, 0.0, 0, 0])
+        # self.Q = np.diag([5.0, 0.0, 0.0, 50.0, 10.0, 0.0, 0.0, 0, 0])
         self.R = 0 * np.diag([1, 1])
-        self.dR = 50 * np.diag([1, 1])
+        self.dR = 25 * np.diag([1, 1])
 
 def eval_constraintEU(x1, x2, D):
 

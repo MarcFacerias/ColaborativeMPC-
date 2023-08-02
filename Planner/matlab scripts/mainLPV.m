@@ -1,4 +1,6 @@
-files = "../DistributedPlanner/TestsPaperL5";
+clear
+
+files = "../data/test_saving/csv";
 addpath(genpath(files))
 
 tools = "tools";

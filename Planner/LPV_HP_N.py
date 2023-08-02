@@ -1,3 +1,4 @@
+import time
 
 # Global Variables
 import numpy as np
@@ -33,8 +34,9 @@ class agent(initialiserLPV):
 
     def one_step(self, agents, agents_id, pose, uPred = None, xPred = None):
 
+        tic = time.time()
         feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, agents, agents_id, pose)
-
+        self.time_op.append(time.time() - tic)
         if not feas:
             return feas,uPred, xPred, planes, raw
 
