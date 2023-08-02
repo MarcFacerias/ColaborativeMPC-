@@ -10,7 +10,7 @@ TODO Esta setmana
             Fer tests aumentant el horitzo del model (com a matlab) 
                 Maxim un agent
                 Impacte multiples agents
-                Mesurar look ahead al plan local -> afegir a base_class
+                Mesurar look ahead al plan local -> afegir a base_class DONE
             investigar pq no va amb horitzons llargs
         
         Tarda: 
@@ -30,5 +30,9 @@ TODO Setmana que ve
     Parlar amb Vicenç seccio experiments
     Plantejar com millorar convergencia OCD
     Començar a llegir papers (3 dies estare fora, me puc imprimir uns pocs)
+
+TODO QoL
+
+    netejar dependencies
 
     

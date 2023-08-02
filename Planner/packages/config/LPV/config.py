@@ -1,8 +1,9 @@
 # Imports
 import matplotlib.colors as mcolors
 import numpy as np
+import platform
 
-from Planner.packages.config import experiment_utilities
+from Planner.packages.config import experiment_utilities, path_gen
 
 settings = {
     "plot" : -1, # 0: none, 1: online, 2: offline, -1: only save picture
@@ -18,15 +19,9 @@ settings = {
     # map_type : "oval",
     # map_type : "SL",
 
-    # "path_csv" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-    # "path_img" : "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-    # "path_pck": "/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-
-    "path_csv": "I:\Marc\PhD\ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-    "path_img": "I:\Marc\PhD\ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-    "path_pck": "I:\Marc\PhD\ColaborativeMPC-/Planner/data/TestLPVPrePrint/",
-
 }
+
+path_gen(settings, "test_saving")
 
 class initialiserLPV(experiment_utilities):
     def __init__(self, data, path, path_pickle, model = "SCALED CAR"):

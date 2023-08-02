@@ -1,1 +1,1 @@
-from .computePlane import hyperplane_separator
+from .compute_plane import hyperplane_separator

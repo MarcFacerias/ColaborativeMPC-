@@ -1,1 +1,1 @@
-from .misc import curvature, get_ey, compute_weights, checkEnd, initialise_agents
+from .misc import curvature, get_ey, compute_weights, checkEnd, initialise_agents, EuDistance

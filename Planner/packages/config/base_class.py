@@ -1,8 +1,9 @@
 import pickle
 import warnings
-
-from Planner.packages.plotter.plot_tools import *
-
+import numpy as np
+import os.path
+import sys
+from Planner.packages.utilities import EuDistance
 class experiment_utilities():
 
     def __init__(self, data, path_csv, path_pck, model = "SCALED CAR"):
@@ -12,6 +13,7 @@ class experiment_utilities():
         self.data = data
         self.uPred_hist = []
         self.sPred_hist = []
+        self.look_ahead = []
 
         if model == "SCALED CAR":
             self.model_param = {
@@ -45,6 +47,7 @@ class experiment_utilities():
 
         self.data.states.append(xPred[0,:])
         self.sPred_hist.append(xPred)
+        self.look_ahead.append(sum(EuDistance(xPred[0:-2,[7,8]], xPred[1:-1,[7,8]])))
 
         if uPred is not None:
             self.data.u.append(uPred[0,:])
@@ -134,5 +137,18 @@ class experiment_utilities():
                 pickle.dump(self.data.sPred_hist, f2)
 
 
+def path_gen(settings, target, base = None):
 
+    if (base is not None) :
+        #  global path
+        path = os.path.normpath(base + "/data/" + target + "/")
+        settings["path_csv"] = path
+        settings["path_img"] = path
+        settings["path_pck"] = path
 
+    else:
+        #  relative path (prefered)
+        path = os.path.normpath(sys.path[0] + "/data/" + target + "/")
+        settings["path_csv"] = path
+        settings["path_img"] = path
+        settings["path_pck"] = path
