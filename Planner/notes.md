@@ -12,6 +12,7 @@ TODO Esta setmana
                 Impacte multiples agents
                 Mesurar look ahead al plan local -> afegir a base_class DONE
             investigar pq no va amb horitzons llargs
+            afegir els shades dels markets -> Falta decidir el range de colors 
         
         Tarda: 
             Actualitzar pc casa casadi
@@ -34,5 +35,5 @@ TODO Setmana que ve
 TODO QoL
 
     netejar dependencies
-
+    Make more than one lap at a time
     

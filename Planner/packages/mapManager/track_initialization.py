@@ -53,6 +53,16 @@ class Map():
             self.halfWidth = np.array([0.55,0.55,0.55,0.55,0.55,0.55])
             self.open = False
 
+        elif selectedTrack == "oval_mt":
+            self.slack      = 0.15
+            spec = np.empty((5,2,1))
+            spec[:,:,0] = np.array([[1.0, 0],
+                             [4.5, 4.5 / np.pi],
+                             [2.0, 0],
+                             [4.5, 4.5 / np.pi],
+                             [1.0, 0]])
+            self.halfWidth = 0.5 * np.ones(spec.shape[0])
+            self.open = False
 
         elif selectedTrack == "Oval2":
             self.slack      = 0.15

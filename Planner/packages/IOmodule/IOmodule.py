@@ -23,7 +23,7 @@ class io_class():
         if self.plot == 1:
             self.disp = plotter(system[0].map, self.n_agent)
 
-        elif self.plot != 0 :
+        elif self.plot != 0:
             self.disp = plotter_offline(system[0].map)
 
     def tic(self):
@@ -47,6 +47,9 @@ class io_class():
 
             for idx in range(0, self.n_agent):
                 self.disp.plot_step(x_pred[idx][1, 7], x_pred[idx][1, 8], x_pred[0][1, 5], idx)
+
+        elif self.plot == 2:
+            self.disp.animate_step(x_pred[0]) # TODO: Fix this
 
         track_len = str(self.sys[0].map.TrackLength[0])
 

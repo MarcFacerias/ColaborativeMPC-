@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
+from math import ceil
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 
@@ -26,18 +27,24 @@ class plotter_offline():
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def plot_offline_experiment(self, agent, path = None, style_agent = ".b", ):
+    def plot_offline_experiment(self, agent, path = None, style_agent = ".b", show = False ):
         states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
         plt.plot(states[:, 7],states[:, 8], style_agent)
 
         if path is not None:
-            for j in range(0,states.shape[0],50):
+            n = ceil(states.shape[0]/15)
+            # colors = get_color_gradient(n) # TODO fix this!
+            for j in range(0,states.shape[0],n):
                 plt.plot(states[j, 7], states[j, 8], 'k', marker='x')
 
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
 
             plt.savefig(path + "track.png")
+
+        if show:
+            self.fig.canvas.draw()
+            plt.pause(0.001)
 
     def animate_offline_experiment(self, sys, style_agents = default_color):
 
@@ -59,6 +66,16 @@ class plotter_offline():
             for line in lines:
                 line[0].remove()
 
+    def animate_step(self, xPred, style_agents = default_color):
+
+        plt.plot(xPred[:,7],xPred[:,8],style_agents[0])
+
+        plt.show()
+        self.fig.canvas.draw()
+        plt.pause(0.001)
+
+
+
     def plot_map(self,path = None):
         plt.show()
         self.fig.canvas.draw()
@@ -68,7 +85,6 @@ class plotter_offline():
                 os.makedirs(path, exist_ok=True)
 
             plt.savefig(path + "track.png")
-
 
 class plotter():
 
@@ -178,3 +194,21 @@ def plot_distance( distance_hist, th):
     plt.plot(x, th*np.ones(len(distance_hist)), "-r")
     plt.show()
     plt.pause(0.001)
+
+
+def hex_to_RGB(hex_str):
+    """ #FFFFFF -> [255,255,255]"""
+    #Pass 16 to the integer function for change of base
+    return [int(hex_str[i:i+2], 16) for i in range(1,6,2)]
+
+def get_color_gradient(n, c1 = '#FB575D', c2 = '#15251B'):
+    """
+    Given two hex colors, returns a color gradient
+    with n colors.
+    """
+    assert n > 1
+    c1_rgb = np.array(hex_to_RGB(c1))/255
+    c2_rgb = np.array(hex_to_RGB(c2))/255
+    mix_pcts = [x/(n-1) for x in range(n)]
+    rgb_colors = [((1-mix)*c1_rgb + (mix*c2_rgb)) for mix in mix_pcts]
+    return ["#" + "".join([format(int(round(val*255)), "02x") for val in item]) for item in rgb_colors]

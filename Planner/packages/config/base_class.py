@@ -6,10 +6,10 @@ import sys
 from Planner.packages.utilities import EuDistance
 class experiment_utilities():
 
-    def __init__(self, data, path_csv, path_pck, model = "SCALED CAR"):
+    def __init__(self, data, settings, model = "SCALED CAR"):
 
-        self.path_csv = path_csv
-        self.path_pck = path_pck
+        self.path_csv = settings["path_csv"]
+        self.path_pck = settings["path_pck"]
         self.data = data
         self.uPred_hist = []
         self.sPred_hist = []
@@ -21,20 +21,20 @@ class experiment_utilities():
                 "lr" : 0.125,
                 "m"  : 1.98,
                 "I"  : 0.06,
-                "Cf" : 60.0,
-                "Cr" : 60.0,
+                "Cf" : 70.0,
+                "Cr" : 70.0,
                 "mu" : 0.05
             }
 
             self.sys_lim     = {
-                "vx_ref" : 4.5,
+                "vx_ref" : settings["vx_ref"],
                 "min_dist" : 0.25,
                 "max_vel"  : 5.5,
                 "min_vel"  : 0.2,
                 "max_rs" : 0.45,
                 "max_ls" : 0.45,
-                "max_ac" : 4.0,
-                "max_dc" : 3.0,
+                "max_ac" : 5.0,
+                "max_dc" : 10.0,
                 "sm"     :0.9,
                 "LPV": True
             }
@@ -91,7 +91,7 @@ class experiment_utilities():
         np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
 
 
-    def save_var_pickle(self, vars = None, tags = None):
+    def save_var_pickle(self, vars , tags = None):
 
         parent_path = self.path_csv + "pck/"
 
@@ -103,24 +103,17 @@ class experiment_utilities():
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
 
-        if vars is None:
-                with open(path + '/u.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
-                    pickle.dump(self.data.uPred_hist, f1)
-                with open(path + '/states.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
-                    pickle.dump(self.data.sPred_hist, f2)
-        else:
+        for i, var in enumerate(vars):
 
-            for i, var in enumerate(vars):
+            try:
+                with open(path + '/' + tags[i] + '.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
+                    pickle.dump(var, f1)
 
-                try:
-                    with open(path + '/' + tags[i] + '.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
-                        pickle.dump(var, f1)
-
-                except:
-                    with open(path +'/def' + str(i) + '.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
-                        pickle.dump(var, f2)
-                        msg = "WARNING no name asigned !"
-                        warnings.warn(msg)
+            except:
+                with open(path +'/def' + str(i) + '.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
+                    pickle.dump(var, f2)
+                    msg = "WARNING no name asigned !"
+                    warnings.warn(msg)
 
     def save_exp(self):
         parent_path = self.path_csv + "pck/"
@@ -136,19 +129,21 @@ class experiment_utilities():
             with open(path + '/states.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
                 pickle.dump(self.data.sPred_hist, f2)
 
+            with open(path + '/u.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
+                pickle.dump(self.data.uPred_hist, f1)
 
 def path_gen(settings, target, base = None):
 
     if (base is not None) :
         #  global path
-        path = os.path.normpath(base + "/data/" + target + "/")
-        settings["path_csv"] = path
-        settings["path_img"] = path
-        settings["path_pck"] = path
+        path = os.path.normpath(base + "/data/" + target )
+        settings["path_csv"] = path + "/"
+        settings["path_img"] = path + "/"
+        settings["path_pck"] = path + "/"
 
     else:
         #  relative path (prefered)
-        path = os.path.normpath(sys.path[0] + "/data/" + target + "/")
-        settings["path_csv"] = path
-        settings["path_img"] = path
-        settings["path_pck"] = path
+        path = os.path.normpath(sys.path[0] + "/data/" + target)
+        settings["path_csv"] = path + "/"
+        settings["path_img"] = path + "/"
+        settings["path_pck"] = path + "/"

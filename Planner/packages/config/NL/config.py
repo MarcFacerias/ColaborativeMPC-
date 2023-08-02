@@ -14,6 +14,8 @@ settings = {
     "min_dist": 0.25,
     "N" : 15,
     "dt" : 0.01,
+    "vx_ref": 4.5,
+
     "map_type" : "Highway",
     # map_type : "oval",
     # map_type : "SL",

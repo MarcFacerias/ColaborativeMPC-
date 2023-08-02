@@ -309,7 +309,6 @@ def _buildMatIneqConst(Controller,ey):
     # linear velocity constraints + slack variables
     Fx[0,0] = -1
     Fx[1,0] = 1
-    Fx[0,-3] = -1
     Fx[1,-3] = 1
 
     # limit lateral error with slack variables

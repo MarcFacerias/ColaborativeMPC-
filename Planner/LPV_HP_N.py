@@ -18,7 +18,7 @@ class agent(initialiserLPV):
     #  Q: [vx ; vy ; psiDot ; e_psi ; s ; e_y]
     #  R:  [delta ; a] la R es sobre el dU
     def __init__(self, settings, maps, x0, id):
-        super().__init__(self, settings['path_csv'], settings['path_pck']) # initialise the initialiser
+        super().__init__(self, settings) # initialise the initialiser
         self.map = maps
         self.N = settings["N"]
         self.dt = settings["dt"]
