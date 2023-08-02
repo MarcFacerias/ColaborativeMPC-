@@ -517,15 +517,34 @@ def _EstimateABC(Controller,states, u):
             cur = curvature(s, Controller.map)
             delta = u[i, 0]  # EA: steering angle at K-1
 
-            # standard model
-            A12 = ((np.sin(delta) * Cf) / (m * vx))
-            A13 = ((np.sin(delta) * Cf * lf) / (m * vx) + vy)
+            if vx < 0.2:
 
-            A22 = (-(Cr + Cf * np.cos(delta)) / (m * vx))
-            A23 = (-(lf * Cf * np.cos(delta) - lr * Cr) / (m * vx) - vx)
+                # low vel model: straight line .
+                A12 = 0
+                A13 = 0
 
-            A32 = (-(lf * Cf * np.cos(delta) - lr * Cr) / (I * vx))
-            A33 = (-(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I * vx))
+                A22 = 0
+                A23 = 0
+
+                A32 = 0
+                A33 = 0
+
+                B11 = 0
+
+            else:
+
+                # standard model
+                A12 = ((np.sin(delta) * Cf) / (m * vx))
+                A13 = ((np.sin(delta) * Cf * lf) / (m * vx) + vy)
+
+                A22 = (-(Cr + Cf * np.cos(delta)) / (m * vx))
+                A23 = (-(lf * Cf * np.cos(delta) - lr * Cr) / (m * vx) - vx)
+
+                A32 = (-(lf * Cf * np.cos(delta) - lr * Cr) / (I * vx))
+                A33 = (-(lf * lf * Cf * np.cos(delta) + lr * lr * Cr) / (I * vx))
+
+                B11 = (-(np.sin(delta) * Cf) / m)
+
 
             A41 = np.sin(epsi)
             A42 = np.cos(epsi)
@@ -542,7 +561,6 @@ def _EstimateABC(Controller,states, u):
             A91 = np.sin(theta)
             A92 = np.cos(theta)
 
-            B11 = (-(np.sin(delta) * Cf) / m)
             B21 = ((np.cos(delta) * Cf) / m)
             B31 = ((lf * Cf * np.cos(delta)) / I)
 

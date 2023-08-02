@@ -156,7 +156,10 @@ class base_nl_constr:
             # y
             self.A91 = self.opti.parameter(self.N)
             self.A92 = self.opti.parameter(self.N)
-
+        
+        else:
+            self.low_vel = self.opti.parameter()
+            
     def LPV_model(self):
         # add the model
         for j in range(1, self.N + 1):
@@ -234,9 +237,9 @@ class base_nl_constr:
             self.opti.subject_to(
                     self.x[j,0] == self.x[mod_prev,0] + (
                             -self.mu*self.x[mod_prev,0] +
-                            ((np.sin(self.u[mod_prev,0]) * self.Cf) / (self.m * self.x[mod_prev,0])) *self.x[mod_prev,1] +
-                            ((np.sin(self.u[mod_prev,0]) * self.Cf * self.lf) / (self.m * self.x[mod_prev,0]) + self.x[mod_prev,1])*self.x[mod_prev,2] +
-                            (-(np.sin(self.u[mod_prev,0]) * self.Cf) / self.m)*self.u[mod_prev,0] +
+                            self.low_vel*((np.sin(self.u[mod_prev,0]) * self.Cf) / (self.m * self.x[mod_prev,0])) *self.x[mod_prev,1] +
+                            self.low_vel*((np.sin(self.u[mod_prev,0]) * self.Cf * self.lf) / (self.m * self.x[mod_prev,0]) + self.x[mod_prev,1])*self.x[mod_prev,2] +
+                            self.low_vel*(-(np.sin(self.u[mod_prev,0]) * self.Cf) / self.m)*self.u[mod_prev,0] +
                             self.u[mod_prev,1])*self.dt
                 )
             # --------------------------------------------------------------------------------------------------------------------------
@@ -244,8 +247,8 @@ class base_nl_constr:
 
             self.opti.subject_to(
                 self.x[j,1] == self.x[mod_prev,1] + (
-                        (-(self.Cr + self.Cf * np.cos(self.u[mod_prev, 0])) / (self.m * self.x[mod_prev, 0]))*self.x[mod_prev,1] +
-                        (-(self.lf * self.Cf * np.cos(self.u[mod_prev, 0]) - self.lr * self.Cr) / (self.m * self.x[mod_prev, 0]) - self.x[mod_prev, 0])*self.x[mod_prev,2] +
+                        self.low_vel*(-(self.Cr + self.Cf * np.cos(self.u[mod_prev, 0])) / (self.m * self.x[mod_prev, 0]))*self.x[mod_prev,1] +
+                        self.low_vel*(-(self.lf * self.Cf * np.cos(self.u[mod_prev, 0]) - self.lr * self.Cr) / (self.m * self.x[mod_prev, 0]) - self.x[mod_prev, 0])*self.x[mod_prev,2] +
                         ((np.cos(self.u[mod_prev, 0]) * self.Cf) / self.m)*self.u[mod_prev,0])*self.dt
             )
 
@@ -254,8 +257,8 @@ class base_nl_constr:
 
             self.opti.subject_to(
                 self.x[j,2] == self.x[mod_prev,2] + (
-                        (-(self.lf * self.Cf * np.cos(self.u[mod_prev, 0]) - self.lr * self.Cr) / (self.I * self.x[mod_prev, 0]))*self.x[mod_prev,1] +
-                        (-(self.lf * self.lf * self.Cf * np.cos(self.u[mod_prev, 0]) + self.lr * self.lr * self.Cr) / ( self.I * self.x[mod_prev, 0]))*self.x[mod_prev,2] +
+                        self.low_vel*(-(self.lf * self.Cf * np.cos(self.u[mod_prev, 0]) - self.lr * self.Cr) / (self.I * self.x[mod_prev, 0]))*self.x[mod_prev,1] +
+                        self.low_vel*(-(self.lf * self.lf * self.Cf * np.cos(self.u[mod_prev, 0]) + self.lr * self.lr * self.Cr) / ( self.I * self.x[mod_prev, 0]))*self.x[mod_prev,2] +
                         ((self.lf * self.Cf * np.cos(self.u[mod_prev, 0])) / self.I)*self.u[mod_prev,0])*self.dt
             )
 
@@ -348,17 +351,36 @@ class base_nl_constr:
                 cur = curvature(s, self.map)
                 delta = u[j, 0]  # EA: steering angle at K-1
 
-                self.opti.set_value(self.A12[j], (np.sin(delta) * self.Cf) / (self.m * vx))
-                self.opti.set_value(self.A13[j], (np.sin(delta) * self.Cf * self.lf) / (self.m * vx) + vy)
+                if vx < 0.2:
 
-                self.opti.set_value(self.A22[j], -(self.Cr + self.Cf * np.cos(delta)) / (self.m * vx))
-                self.opti.set_value(self.A23[j],
-                                    -(self.lf * self.Cf * np.cos(delta) - self.lr * self.Cr) / (self.m * vx) - vx)
+                    # low vel model: straight line .
+                    self.opti.set_value(self.A12[j], 0)
+                    self.opti.set_value(self.A13[j], 0)
 
-                self.opti.set_value(self.A32[j], -(self.lf * self.Cf * np.cos(delta) - self.lr * self.Cr) / (self.I * vx))
-                self.opti.set_value(self.A33[j],
-                                    -(self.lf * self.lf * self.Cf * np.cos(delta) + self.lr * self.lr * self.Cr) / (
+                    self.opti.set_value(self.A22[j], 0)
+                    self.opti.set_value(self.A23[j], 0)
+
+                    self.opti.set_value(self.A32[j], 0)
+                    self.opti.set_value(self.A33[j], 0)
+
+                    self.opti.set_value(self.B11[j], 0)
+
+                else:
+
+                    # standard model
+                    self.opti.set_value(self.A12[j], (np.sin(delta) * self.Cf) / (self.m * vx))
+                    self.opti.set_value(self.A13[j], (np.sin(delta) * self.Cf * self.lf) / (self.m * vx) + vy)
+
+                    self.opti.set_value(self.A22[j], -(self.Cr + self.Cf * np.cos(delta)) / (self.m * vx))
+                    self.opti.set_value(self.A23[j],
+                                        -(self.lf * self.Cf * np.cos(delta) - self.lr * self.Cr) / (self.m * vx) - vx)
+
+                    self.opti.set_value(self.A32[j],
+                                        -(self.lf * self.Cf * np.cos(delta) - self.lr * self.Cr) / (self.I * vx))
+                    self.opti.set_value(self.A33[j],
+                                        -(self.lf * self.lf * self.Cf * np.cos(delta) + self.lr * self.lr * self.Cr) / (
                                                 self.I * vx))
+
 
                 self.opti.set_value(self.A41[j], np.sin(epsi))
                 self.opti.set_value(self.A42[j], np.cos(epsi))
@@ -375,10 +397,18 @@ class base_nl_constr:
                 self.opti.set_value(self.A91[j], np.sin(theta))
                 self.opti.set_value(self.A92[j], np.cos(theta))
 
-                self.opti.set_value(self.B11[j], -(np.sin(delta) * self.Cf) / self.m)
-
                 self.opti.set_value(self.B21[j], (np.cos(delta) * self.Cf) / self.m)
                 self.opti.set_value(self.B31[j], (self.lf * self.Cf * np.cos(delta)) / self.I)
+            
+            else:
+                if vx < 0.2:
+
+                    # low vel model: straight line .
+                    self.opti.set_value(self.low_vel, 0) 
+
+                else:
+                    self.opti.set_value(self.low_vel, 1)
+
 
             for i, el in enumerate(self.agent_list):
 
