@@ -1,6 +1,5 @@
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 
 from Planner.planners.nonLinDistribPlanner import PlannerEu
 from Planner.packages.mapManager import Map
@@ -51,6 +50,7 @@ def main():
     max_it = settings["max_it"]
     dth = settings["min_dist"]
     max_it_OCD = settings["max_it_OCD"]
+    min_it_OCD = settings["min_it_OCD"]
     it_conv = settings["it_conv"]
 
     # controller constants
@@ -89,14 +89,15 @@ def main():
     cost_old = np.zeros((n_agents, n_agents, N))
     lambdas_hist = []
     it = 0
+    lambdas = np.zeros((n_agents, n_agents, N))
+    error = False
 
     while(it<max_it and not checkEnd(x_pred, maps)):
 
-        lambdas = np.zeros((n_agents, n_agents, N))
         it_OCD = 0
         itc = 0
 
-        while(not (it_OCD > 2 and finished)) :
+        while(not (it_OCD > min_it_OCD and finished)) :
             # OCD loop, we want to force at least 2 iterations + it_conv iterations without significant changes
             # run an instance of the optimisation problems
             io.tic()
@@ -104,13 +105,16 @@ def main():
             for i, r in enumerate(rs):
                 feas[i], u_pred[i], x_pred[i], raws[i] = r.one_step( lambdas[[i],ns[i],:], agents[:,ns[i],:], ns[i], u_old[i], raws[i])
 
+            if not np.any(feas):
+                error = True
+                break
+
             io.toc()
 
             for j,r in enumerate(rs):
                 r.data_collec = [rs[i].data_opti for i in ns[j]]
 
             cost = np.zeros((n_agents,n_agents,N))
-
             # update the values of x,y for the obstacle avoidance constraints
             agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:], 0, 1)
 
@@ -152,28 +156,26 @@ def main():
             x_old = x_pred
             cost_old = cost
 
-            io.updateOCD(x_pred, it_OCD)
+            io.updateOCD(x_pred, it_OCD, it)
+            it_OCD += 1
 
         for j,r in enumerate(rs):
             r.save(x_pred[j], u_pred[j])
             r.x0 = x_pred[j][1:, :]
 
+        if it == 0:
+            rs[0].save_var_pickle([lambdas], ["ini_lambdas"])
+
+
         u_old = u_pred
         finished = False
-        io.update( x_pred, u_pred ,agents, it)
+        io.update( x_pred, u_pred ,agents, it, error = error, OCD_ct=it_OCD)
         it += 1
 
+        if error:
+            break
 
-def plot_performance( agent):
-
-    fig_status = plt.figure()
-    fig_status.add_subplot(2, 1, 1)
-    x = np.arange(0,len(agent.status))
-    plt.scatter(x, np.array(agent.status))
-    fig_status.add_subplot(2, 1, 2)
-    plt.scatter(x, np.array(agent.time_op))
-    plt.show()
-    plt.pause(0.001)
+    io.update(x_pred, u_pred, agents, it, end=True,error = error)
 
 if __name__ == "__main__":
 

@@ -19,6 +19,7 @@ class io_class():
         self.sys  = system
         self._tic = 0
         self._toc = 0
+        self.it_OCD = []
 
         if self.plot == 1:
             self.disp = plotter(system[0].map, self.n_agent)
@@ -31,11 +32,12 @@ class io_class():
     def toc(self):
         self._toc = time.time()
 
-    def updateOCD(self,x_pred,it_OCD):
+    def updateOCD(self,x_pred,it_OCD,it):
         if self.verb_OCD:
 
             print("-------------------------------------------------")
-            print("length " + str(it_OCD))
+            print("it " + str(it))
+            print("length OCD" + str(it_OCD))
             for i in range(0, self.n_agent):
                 print("---------------------Agents---------------------------------------")
                 print("Agent " + str(i) + " track s: " + str(x_pred[i][1, 6]))
@@ -52,6 +54,9 @@ class io_class():
             self.disp.animate_step(x_pred[0]) # TODO: Fix this
 
         track_len = str(self.sys[0].map.TrackLength[0])
+
+        if OCD_ct is not None:
+            self.it_OCD.append(OCD_ct)
 
         if self.verb == 1:
 
@@ -107,5 +112,5 @@ class io_class():
 
             for r in self.sys:
 
-                r.save_to_csv()
+                r.save_to_csv(self.it_OCD)
                 r.save_exp()

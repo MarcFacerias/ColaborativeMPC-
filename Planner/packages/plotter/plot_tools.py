@@ -201,7 +201,7 @@ def hex_to_RGB(hex_str):
     #Pass 16 to the integer function for change of base
     return [int(hex_str[i:i+2], 16) for i in range(1,6,2)]
 
-def get_color_gradient(n, c1 = '#FB575D', c2 = '#15251B'):
+def get_color_gradient(n, c1 = '#FFFFFF', c2 = '#000000'):
     """
     Given two hex colors, returns a color gradient
     with n colors.

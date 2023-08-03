@@ -381,6 +381,8 @@ class base_nl_constr:
                                         -(self.lf * self.lf * self.Cf * np.cos(delta) + self.lr * self.lr * self.Cr) / (
                                                 self.I * vx))
 
+                    self.opti.set_value(self.B11[j], 1)
+
 
                 self.opti.set_value(self.A41[j], np.sin(epsi))
                 self.opti.set_value(self.A42[j], np.cos(epsi))

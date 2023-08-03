@@ -13,7 +13,9 @@ def load_s(id = 0):
     with open(path + 'states.pkl', 'rb') as f:  # Python 3: open(..., 'wb')
         return pickle.load(f)
 
-
+class proxy():
+    def __init__(self,states):
+        self.states = states
 
 def main():
 

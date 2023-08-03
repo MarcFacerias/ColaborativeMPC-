@@ -18,16 +18,24 @@ TODO Esta setmana
             Actualitzar pc casa casadi
             Pujar la bibliografia del nostre paper a mendeley
             triar papers nous que llegir mes o menos
-            Fer una mica de plannign de la propera recerca -> de cara a bibliografia tindriam que juntar coses
+            
 
     Dijous
-        Refinar el LPV + pendre les dades
-        Revisar CASADI + pendre les dades (tal com esta)
-        Bibliografia millora de la alpha
+        Refinar el LPV + pendre les dades -> ho tinc 
+        Revisar CASADI + pendre les dades -> ho tinc 
+        Bibliografia millora de la alpha  -> podem mirar de fer servir el update amb el delta enlloc de amb la alpha 
+
+        Buscar com actualitzar la alpha -> Convergeix molt be mantenint antics valors 
+
+        TODO: 
+
+            add recording of the OCD iterations  -> Done
+            add error handling to the OCD method -> Done
+            
+        Plantejar com millorar convergencia OCD, still have some issues with current lambda
 
     Divendres
         fer seccio de experiments amb el cas LPV de cara a la setmana que ve
-        Plantejar com millorar convergencia OCD
 
 TODO Setmana que ve 
     
@@ -37,7 +45,7 @@ TODO Setmana que ve
         Horitzons curts  -> dona menys problemes pero el look ahead es moolt curt 
 
         Exemple: experiment amb 3 vehicles sobre el mapa "gran" tarda uns 
-    
+ 
     Dilluns/dimarts -> Fer vistazo a les practiques per portar algo el dia 8 
 
 TODO QoL

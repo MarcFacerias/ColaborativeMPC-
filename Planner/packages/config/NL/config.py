@@ -8,25 +8,28 @@ settings = {
     "save_data" : True,
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 1,
+    "n_agents" : 3,
     "max_it" : 5000,
     "min_dist": 0.25,
+    # "N" : 125,
+    # "dt" : 0.025,
     "N" : 75,
-    "dt" : 0.05,
+    "dt" : 0.025,
     "vx_ref": 3.0,
 
-    # "map_type" : "Highway",
-    "map_type" : "oval",
+    "map_type" : "Highway",
+    # "map_type" : "oval",
     # "map_type" : "SL",
 
     #OCD specific
-    "it_conv" : 1,
-    "max_it_OCD" : 10,
+    "it_conv" : 2,
+    "max_it_OCD" : 1000,
+    "min_it_OCD": 2,
     "verb_OCD" : True,
     "LPV": False,
 }
 
-path_gen(settings, "test_saving")
+path_gen(settings, "NL3_agent_lh")
 
 x0_database = [""] * 4
 x0_database[0] = [1.3, -0.16, 0.00, 0.0, 0, 0.0, 0, 0.0, 1.45]  # [vx vy psidot y_e thetae theta s x y]

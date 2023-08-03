@@ -14,7 +14,6 @@ class experiment_utilities():
         self.uPred_hist = []
         self.sPred_hist = []
         self.look_ahead = []
-        self.et = []
 
         if model == "SCALED CAR":
             self.model_param = {
@@ -31,7 +30,7 @@ class experiment_utilities():
                 "vx_ref" : settings["vx_ref"],
                 "min_dist" : 0.25,
                 "max_vel"  : 5.5,
-                "min_vel"  : 0.2,
+                "min_vel"  : 0,
                 "max_rs" : 0.3,
                 "max_ls" : 0.3,
                 "max_ac" : 5.0,
@@ -60,10 +59,8 @@ class experiment_utilities():
         if feas is not None:
             self.data.status.append(feas)
 
-        self.et.append(self.data.time_op)
 
-
-    def save_to_csv(self):
+    def save_to_csv(self, OCD_it = None):
 
         parent_path = self.path_csv + "csv/"
 
@@ -80,29 +77,26 @@ class experiment_utilities():
         np.savetxt(path + '/time.dat', self.data.time_op, fmt='%.5e', delimiter=' ')
         np.savetxt(path + '/plan_dist.dat', self.data.look_ahead, fmt='%.5e', delimiter=' ')
 
-    def save_var_to_csv(self,var, name):
+        if OCD_it is not None:
+            try:
+                np.savetxt(path + '/time_it.dat', self.time_OCD(OCD_it), fmt='%.5e', delimiter=' ')
+                np.savetxt(path + '/OCD_it.dat', OCD_it, fmt='%.5e', delimiter=' ')
+            except Exception as e:
+                print(e)
+
+    def save_var_to_csv(self, var, name):
 
         parent_path = self.path_csv + "csv/"
 
         if not os.path.exists(parent_path):
             os.makedirs(parent_path, exist_ok=True)
 
-        path = parent_path + str(self.data.id)
-
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
-
-        np.savetxt(path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
+        np.savetxt(parent_path + '/' + str(name) + '.dat', var, fmt='%.5e',delimiter=' ')
 
 
     def save_var_pickle(self, vars , tags = None):
 
-        parent_path = self.path_csv + "pck/"
-
-        if not os.path.exists(parent_path):
-            os.makedirs(parent_path, exist_ok=True)
-
-        path = parent_path + str(self.data.id)
+        path = self.path_pck + "pck/"
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
@@ -135,6 +129,17 @@ class experiment_utilities():
 
             with open(path + '/u.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
                 pickle.dump(self.data.uPred_hist, f1)
+
+
+    def time_OCD(self,OCD_it):
+
+        lim = np.max(np.array(OCD_it))
+        placeholder = np.zeros((len(OCD_it),lim))
+
+        for i in range(0,len(OCD_it)):
+            placeholder[i,:] = self.data.time_op[i*lim:(i+1)*lim]
+
+        return placeholder
 
 def path_gen(settings, target, base = None):
 
