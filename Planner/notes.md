@@ -43,6 +43,7 @@ TODO Esta setmana
         Guardar times be del CASADI -> vui saber temps x iteracio i num de iteracions
         Fer algunes figures del matlab, encara que sigui amb els resultats antics 
         Fer el plot de la pista nova i refer pista nova 
+    
 
 TODO Setmana que ve 
     
@@ -57,4 +58,4 @@ TODO Setmana que ve
 
 TODO QoL
 
-    
+    clean redundant variables in the code (labeled with TODO)

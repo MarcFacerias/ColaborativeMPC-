@@ -112,6 +112,7 @@ class PlannerLPV:
         return Q
 
     def solve(self, x0, Last_xPredicted, uPred, x_agents, agents_id, pose):
+        # TODO redundant variables! mayb worth to refactor (agents_id and pose)
         """Computes control action
         Arguments:
             x0: current state position
