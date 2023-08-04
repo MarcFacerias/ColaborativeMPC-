@@ -19,6 +19,8 @@ class io_class():
         self.sys  = system
         self._tic = 0
         self._toc = 0
+        self.it_count = 0
+        self.it_plot = None
         self.it_OCD = []
 
         if self.plot == 1:
@@ -31,6 +33,12 @@ class io_class():
         self._tic = time.time()
     def toc(self):
         self._toc = time.time()
+
+    def set_pplot(self, it):
+        self.it_plot = it
+        self.it_count = 0
+        if self.plot == 0:
+            self.disp = plotter_offline(self.sys[0].map)
 
     def updateOCD(self,x_pred,it_OCD,it):
         if self.verb_OCD:
@@ -45,6 +53,7 @@ class io_class():
 
     def update(self, x_pred, u_pred ,agents, it, error = False, OCD_ct = None, end = False):
 
+        self.it_count += 1
         if self.plot == 1 :
 
             for idx in range(0, self.n_agent):
@@ -102,6 +111,11 @@ class io_class():
 
             for j,r in enumerate(self.sys):
                 self.disp.plot_offline_experiment(r, self.path, self.color[j])
+
+        if (self.it_count == self.it_plot):
+            self.it_count = 0
+            for j,r in enumerate(self.sys):
+                self.disp.plot_offline_experiment(r, None, self.color[j],True)
 
         if self.plot == 2 and end:
             self.disp.animate_offline_experiment(self.sys, style_agents=self.color)

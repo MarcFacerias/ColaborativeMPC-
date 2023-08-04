@@ -1,9 +1,10 @@
 import time
+
 import numpy as np
 
 from Planner.planners.nonLinDistribPlanner import PlannerEu
 from Planner.packages.mapManager import Map
-from Planner.packages.utilities import checkEnd, initialise_agents
+from Planner.packages.utilities import checkEnd, initialise_agents, get_lambdas
 from Planner.packages.IOmodule import io_class
 from Planner.packages.config.NL import initialiserNL, x0_database, settings, eval_constraintEU, get_alpha
 
@@ -30,7 +31,7 @@ class agent(initialiserNL):
         tic = time.time()
         feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
         self.time_op.append(time.time() - tic)
-        self.save(self.Controller.xPred, self.Controller.uPred, feas)
+        # self.save(self.Controller.xPred, self.Controller.uPred, feas)
 
 
         return feas, self.Controller.uPred, self.Controller.xPred, Solution
@@ -86,10 +87,9 @@ def main():
 
     io = io_class(settings, rs)
 
-    cost_old = np.zeros((n_agents, n_agents, N))
     lambdas_hist = []
     it = 0
-    lambdas = np.zeros((n_agents, n_agents, N))
+    lambdas = get_lambdas(settings)
     error = False
 
     while(it<max_it and not checkEnd(x_pred, maps)):
@@ -133,12 +133,15 @@ def main():
             lambdas_hist.append(lambdas)
 
             # check if the values of x changed, if they are close enough for two iterations the algorithm has converged
+            metric = ['']*(n_agents+1)
             if it_OCD != 0:
                 finished_ph = 1
                 for i in range(0,n_agents):
                     finished_ph &= np.allclose(x_old[i], x_pred[i], atol=0.01)
+                    metric[i] = x_old[i] - x_pred[i]
 
-                finished_ph &= np.allclose(cost, cost_old, atol=0.01)
+                # metric[n_agents] = cost - cost_old
+                # finished_ph |= np.allclose(cost, cost_old, atol=0.01)
                 itc += 1
 
             if not finished_ph :
@@ -154,7 +157,6 @@ def main():
 
             # store values from current iteration into the following one
             x_old = x_pred
-            cost_old = cost
 
             io.updateOCD(x_pred, it_OCD, it)
             it_OCD += 1
@@ -165,7 +167,6 @@ def main():
 
         if it == 0:
             rs[0].save_var_pickle([lambdas], ["ini_lambdas"])
-
 
         u_old = u_pred
         finished = False

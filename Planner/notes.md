@@ -36,6 +36,13 @@ TODO Esta setmana
 
     Divendres
         fer seccio de experiments amb el cas LPV de cara a la setmana que ve
+        fer funcionalitat de plots cada N iteracions -> done faltara el test
+        guardar config -> done
+    
+    Disabte -> per la tarda baixare aqui una estona i ya sortire amb el pausito desprs 
+        Guardar times be del CASADI -> vui saber temps x iteracio i num de iteracions
+        Fer algunes figures del matlab, encara que sigui amb els resultats antics 
+        Fer el plot de la pista nova 
 
 TODO Setmana que ve 
     
@@ -50,5 +57,4 @@ TODO Setmana que ve
 
 TODO QoL
 
-    Make more than one lap at a time
     

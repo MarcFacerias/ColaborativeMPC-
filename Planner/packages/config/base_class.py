@@ -141,18 +141,4 @@ class experiment_utilities():
 
         return placeholder
 
-def path_gen(settings, target, base = None):
 
-    if (base is not None) :
-        #  global path
-        path = os.path.normpath(base + "/data/" + target )
-        settings["path_csv"] = path + "/"
-        settings["path_img"] = path + "/"
-        settings["path_pck"] = path + "/"
-
-    else:
-        #  relative path (prefered)
-        path = os.path.normpath(sys.path[0] + "/data/" + target)
-        settings["path_csv"] = path + "/"
-        settings["path_img"] = path + "/"
-        settings["path_pck"] = path + "/"

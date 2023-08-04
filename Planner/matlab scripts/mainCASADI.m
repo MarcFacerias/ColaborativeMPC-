@@ -21,25 +21,33 @@ for n = 1:length(subFolders)
 end
 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Cartesian States 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Agent 0 
-hold on 
+
 total = length(subFolders);
 for n = 0:2:(total-1)*2 
 
-    sgtitle("Linear velocity and S evolutions for agents 1 to N")
+    sgtitle("Linear velocity and S evolutions for agents in the fleet")
     subplot(total,2,n+1);
+    hold on 
+    title("agent " + num2str(n/2 +1))
     plot(states(n/2 +1 ,:,1))
-    ylabel("Vel X")
+    ylabel("Vel x (m/s)")
     xlabel("it")
-    
-    subplot(total,2,n+2);
-    plot(states(n/2 +1,:,7))
-    ylabel("s")
-    xlabel("it")
+    grid on 
+    hold off 
 
+    subplot(total,2,n+2);
+    hold on 
+    title("agent " + num2str(n/2 +1))
+    plot(states(n/2 +1,:,7))
+    ylabel("s (m)")
+    xlabel("it")
+    grid on 
+    hold off 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % distance  
@@ -51,13 +59,24 @@ for n = 1:total
 
     sgtitle("Distance between agents along the track")
     subplot(total,1,n);
+    aux_title = "agent " + num2str(n) + " vs neighbours";
+    title(aux_title)
     hold on
-    plot(0.3*ones(size(states,2)), "-r")
+    grid on 
+    plot(0.25*ones(size(states,2)))
+    Legend=cell(total,1);
+    Legend{1} = "minimum allowed distance";
+    k = 1;
     for j = 1:total
         if j ~= n
             plot(sqrt((states(n,:,8) - states(j,:,8)).^2 +  (states(n,:,9) - states(j,:,9)).^2))
+            k = k+1;
+            Legend{k} = "agent " + num2str(j);
+            ylabel("distance (m)")
+            xlabel("it")
         end 
     end
+    legend(Legend)
     hold off 
   
 end

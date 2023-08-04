@@ -1,7 +1,8 @@
 # Imports
 import matplotlib.colors as mcolors
 import numpy as np
-from Planner.packages.config import experiment_utilities, path_gen
+from Planner.packages.config import experiment_utilities
+from Planner.packages.utilities import path_gen, save_config
 
 settings = {
     "plot" : -1, # 0: none, 1: online, 2: offline, -1: only save picture
@@ -21,7 +22,7 @@ settings = {
 }
 
 path_gen(settings, "LPV3_agent")
-
+save_config(settings)
 class initialiserLPV(experiment_utilities):
     def __init__(self, data, settings, model = "SCALED CAR"):
         super().__init__(data, settings, model)

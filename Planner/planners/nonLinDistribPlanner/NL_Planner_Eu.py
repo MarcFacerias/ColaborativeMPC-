@@ -166,7 +166,7 @@ class PlannerEu(base_nl_constr):
         self.update_parameters(ini_xPredicted,uPred) #update parameters in the control problem and run the optimisation
 
         p_opts = {"ipopt.print_level":0, "ipopt.sb":"yes", "print_time":0}
-        s_opts = {"max_iter": 1}
+        s_opts = {"max_iter": 100}
         self.opti.solver("ipopt", p_opts,
                     s_opts)
 
