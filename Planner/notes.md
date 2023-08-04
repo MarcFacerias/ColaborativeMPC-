@@ -42,7 +42,7 @@ TODO Esta setmana
     Disabte -> per la tarda baixare aqui una estona i ya sortire amb el pausito desprs 
         Guardar times be del CASADI -> vui saber temps x iteracio i num de iteracions
         Fer algunes figures del matlab, encara que sigui amb els resultats antics 
-        Fer el plot de la pista nova 
+        Fer el plot de la pista nova i refer pista nova 
 
 TODO Setmana que ve 
     

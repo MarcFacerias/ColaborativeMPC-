@@ -1,7 +1,6 @@
 
-import sys
 import numpy as np
-
+import sys
 from Planner.packages.mapManager import Map
 from Planner.packages.plotter import plotter_offline
 
@@ -11,7 +10,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 def main():
 
-    path = r"/Planner/drawings/map2.png"
+    path = sys.path[0] + "/drawings/"
     disp = plotter_offline(Map("SL"))
     disp.plot_map(path)
 
