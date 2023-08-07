@@ -1,7 +1,7 @@
 import sys
 import time
 
-from Planner.packages.plotter import plotter, plotter_offline
+from planner.packages.plotter import plotter, plotter_offline
 
 class io_class():
 

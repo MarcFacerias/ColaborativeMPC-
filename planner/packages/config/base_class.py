@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import os.path
 import sys
-from Planner.packages.utilities import EuDistance
+from planner.packages.utilities import EuDistance
 class experiment_utilities():
 
     def __init__(self, data, settings, model = "SCALED CAR"):

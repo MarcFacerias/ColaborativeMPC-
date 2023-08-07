@@ -1,8 +1,8 @@
 
 
-from Planner.packages.mapManager import Map
-from Planner.packages.plotter import *
-from Planner.packages.config.LPV import *  #Important!! Containts system definitions
+from planner.packages.mapManager import Map
+from planner.packages.plotter import *
+from planner.packages.config.LPV import *  #Important!! Containts system definitions
 
 import pickle
 

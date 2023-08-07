@@ -1,0 +1,13 @@
+plot,-1
+save_data,True
+verb,2
+color_list,"['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']"
+n_agents,3
+max_it,3000
+N,125
+dt,0.025
+vx_ref,3.0
+map_type,Highway
+path_csv,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/LPV3_agent/
+path_img,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/LPV3_agent/
+path_pck,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/Planner/data/LPV3_agent/

@@ -1,4 +1,4 @@
-# TODO check this
+#!/usr/bin/env python
 
 # ROS libs
 import rospy
@@ -13,7 +13,7 @@ import time
 from Planner.planners.distributedPlanner import PlannerLPV
 from Planner.packages.mapManager import Map
 from Planner.packages.utilities import checkEnd, initialise_agents
-from Planner.packages.IOmodule_ROS import io_class_ROS  # TODO change this for ros type and add plotting
+from Planner.packages.IOmodule_ROS import io_class_ROS
 from Planner.packages.config.LPV import initialiserLPV, settings
 from Planner.packages.config import x0_database
 
@@ -40,7 +40,7 @@ class agentROS_LPV(initialiserLPV):
         self.pub = rospy.Publisher('car' + str(id) + "_data", agent_info, queue_size=10)
         self.subs = [''] * len(connections)
         self.agents_id = connections
-        self.agents = [''] * len(connections)
+        self.agents = [''] * len(connections+1)
 
         for i,n in enumerate(connections):
             self.subs[i] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback(id = n))
@@ -49,7 +49,7 @@ class agentROS_LPV(initialiserLPV):
 
         self.pose = self.x0[[7,8]]
         tic = time.time()
-        feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, self.agents, self.agents_id, self.pose) # TODO redundant variables! mayb worth to refactor (agents_id and pose)
+        feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, self.agents, self.agents_id, self.pose)
         self.time_op.append(time.time() - tic)
         if not feas:
             return feas,uPred, xPred, planes, raw
@@ -68,7 +68,7 @@ class agentROS_LPV(initialiserLPV):
         self.agents[id] = deserialise_msg(msg)
 
     def send_states(self):
-        msg = serialise_np(self.Controller.uPred[1::,[7,8]])
+        msg = serialise_np(self.Controller.xPred[1::,[7,8]])
         self.pub.publish(msg)
 
 
@@ -90,17 +90,14 @@ def main(id):
     it = 0
 
     x0 = x0_database[0:n_agents]
-    ns = [[i for i in range(0, n_agents)] for j in range(0, n_agents)]
-
-    for j, n in enumerate(ns):
-        n.remove(j)
+    ns = [j for j in range(0, n_agents)].remove(id)
 
     maps = [Map(settings["map_type"])]*n_agents
 
     agents,x_old,u_old = initialise_agents(x0,N,dt,maps)
 
     rospy.init_node("car" + str(id))
-    rate = rospy.Rate(settings["Hz"])  # 10hz
+    rate = rospy.Rate()  # 10hz
 
     rs = agentROS_LPV(settings, x_old[id][0,:], id, ns)
 
@@ -129,8 +126,7 @@ def main(id):
 
 if __name__ == "__main__":
     myargv = rospy.myargv(argv=sys.argv)
-    aux = main(myargv[1])
-    aux.run()
+    main(myargv[1])
 
 
 

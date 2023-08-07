@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="robots" default="1"/>
+  <arg name = "name_robot" value = "$(eval 'car' + str(arg('robots')))"/>
+    <!-- Load joint controller configurations from YAML file to parameter server -->
+
+  <arg name="output" default="log"  unless="$(eval robots ==  log_agent)"/>
+  <arg name="output" value="screen" if="$(eval robots ==  log_agent)"/>
+
+  <arg name = "log_agent" default = "-1"/>
+
+
+  <node name="$(eval str(arg('name_robot')))" output="log" pkg="planner_experiments" type="LPV_ROS_main" args="$(eval str(arg('robots')))"/>
+
+  <!-- Node for interval dead reckoning -->
+  <!-- <node name="$(eval str(arg('name_robot')) + '_i_dr')" output="$(arg output)" pkg="mrs_localisation" type="mrs_localisation_node" args="$(eval str(arg('name_robot')) + '/')"/> -->
+
+  <include file="$(find planner_experiments)/launch/LPV_car_spawner.launch" if="$(eval arg('robots') - 1 > 0)">
+    <arg name="robots" value="$(eval arg('robots') - 1)"/>
+    <arg name = "log_agent" value = "$(arg log_agent)"/>
+  </include>
+</launch>

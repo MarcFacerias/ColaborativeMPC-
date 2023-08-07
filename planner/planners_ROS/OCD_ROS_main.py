@@ -2,11 +2,11 @@ import time
 
 import numpy as np
 
-from Planner.planners.nonLinDistribPlanner import PlannerEu
-from Planner.packages.mapManager import Map
-from Planner.packages.utilities import checkEnd, initialise_agents, get_lambdas
-from Planner.packages.IOmodule import io_class # TODO change this for ros type and add plotting
-from Planner.packages.config.NL import initialiserNL, x0_database, settings, eval_constraintEU, get_alpha
+from planner.planners.nonLinDistribPlanner import PlannerEu
+from planner.packages.mapManager import Map
+from planner.packages.utilities import checkEnd, initialise_agents, get_lambdas
+from planner.packages.IOmodule import io_class # TODO change this for ros type and add plotting
+from planner.packages.config.NL import initialiserNL, x0_database, settings, eval_constraintEU, get_alpha
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 

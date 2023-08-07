@@ -2,8 +2,8 @@
 import time
 from casadi import *
 import numpy as np
-from Planner.packages.utilities import curvature, get_ey
-from Planner.packages.planes import hyperplane_separator
+from planner.packages.utilities import curvature, get_ey
+from planner.packages.planes import hyperplane_separator
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 

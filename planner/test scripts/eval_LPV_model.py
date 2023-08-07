@@ -2,12 +2,12 @@
 # Global Variables
 import numpy as np
 
-from Planner.planners.distributedPlanner import LPV_Model
-from Planner.packages.mapManager import Map
-from Planner.packages.plotter import *
-from Planner.packages.utilities import initialise_agents
-from Planner.packages.config.LPV import *  #Important!! Containts system definitions
-from Planner.packages.config import *  #Important!! Containts system definitions
+from planner.planners.distributedPlanner import LPV_Model
+from planner.packages.mapManager import Map
+from planner.packages.plotter import *
+from planner.packages.utilities import initialise_agents
+from planner.packages.config.LPV import *  #Important!! Containts system definitions
+from planner.packages.config import *  #Important!! Containts system definitions
 
 import pickle
 

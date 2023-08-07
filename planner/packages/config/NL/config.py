@@ -1,8 +1,8 @@
 # Imports
 import matplotlib.colors as mcolors
 import numpy as np
-from Planner.packages.config import experiment_utilities
-from Planner.packages.utilities import  path_gen,lbp_gen
+from planner.packages.config import experiment_utilities
+from planner.packages.utilities import  path_gen,lbp_gen
 
 settings = {
     "plot" : -1, # 0: none, 1: online, 2: offline, -1: only save picture
