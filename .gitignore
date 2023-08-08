@@ -29,6 +29,10 @@ devel_isolated/
 .project
 .cproject
 
+# pycharm
+.idea
+.pytest_cache
+
 # qcreator stuff
 CMakeLists.txt.user
 

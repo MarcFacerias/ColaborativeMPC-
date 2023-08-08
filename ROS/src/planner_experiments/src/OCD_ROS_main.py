@@ -1,6 +1,5 @@
 #!/usr/bin/env python3.6
 
-
 # ROS libs
 import rospy
 import sys

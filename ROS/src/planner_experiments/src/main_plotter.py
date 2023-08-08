@@ -24,10 +24,10 @@ class plotter_ROS():
     def __init__(self, mode = "LPV"):
 
         if mode == "LPV":
-            from plan_lib.config.LPV import settings
+            from config_files.config_LPV import settings
 
         else:
-            from plan_lib.config.NL import settings
+            from config_files.config_NL import settings
 
         self.nh = rospy.init_node("plotter")
         self.rate = rospy.Rate(20)

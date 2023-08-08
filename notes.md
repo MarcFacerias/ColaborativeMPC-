@@ -17,11 +17,11 @@ TODO Experiments
         
     Mapa amb escañament -> fet, mes o menos tindria que estar be 
     Acabar lo de ROS
-    Revisar metriques temporals
-    Testejar la nova refactor de la llibreria 
+    Revisar metriques temporals -> ja esta fet, a priori funciona
+    Testejar la nova refactor de la llibreria -> ja esta fet, a priori funciona
     Acabar el codi de ROS
     Escriure documentacio
-    Refactor del git
+    Refactor del git -> ja esta fet, a priori funciona, igual tindriam que afegir igore de fitxers ocults
     afegir docker
 
 TODO Paper 

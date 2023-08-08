@@ -40,7 +40,7 @@ class io_class_ROS():
 
         self.it_count += 1
 
-        track_len = str(self.sys[0].map.TrackLength[0])
+        track_len = str(self.sys.map.TrackLength[0])
 
         if OCD_ct is not None:
             self.it_OCD.append(OCD_ct)
@@ -50,9 +50,8 @@ class io_class_ROS():
             print("--------------------------------------------------------------")
             print("it: " + str(it))
 
-            for i in range(0, self.n_agent):
-                print("---------------------Agents---------------------------------------")
-                print("Agent " + str(i) + " track s: " + str(x_pred[i][1, -3]) + "/" + track_len)
+            print("---------------------Agents---------------------------------------")
+            print("Agent " + " track s: " + str(x_pred[1, -3]) + "/" + track_len)
 
             print("---------------------END Agents---------------------------------------")
             print("avg computational time: " + str((self._toc - self._tic)/self.sys.n_agents))
@@ -66,11 +65,10 @@ class io_class_ROS():
             print("agents x : " + str(agents[0,:,0]))
             print("agents y : " + str(agents[0,:,1]))
 
-            for i in range(0,self.n_agent):
-                print("---------------------Agents---------------------------------------")
-                print("Agent " + str(i) + " track s: " + str(x_pred[i][0,-3]) + "/" + track_len)
-                print("Agent " + str(i) + " u0: " + str(u_pred[i][0,0]) + " u1: " + str(u_pred[i][0,1]))
-                print("Agent " + str(i) + " v: " + str(x_pred[i][1, 0]) + " ey: " + str(x_pred[i][1, 3]))
+            print("---------------------Agents---------------------------------------")
+            print("Agent "  + " track s: " + str(x_pred[0,-3]) + "/" + track_len)
+            print("Agent "  + " u0: " + str(u_pred[0,0]) + " u1: " + str(u_pred[0,1]))
+            print("Agent "  + " v: " + str(x_pred[1, 0]) + " ey: " + str(x_pred[1,3]))
 
             print("---------------------END Agents---------------------------------------")
             print("avg computational time: " + str((self._toc - self._tic)/self.n_agent))

@@ -16,7 +16,7 @@ from plan_lib.utilities import checkEnd, initialise_agents
 from IOmodule_ROS.IOmodule import io_class_ROS
 from plan_lib.config.LPV import initialiserLPV
 from plan_lib.config import x0_database
-from  config_files.config_LPV import settings
+from config_files.config_LPV import settings
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 
@@ -30,7 +30,7 @@ class agentROS_LPV(initialiserLPV):
         self.N = settings["N"]
         self.dt = settings["dt"]
         self.Controller = PlannerLPV(self.Q, self.Qs, self.R, self.dR, self.N, self.dt, self.map, id, self.wq, self.model_param, self.sys_lim)
-        self.x0 = x0
+        self.x0 = x0[0,:]
         self.states = []
         self.u = []
         self.planes = []
@@ -40,16 +40,16 @@ class agentROS_LPV(initialiserLPV):
         self.pub = rospy.Publisher('car' + str(id) + "_data", agent_info, queue_size=10)
         self.subs = [''] * len(connections)
         self.agents_id = connections
-        self.agents = [''] * (len(connections)+1)
+        self.agents = np.zeros((settings["N"] + 1, len(connections)+1, 2))
 
         for i,n in enumerate(connections):
             self.subs[i] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback,n)
 
     def one_step(self, uPred = None, xPred = None):
 
-        self.pose = self.x0[[7,8]]
+        pose = xPred[:,[7,8]]
         tic = time.time()
-        feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, self.agents, self.agents_id, self.pose)
+        feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, self.agents, self.agents_id, pose)
         self.time_op.append(time.time() - tic)
         if not feas:
             return feas,uPred, xPred, planes, raw
@@ -61,11 +61,11 @@ class agentROS_LPV(initialiserLPV):
 
         uPred, xPred = self.Controller.uPred, self.Controller.xPred
         self.save(xPred, uPred, feas, planes)
-        self.send_states(xPred)
+        self.send_states()
         return feas,uPred, xPred, planes, raw
 
     def callback(self,msg,id):
-        self.agents[id] = deserialise_msg(msg)
+        self.agents[:,id,:] = deserialise_msg(msg)
 
     def send_states(self):
         msg = serialise_np(self.Controller.xPred[1::,[7,8]])
@@ -82,7 +82,7 @@ def main(id):
     N        = settings["N"]
     dt       = settings["dt"]
     max_it   = settings["max_it"]
-
+    id = int(id)
     # set constants
     x_pred = [None] * n_agents
     u_pred = [None] * n_agents
@@ -90,16 +90,19 @@ def main(id):
     it = 0
 
     x0 = x0_database[0:n_agents]
-    ns = [j for j in range(0, n_agents)].remove(id)
+    ns = [j for j in range(0, n_agents)]
+    ns.remove(id)
 
     maps = [Map(settings["map_type"])]*n_agents
-
     agents,x_old,u_old = initialise_agents(x0,N,dt,maps)
 
     rospy.init_node("car" + str(id))
-    rate = rospy.Rate()  # 10hz
+    rate = rospy.Rate(10)  # 10hz
+    x_old = x_old[id]
+    u_old = u_old[id]
 
-    rs = agentROS_LPV(settings, x_old[id][0,:], id, ns)
+    rs = agentROS_LPV(settings, x_old, id, ns)
+    rs.agents = agents
 
     io = io_class_ROS(settings, rs)
 
