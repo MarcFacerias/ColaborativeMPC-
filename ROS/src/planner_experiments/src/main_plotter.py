@@ -1,6 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.6
 
-from planner.packages.plotter import *
 import numpy as np
 np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 import sys
@@ -9,7 +8,9 @@ import sys
 from planner_experiments.msg import agent_info
 from std_msgs.msg import Int32
 from utilities_ROS.utilities_ros import deserialise_msg
-from planner.packages.mapManager import Map
+from plan_lib.mapManager import Map
+from plan_lib.plotter import plotter_offline,plotter
+
 import rospy
 # proxy class used to match function calls
 class proxy_agent():
@@ -23,34 +24,36 @@ class plotter_ROS():
     def __init__(self, mode = "LPV"):
 
         if mode == "LPV":
-            from planner.packages.config.LPV import settings
+            from plan_lib.config.LPV import settings
 
         else:
-            from planner.packages.config.NL import settings
+            from plan_lib.config.NL import settings
 
         self.nh = rospy.init_node("plotter")
-        self.rate = rospy.Rate(settings["Hz"])
+        self.rate = rospy.Rate(20)
 
-        map = Map(settings["map"])
+        map = Map(settings["map_type"])
         self.plot = settings["plot"]
         self.n_agent = settings["n_agents"]
         self.color = settings["color_list"]
         self.path = settings["path_img"]
         self.sys = proxy_agent() # change this so that the proxy is updated
 
-        self.subs = [''] * len(self.n_agent)
-        self.agents = [proxy_agent()] * len(self.n_agent)
+        self.subs = [''] * self.n_agent
+        self.agents = [proxy_agent()] * self.n_agent
 
         if self.plot == 1:
             self.disp = plotter(map, self.n_agent)
 
         elif self.plot != 0:
             self.disp = plotter_offline(map)
+        self.it_plot = -1
+        self.it_count = 0
 
         self.sub_pp = rospy.Subscriber("set_pplot",Int32 , self.set_pplot_callback)
 
         for n in range(self.n_agent):
-            self.subs[n] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback(id=n))
+            self.subs[n] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback, (n))
 
     def callback(self,msg,id):
         self.agents[id].states = deserialise_msg(msg)
@@ -89,6 +92,8 @@ class plotter_ROS():
 
             for j,r in enumerate(self.agents):
                 self.disp.plot_offline_experiment(r, self.path, self.color[j])
+
+        self.it_count +=1
 
 
 if __name__ == "__main__":

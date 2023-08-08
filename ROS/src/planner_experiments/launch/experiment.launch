@@ -5,10 +5,10 @@
 
 <node pkg="planner_experiments" type="main_plotter.py" name="plotter" output="log"/>
 
-<!-- <include file="$(find planner_experiments)/launch/LPV_car_spawner.launch"> -->
-<!--     <arg name="robots" value="$(arg n_robots)"/> -->
-<!--     <arg name="log_agent" value="2"/> -->
-<!-- </include> -->
+<include file="$(find planner_experiments)/launch/LPV_car_spawner.launch">
+    <arg name="robots" value="$(arg n_robots)"/>
+    <arg name="log_agent" value="2"/>
+</include>
 
 <!--   <include file="$(find planner_experiments)/launch/NL_car_spawner.launch"> -->
 <!--     <arg name="robots" value="$(arg n_robots)"/> -->

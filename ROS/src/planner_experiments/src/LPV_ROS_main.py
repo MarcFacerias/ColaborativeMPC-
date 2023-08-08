@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.6
 
 # ROS libs
 import rospy
@@ -10,12 +10,12 @@ from planner_experiments.msg import agent_info
 import numpy as np
 import warnings
 import time
-from Planner.planners.distributedPlanner import PlannerLPV
-from Planner.packages.mapManager import Map
-from Planner.packages.utilities import checkEnd, initialise_agents
-from Planner.packages.IOmodule_ROS import io_class_ROS
-from Planner.packages.config.LPV import initialiserLPV, settings
-from Planner.packages.config import x0_database
+from plan_lib.distributedPlanner import PlannerLPV
+from plan_lib.mapManager import Map
+from plan_lib.utilities import checkEnd, initialise_agents
+from IOmodule_ROS import io_class_ROS
+from plan_lib.config.LPV import initialiserLPV, settings
+from plan_lib.config import x0_database
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
@@ -40,10 +40,10 @@ class agentROS_LPV(initialiserLPV):
         self.pub = rospy.Publisher('car' + str(id) + "_data", agent_info, queue_size=10)
         self.subs = [''] * len(connections)
         self.agents_id = connections
-        self.agents = [''] * len(connections+1)
+        self.agents = [''] * (len(connections)+1)
 
         for i,n in enumerate(connections):
-            self.subs[i] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback(id = n))
+            self.subs[i] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback,n)
 
     def one_step(self, uPred = None, xPred = None):
 

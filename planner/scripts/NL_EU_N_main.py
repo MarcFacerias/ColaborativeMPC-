@@ -1,31 +1,23 @@
-#!/usr/bin/env python3.6
-
 import time
 
-# ROS libs
-import rospy
-import sys
-from utilities_ROS.utilities_ros import serialise_np, deserialise_msg
-from planner_experiments.msg import agent_info
-from IOmodule_ROS import io_class_ROS
-
 import numpy as np
-from plan_lib.nonLinDistribPlanner import PlannerEu
-from plan_lib.mapManager import Map
-from plan_lib.utilities import checkEnd, initialise_agents, get_lambdas
+from plan_lib import io_class
 from plan_lib.config.NL import initialiserNL, x0_database, settings, eval_constraintEU, get_alpha
+from plan_lib.mapManager import Map
+from plan_lib import checkEnd, initialise_agents, get_lambdas
+from plan_lib import PlannerEu
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
-class agentROS_OCD(initialiserNL):
+class agent(initialiserNL):
 
-    def __init__(self, settings, x0, id, connections):
+    def __init__(self, settings, maps, x0, id ):
         super().__init__(self, settings) # initialise the initialiser
-        self.map = Map(settings["map_type"])
+        self.map = maps
         self.dt = settings["dt"]
         self.N =  settings["N"]
         self.x0 = x0
-        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.dR, self.N, self.dt, self.map, id, self.model_param, self.sys_lim)
+        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.dR, self.N, self.dt, maps, id, self.model_param, self.sys_lim)
         self.states = []
         self.u = []
         self.time_op = []
@@ -34,43 +26,18 @@ class agentROS_OCD(initialiserNL):
         self.data_collec = []
         self.id = id
 
-        # ROS CONNECTIONS
-        self.pub = rospy.Publisher('car' + str(id) + "_data", agent_info, queue_size=10)
-        self.subs = [''] * len(connections)
-        self.agents_id = connections
-        self.updated = [False] * len(connections)
-        self.agents_data = [''] * len(connections+1)
-        for i,n in enumerate(connections):
-            self.subs[i] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback, (n))
-
-
-    def one_step(self, lambdas, uPred = None, xPred = None):
+    def one_step(self, lambdas, agents, agents_id, uPred = None, xPred = None):
         tic = time.time()
-        feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, self.agents_data[0][1,[7,8]], self.agents_id, self.agents_data[1::])
+        feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
         self.time_op.append(time.time() - tic)
-        self.send_states()
+        # self.save(self.Controller.xPred, self.Controller.uPred, feas)
+
+
         return feas, self.Controller.uPred, self.Controller.xPred, Solution
 
-    def callback(self,msg,id):
-        self.agents_data[id] = deserialise_msg(msg)
-        self.updated[id] = True
 
-    def send_states(self):
-        msg = serialise_np([self.Controller.xPred] + self.data_opti)
-        self.pub.publish(msg)
+def main():
 
-    def wat_update(self):
-
-        while not all(self.updated):
-            pass
-
-        self.updated = [not elem for elem in self.updated]
-
-    def build_agents(self):
-        return np.swapaxes(np.asarray(self.agents_data[0])[:, :, -2:], 0, 1)
-
-def main(id):
-# TODO Note we only use Neigbours!! not all robots from the fleet
 #########################################################
 #########################################################
 
@@ -92,7 +59,10 @@ def main(id):
 
     # set constants
     x0 = x0_database[0:n_agents]
-    ns = [j for j in range(0, n_agents)].remove(id)
+    ns = [[i for i in range(0, n_agents)] for j in range(0, n_agents)]
+
+    for j, n in enumerate(ns):
+        n.remove(j)
 
     # initialise data structures
     maps = [Map(map_type)]*n_agents
@@ -100,24 +70,26 @@ def main(id):
 
     x_pred = [None] * n_agents
     u_pred = [None] * n_agents
+    feas   = [None] * n_agents
     raws   = [None] * n_agents
+    rs     = [None] * n_agents
+    data   = [None] * n_agents
 
-    data = [x_old[id], u_old[id], np.zeros((N, 2)), np.zeros((N, 2)), np.zeros((N, n_agents)),
-            np.zeros((N, n_agents))]
+    for i in range(0, n_agents):
+        data[i] = [x_old[i], u_old[i], np.zeros((N, 2)), np.zeros((N, 2)), np.zeros((N, n_agents)),
+                    np.zeros((N, n_agents))]
 
-    rs = agentROS_OCD(settings, x_old[id][0,:],id, ns)
-    rs.data_collec = [data[j] for j in ns]
+    # initialise controllers and data holders
+    for i in range (0,n_agents):
+        rs[i] = agent(settings, maps[i], x_old[i], i)
+        rs[i].data_collec = [data[j] for j in ns[i]]
 
-    io = io_class_ROS(settings, rs)
+    io = io_class(settings, rs)
 
     lambdas_hist = []
     it = 0
-    lambdas = get_lambdas(settings)[id, ns,:].squeze()
+    lambdas = get_lambdas(settings)
     error = False
-
-
-    rospy.init_node("car" + str(id))
-    rate = rospy.Rate()
 
     while(it<max_it and not checkEnd(x_pred, maps)):
 
@@ -129,28 +101,31 @@ def main(id):
             # run an instance of the optimisation problems
             io.tic()
 
-            feas, u_pred, x_pred, raws = rs.one_step( lambdas, u_old, raws)
+            for i, r in enumerate(rs):
+                feas[i], u_pred[i], x_pred[i], raws[i] = r.one_step( lambdas[[i],ns[i],:], agents[:,ns[i],:], ns[i], u_old[i], raws[i])
 
-            if not feas:
+            if not np.any(feas):
                 error = True
                 break
 
             io.toc()
 
-            cost = np.zeros((n_agents,N))
-            # update the values of x,y for the obstacle avoidance constraits
+            for j,r in enumerate(rs):
+                r.data_collec = [rs[i].data_opti for i in ns[j]]
+
+            cost = np.zeros((n_agents,n_agents,N))
+            # update the values of x,y for the obstacle avoidance constraints
+            agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:], 0, 1)
 
             if n_agents == 1:
                 break
 
-            rs.wat_update()
-
-            agents = rs.build_agents()
-
             for k in range(1,N+1):
+                for i in range(0,n_agents):
                     for j in range(0,n_agents):
-                        if (id != j) and id<j:
-                            cost[j,k-1] = eval_constraintEU(agents[k,id,:],agents[k,j,:],dth)
+
+                        if (i != j) and i<j:
+                            cost[i,j,k-1] = eval_constraintEU(agents[k,i,:],agents[k,j,:],dth)
 
             alpha = get_alpha()
             lambdas += alpha*cost
@@ -165,6 +140,7 @@ def main(id):
                     metric[i] = x_old[i] - x_pred[i]
 
                 # metric[n_agents] = cost - cost_old
+                # finished_ph |= np.allclose(cost, cost_old, atol=0.01)
                 itc += 1
 
             if not finished_ph :
@@ -184,8 +160,12 @@ def main(id):
             io.updateOCD(x_pred, it_OCD, it)
             it_OCD += 1
 
-            rs.save(x_pred, u_pred)
-            rs.x0 = x_pred[1:, :]
+        for j,r in enumerate(rs):
+            r.save(x_pred[j], u_pred[j])
+            r.x0 = x_pred[j][1:, :]
+
+        if it == 0:
+            rs[0].save_var_pickle([lambdas], ["ini_lambdas"])
 
         u_old = u_pred
         finished = False
@@ -194,13 +174,13 @@ def main(id):
 
         if error:
             break
-        rate.sleep()
 
     io.update(x_pred, u_pred, agents, it, end=True,error = error)
 
 if __name__ == "__main__":
-    myargv = rospy.myargv(argv=sys.argv)
-    main(myargv[1])
+
+    main()
+
 
 
 
