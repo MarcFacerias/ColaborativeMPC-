@@ -1,19 +1,22 @@
 #!/usr/bin/env python3.6
 
-import time
 
 # ROS libs
 import rospy
 import sys
+import numpy as np
+import time
+
 from utilities_ROS.utilities_ros import serialise_np, deserialise_msg
 from planner_experiments.msg import agent_info
-from IOmodule_ROS import io_class_ROS
+from IOmodule_ROS.IOmodule import io_class_ROS
 
-import numpy as np
 from plan_lib.nonLinDistribPlanner import PlannerEu
 from plan_lib.mapManager import Map
 from plan_lib.utilities import checkEnd, initialise_agents, get_lambdas
-from plan_lib.config.NL import initialiserNL, x0_database, settings, eval_constraintEU, get_alpha
+from plan_lib.config.NL import initialiserNL, eval_constraintEU, get_alpha
+from plan_lib.config import x0_database
+from config_files.config_NL import settings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 

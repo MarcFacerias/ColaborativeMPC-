@@ -13,10 +13,10 @@ import time
 from plan_lib.distributedPlanner import PlannerLPV
 from plan_lib.mapManager import Map
 from plan_lib.utilities import checkEnd, initialise_agents
-from IOmodule_ROS import io_class_ROS
-from plan_lib.config.LPV import initialiserLPV, settings
+from IOmodule_ROS.IOmodule import io_class_ROS
+from plan_lib.config.LPV import initialiserLPV
 from plan_lib.config import x0_database
-
+from  config_files.config_LPV import settings
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 

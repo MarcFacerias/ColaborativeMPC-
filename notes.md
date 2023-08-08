@@ -18,6 +18,11 @@ TODO Experiments
     Mapa amb escañament -> fet, mes o menos tindria que estar be 
     Acabar lo de ROS
     Revisar metriques temporals
+    Testejar la nova refactor de la llibreria 
+    Acabar el codi de ROS
+    Escriure documentacio
+    Refactor del git
+    afegir docker
 
 TODO Paper 
 

@@ -1,11 +1,13 @@
 import time
 
 import numpy as np
-from plan_lib import io_class
+from plan_lib.IOmodule import io_class
 from plan_lib.config.NL import initialiserNL, x0_database, settings, eval_constraintEU, get_alpha
 from plan_lib.mapManager import Map
-from plan_lib import checkEnd, initialise_agents, get_lambdas
-from plan_lib import PlannerEu
+from plan_lib.utilities import checkEnd, initialise_agents, get_lambdas
+from plan_lib.nonLinDistribPlanner import PlannerEu
+
+from config_files.config_NL import settings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 

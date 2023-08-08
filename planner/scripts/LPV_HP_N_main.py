@@ -4,12 +4,14 @@ import warnings
 # Global Variables
 import numpy as np
 
-from plan_lib import io_class
-from plan_lib import x0_database
-from plan_lib.config.LPV import initialiserLPV, settings
+from plan_lib.IOmodule import io_class
+from plan_lib.config import x0_database
+from plan_lib.config.LPV import initialiserLPV
 from plan_lib.mapManager import Map
-from plan_lib import checkEnd, initialise_agents
-from plan_lib import PlannerLPV
+from plan_lib.utilities import checkEnd, initialise_agents
+from plan_lib.distributedPlanner import PlannerLPV
+
+from config_files.config_LPV import settings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
