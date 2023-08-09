@@ -28,10 +28,10 @@ def EuDistance(p1, p2):
 def checkEnd(x, maps, laps=1):
     status = False
 
-    if maps is not list:
+    if type(maps) != list:
         maps = [maps]
 
-    if x is not list:
+    if type(x) != list:
         x = [x]
 
     for i, agent in enumerate(x):

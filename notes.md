@@ -15,14 +15,7 @@ TODO Experiments
         Cas 2 Bottleneck
             Comparison with both cases (best performing for in the previous experiment)
         
-    Mapa amb escañament -> fet, mes o menos tindria que estar be 
-    Acabar lo de ROS
-    Revisar metriques temporals -> ja esta fet, a priori funciona
-    Testejar la nova refactor de la llibreria -> ja esta fet, a priori funciona
-    Acabar el codi de ROS
-    Escriure documentacio
-    Refactor del git -> ja esta fet, a priori funciona, igual tindriam que afegir igore de fitxers ocults
-    afegir docker
+
 
 TODO Paper 
 
@@ -30,6 +23,11 @@ TODO Paper
         Revisio final post experiments
         Afegir lo de ROS
 
-TODO QoL
+TODO setmana que ve 
 
-    clean redundant variables in the code (labeled with TODO)
+    Acabar el codi de ROS Casadi
+    Escriure documentacio
+    mirar remarkable 
+    mirar PC 
+    mirar gym 
+    Escriure experiments 

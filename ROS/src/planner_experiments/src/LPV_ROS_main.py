@@ -3,7 +3,7 @@
 # ROS libs
 import rospy
 import sys
-from utilities_ROS.utilities_ros import serialise_np, deserialise_msg
+from utilities_ROS.utilities_ros import serialise_np, deserialise_np
 from planner_experiments.msg import agent_info
 
 # Global Variables
@@ -38,18 +38,20 @@ class agentROS_LPV(initialiserLPV):
         self.status = []
         self.id = id
         self.pub = rospy.Publisher('car' + str(id) + "_data", agent_info, queue_size=10)
-        self.subs = [''] * len(connections)
+        self.subs = [''] * (len(connections)+1)
         self.agents_id = connections
-        self.agents = np.zeros((settings["N"] + 1, len(connections)+1, 2))
+        self.agents = np.zeros((settings["N"]+1, len(connections)+1, 2))
+        self.updated = [True] * (len(connections)+1)
+        self.waiting = False
 
-        for i,n in enumerate(connections):
-            self.subs[i] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback,n)
+        for n in connections:
+            self.subs[n] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback,n)
 
     def one_step(self, uPred = None, xPred = None):
 
         pose = xPred[:,[7,8]]
         tic = time.time()
-        feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, self.agents, self.agents_id, pose)
+        feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, self.agents[:,self.agents_id,:], self.agents_id, pose)
         self.time_op.append(time.time() - tic)
         if not feas:
             return feas,uPred, xPred, planes, raw
@@ -60,22 +62,33 @@ class agentROS_LPV(initialiserLPV):
             print(self.Controller.sPred[:,1:])
 
         uPred, xPred = self.Controller.uPred, self.Controller.xPred
+        self.agents[:, self.id, :] = xPred[:,[7,8]]
         self.save(xPred, uPred, feas, planes)
         self.send_states()
         return feas,uPred, xPred, planes, raw
 
     def callback(self,msg,id):
-        self.agents[:,id,:] = deserialise_msg(msg)
+        self.agents[:,id,:] = deserialise_np(msg)[0][:,[7,8]]
+        self.updated[id] = True
 
     def send_states(self):
-        msg = serialise_np(self.Controller.xPred[1::,[7,8]])
+        msg = serialise_np([self.Controller.xPred])
         self.pub.publish(msg)
 
+    def wait_coms(self):
+        self.waiting = True
+        for idx in self.agents_id:
+            self.updated[idx] = False
 
 def main(id):
 
     #########################################################
     #########################################################
+    # Update number of robots
+    try:
+        settings["n_agents"] = int(rospy.get_param("n_robots"))
+    except:
+        pass
 
     # Map settings
     n_agents = settings["n_agents"]
@@ -83,6 +96,7 @@ def main(id):
     dt       = settings["dt"]
     max_it   = settings["max_it"]
     id = int(id)
+
     # set constants
     x_pred = [None] * n_agents
     u_pred = [None] * n_agents
@@ -97,7 +111,7 @@ def main(id):
     agents,x_old,u_old = initialise_agents(x0,N,dt,maps)
 
     rospy.init_node("car" + str(id))
-    rate = rospy.Rate(10)  # 10hz
+    rate = rospy.Rate(100)  # 10hz
     x_old = x_old[id]
     u_old = u_old[id]
 
@@ -105,10 +119,18 @@ def main(id):
     rs.agents = agents
 
     io = io_class_ROS(settings, rs)
+    while(it<max_it and not checkEnd(x_pred, rs.map) and not rospy.is_shutdown()):
 
-    while(it<max_it and not checkEnd(x_pred, maps) and not rospy.is_shutdown()):
+        if not all(rs.updated):
+            continue
 
-        io.tic()
+        elif rs.waiting:
+            io.toc()
+            rs.waiting = False
+
+        if not rs.waiting:
+            io.tic()
+
         feas, u_pred, x_pred, planes, raws = rs.one_step(u_old, x_old)
 
         if not feas:
@@ -116,13 +138,13 @@ def main(id):
 
         rs.x0 = x_pred[1, :]
 
-        io.toc()
-
         u_old = u_pred
-        x_old = x_pred[1:, :]
+        x_old = x_pred
 
         io.update( x_pred, u_pred ,agents, it)
         it += 1
+
+        rs.wait_coms()
         rate.sleep()
 
     io.update(x_pred, u_pred, agents, it, end=True)

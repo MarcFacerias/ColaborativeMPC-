@@ -39,9 +39,12 @@ settings = {
     "Qs": Qs,
     "R": R,
     "dR": dR,
-    "wq": wq
+    "wq": wq,
+
+    # ROS
+    "log_agent": 0,
 }
 
-path_gen(settings, "NL3_agent_sht")
+path_gen(settings, "NLR_test")
 lbp_gen(settings, "lambdas")
 save_config(settings)

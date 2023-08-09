@@ -7,7 +7,7 @@ import sys
 # ROS
 from planner_experiments.msg import agent_info
 from std_msgs.msg import Int32
-from utilities_ROS.utilities_ros import deserialise_msg
+from utilities_ROS.utilities_ros import deserialise_np
 from plan_lib.mapManager import Map
 from plan_lib.plotter import plotter_offline,plotter
 
@@ -30,39 +30,46 @@ class plotter_ROS():
             from config_files.config_NL import settings
 
         self.nh = rospy.init_node("plotter")
-        self.rate = rospy.Rate(20)
+        self.rate = rospy.Rate(1000)
 
-        map = Map(settings["map_type"])
+        self.map = Map(settings["map_type"])
         self.plot = settings["plot"]
-        self.n_agent = settings["n_agents"]
+        try:
+            self.n_agent = int(rospy.get_param("n_robots"))
+        except:
+            self.n_agent = settings["n_agent"]
+
         self.color = settings["color_list"]
         self.path = settings["path_img"]
-        self.sys = proxy_agent() # change this so that the proxy is updated
+        self.agents = []
 
         self.subs = [''] * self.n_agent
-        self.agents = [proxy_agent()] * self.n_agent
+
+        for i in range(0,self.n_agent):
+            placeholder = proxy_agent()
+            self.agents.append(placeholder)
 
         if self.plot == 1:
-            self.disp = plotter(map, self.n_agent)
+            self.disp = plotter(self.map, self.n_agent)
 
         elif self.plot != 0:
-            self.disp = plotter_offline(map)
+            self.disp = plotter_offline(self.map)
         self.it_plot = -1
         self.it_count = 0
 
         self.sub_pp = rospy.Subscriber("set_pplot",Int32 , self.set_pplot_callback)
 
-        for n in range(self.n_agent):
+        for n in range(0,self.n_agent):
             self.subs[n] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback, (n))
 
     def callback(self,msg,id):
-        self.agents[id].states = deserialise_msg(msg)
+        self.agents[id].states.append(deserialise_np(msg)[0][1,:])
 
     def set_pplot_callback(self, msg):
         self.it_plot = msg.data
         self.it_count = 0
         if self.plot == 0:
-            self.disp = plotter_offline(self.sys[0].map)
+            self.disp = plotter_offline(self.map)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -88,8 +95,6 @@ class plotter_ROS():
 
         if (self.plot == -1 ):
 
-            input("Press enter to save track ...")
-
             for j,r in enumerate(self.agents):
                 self.disp.plot_offline_experiment(r, self.path, self.color[j])
 
@@ -100,10 +105,10 @@ if __name__ == "__main__":
     myargv = rospy.myargv(argv=sys.argv)
     try:
         mode = myargv[1]
+        plotter = plotter_ROS(mode)
     except:
-        mode = None # TODO add error handling here 
+        plotter = plotter_ROS()
 
-    plotter = plotter_ROS(mode)
     plotter.run()
 
 

@@ -15,17 +15,29 @@ class io_class_ROS():
 
         self.sys  = system
         self._tic = 0
-        self._toc = 0
+        self._et = 0
+        self.et_hist = []
         self.it_count = 0
         self.it_plot = None
         self.it_OCD = []
 
+        if self.sys.id == settings["log_agent"]:
+            self.act_flag = True
+        else:
+            self.act_flag = False
+
+
     def tic(self):
         self._tic = time.time()
     def toc(self):
-        self._toc = time.time()
+        self._et = time.time() - self._tic
+        self.et_hist.append(self._et)
 
     def updateOCD(self,x_pred,it_OCD,it):
+
+        if not self.act_flag:
+            return
+
         if self.verb_OCD:
 
             print("-------------------------------------------------")
@@ -45,6 +57,15 @@ class io_class_ROS():
         if OCD_ct is not None:
             self.it_OCD.append(OCD_ct)
 
+        if (self.save and end) or (self.save and error ):
+
+            self.sys.save_to_csv(self.it_OCD)
+            self.sys.save_exp()
+            self.sys.save_var_to_csv(self.et_hist, "ROS_et_hist")
+
+        if not self.act_flag:
+            return
+
         if self.verb == 1:
 
             print("--------------------------------------------------------------")
@@ -54,7 +75,7 @@ class io_class_ROS():
             print("Agent " + " track s: " + str(x_pred[1, -3]) + "/" + track_len)
 
             print("---------------------END Agents---------------------------------------")
-            print("avg computational time: " + str((self._toc - self._tic)/self.sys.n_agents))
+            print("avg computational time: " + str((self._et)/self.sys.n_agents))
             print("--------------------------------------------------------------")
 
         elif self.verb == 2 :
@@ -71,7 +92,7 @@ class io_class_ROS():
             print("Agent "  + " v: " + str(x_pred[1, 0]) + " ey: " + str(x_pred[1,3]))
 
             print("---------------------END Agents---------------------------------------")
-            print("avg computational time: " + str((self._toc - self._tic)/self.n_agent))
+            print("avg computational time: " + str((self._et)/self.n_agent))
             print("--------------------------------------------------------------")
 
         else:
@@ -80,11 +101,3 @@ class io_class_ROS():
             print("it: " + str(it))
             print("--------------------------------------------------------------")
 
-        if (self.save and end) or (self.save and error ):
-
-            input("Press enter to save data ...")
-
-            for r in self.sys:
-
-                r.save_to_csv(self.it_OCD)
-                r.save_exp()

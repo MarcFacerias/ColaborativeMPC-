@@ -16,8 +16,8 @@ settings = {
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 1,
-    "max_it" : 2,
-    "N" : 125,
+    "max_it" : 5000,
+    "N" : 75,
     "dt" : 0.025,
     "vx_ref" : 3.0,
 
@@ -28,7 +28,11 @@ settings = {
     "Qs" : Qs,
     "R"  : R,
     "dR" : dR,
-    "wq" : wq}
+    "wq" : wq,
 
-path_gen(settings, "LPVt_agent")
+    #ROS
+    "log_agent" : 0,
+}
+
+path_gen(settings, "LPVR_agent")
 save_config(settings)
