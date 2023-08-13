@@ -3,11 +3,13 @@
 
 import pickle
 
-from planner.lib.plan_lib.config.LPV import *  # Important!! Containts system definitions
-from planner.lib.plan_lib.mapManager import Map
-from planner.lib.plan_lib import initialise_agents
-from planner.lib.plan_lib import LPV_Model
-
+from plan_lib.config.LPV import *  # Important!! Containts system definitions
+from plan_lib.mapManager import Map
+from plan_lib.utilities import initialise_agents
+from plan_lib.distributedPlanner import LPV_Model
+from plan_lib.config import x0_database
+from config_files.config_LPV import settings
+from plan_lib.plotter import plotter_offline
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 
@@ -27,8 +29,6 @@ def load_u(id = 0):
     path = settings["path_pck"] + "/" + str(id) + "/"
     with open(path + '/u.pkl', 'rb') as f:  # Python 3: open(..., 'wb')
         return pickle.load(f)
-
-
 
 def main():
 

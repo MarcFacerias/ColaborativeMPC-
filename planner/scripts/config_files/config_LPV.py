@@ -18,6 +18,7 @@ settings = {
     "n_agents" : 2,
     "max_it" : 1000,
     "N" : 75,
+    "min_dist": 0.25,
     "dt" : 0.025,
     "vx_ref" : 3.0,
 

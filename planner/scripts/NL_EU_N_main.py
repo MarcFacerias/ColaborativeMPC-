@@ -24,8 +24,8 @@ class agent(initialiserNL):
         self.u = []
         self.time_op = []
         self.status = []
-        self.data_opti = []
-        self.data_collec = []
+        self.data_opti = [] # data from current optimisation
+        self.data_collec = [] # data from other agents
         self.id = id
 
     def one_step(self, lambdas, agents, agents_id, uPred = None, xPred = None):
@@ -84,7 +84,7 @@ def main():
     # initialise controllers and data holders
     for i in range (0,n_agents):
         rs[i] = agent(settings, maps[i], x_old[i], i)
-        rs[i].data_collec = [data[j] for j in ns[i]]
+        rs[i].data_collec = [data[j] for j in ns[i]] # retrieve data from other agents
 
     io = io_class(settings, rs)
 
@@ -139,7 +139,7 @@ def main():
                 finished_ph = 1
                 for i in range(0,n_agents):
                     finished_ph &= np.allclose(x_old[i], x_pred[i], atol=0.01)
-                    metric[i] = x_old[i] - x_pred[i]
+                    metric[i] = x_old[i] - x_pred[i] # for debugging purposes we want to see how far are the states
 
                 # metric[n_agents] = cost - cost_old
                 # finished_ph |= np.allclose(cost, cost_old, atol=0.01)

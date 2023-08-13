@@ -113,7 +113,7 @@ def main():
         for i in range(0,n_agents):
             x_old[i] = x_pred[i][1:, :]
 
-        agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:],0,1)
+        agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:],0,1)  # we need to swap axes so that they match expected shape
 
         io.update( x_pred, u_pred ,agents, it)
         it += 1

@@ -4,6 +4,8 @@ import numpy as np
 np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 import sys
 
+# TODO: Online plotting was not tested
+
 # ROS
 from planner_experiments.msg import agent_info
 from std_msgs.msg import Int32
@@ -54,6 +56,7 @@ class plotter_ROS():
 
         elif self.plot != 0:
             self.disp = plotter_offline(self.map)
+
         self.it_plot = -1
         self.it_count = 0
 

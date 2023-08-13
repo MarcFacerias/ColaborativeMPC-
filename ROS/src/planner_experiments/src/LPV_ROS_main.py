@@ -24,13 +24,14 @@ class agentROS_LPV(initialiserLPV):
     # Agents class, interfaces with the planner, saves data etc
     #  Q: [vx ; vy ; psiDot ; e_psi ; s ; e_y]
     #  R:  [delta ; a] la R es sobre el dU
+
     def __init__(self, settings, x0, id, connections):
         super().__init__(self, settings) # initialise the initialiser
         self.map = Map(settings["map_type"])
         self.N = settings["N"]
         self.dt = settings["dt"]
         self.Controller = PlannerLPV(self.Q, self.Qs, self.R, self.dR, self.N, self.dt, self.map, id, self.wq, self.model_param, self.sys_lim)
-        self.x0 = x0[0,:]
+        self.x0 = x0[0,:] # inititial values of x
         self.states = []
         self.u = []
         self.planes = []
@@ -38,10 +39,10 @@ class agentROS_LPV(initialiserLPV):
         self.status = []
         self.id = id
         self.pub = rospy.Publisher('car' + str(id) + "_data", agent_info, queue_size=10)
-        self.subs = [''] * (len(connections)+1)
+        self.subs = [''] * (len(connections)+1) # subscribers, there's an additional field to make easier the data acces (id matches aray position)
         self.agents_id = connections
         self.agents = np.zeros((settings["N"]+1, len(connections)+1, 2))
-        self.updated = [True] * (len(connections)+1)
+        self.updated = [True] * (len(connections)+1) # flag to wait till all agents send their data
         self.waiting = False
 
         for n in connections:
@@ -49,7 +50,7 @@ class agentROS_LPV(initialiserLPV):
 
     def one_step(self, uPred = None, xPred = None):
 
-        pose = xPred[:,[7,8]]
+        pose = xPred[:,[7,8]] # current position of the vehicle
         tic = time.time()
         feas, raw, planes = self.Controller.solve(self.x0, xPred, uPred, self.agents[:,self.agents_id,:], self.agents_id, pose)
         self.time_op.append(time.time() - tic)
@@ -103,6 +104,7 @@ def main(id):
 
     it = 0
 
+    # right now all agents simulated are neighbours
     x0 = x0_database[0:n_agents]
     ns = [j for j in range(0, n_agents)]
     ns.remove(id)

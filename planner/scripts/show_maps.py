@@ -2,8 +2,8 @@
 import sys
 
 import numpy as np
-from Planner.packages.mapManager import Map
-from Planner.packages.plotter import plotter_offline
+from plan_lib.mapManager import Map
+from plan_lib.plotter import plotter_offline
 
 plot = False
 plot_end = True

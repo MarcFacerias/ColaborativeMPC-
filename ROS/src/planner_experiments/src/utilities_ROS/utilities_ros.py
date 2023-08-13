@@ -4,9 +4,10 @@ from planner_experiments.msg import agent_info
 
 
 def serialise_np(data, header = None):
-
+    # Code the msg into Float32MultiArray
     msg = agent_info()
 
+    # For each variable we add a filed to msg
     for i,field in enumerate(data):
 
         proxy = Float32MultiArray()
@@ -20,6 +21,7 @@ def serialise_np(data, header = None):
         proxy.layout.dim = [MultiArrayDimension() for _ in range(0,field.ndim)]
         dims = field.shape
 
+        # for each dimension we add a layout so we now how to unpack it
         for k in range(0,len(proxy.layout.dim)):
             # dim[0] is the vertical dimension of your matrix
             proxy.layout.dim[k].label = "dim " + str(k)
@@ -31,7 +33,7 @@ def serialise_np(data, header = None):
     return msg
 
 def deserialise_np(msg):
-
+    # To unpack the msg we resize the raw data with the dimensions in the layouts
     data = ['']*len(msg.data)
     for i,field in enumerate(msg.data):
         size = []

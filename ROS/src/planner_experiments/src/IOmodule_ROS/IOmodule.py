@@ -8,12 +8,13 @@ class io_class_ROS():
         self.verb = settings["verb"]
         if "verb_OCD" in settings.keys():
             self.verb_OCD = settings["verb_OCD"]
+
         self.n_agent = settings["n_agents"]
         self.color = settings["color_list"]
         self.save = settings["save_data"]
         self.path = settings["path_img"]
 
-        self.sys  = system
+        self.sys  = system # we store the robot class
         self._tic = 0
         self._et = 0
         self.et_hist = []
@@ -21,6 +22,7 @@ class io_class_ROS():
         self.it_plot = None
         self.it_OCD = []
 
+        # flag to decide whether or not info is displayed
         if self.sys.id == settings["log_agent"]:
             self.act_flag = True
         else:
@@ -54,15 +56,18 @@ class io_class_ROS():
 
         track_len = str(self.sys.map.TrackLength[0])
 
+        # Save OCD iteration data
         if OCD_ct is not None:
             self.it_OCD.append(OCD_ct)
 
+        # After the experiment or errorsave all the data
         if (self.save and end) or (self.save and error ):
 
             self.sys.save_to_csv(self.it_OCD)
             self.sys.save_exp()
             self.sys.save_var_to_csv(self.et_hist, "ROS_et_hist")
 
+        # Diferent prints depending on the verbosity definition
         if not self.act_flag:
             return
 

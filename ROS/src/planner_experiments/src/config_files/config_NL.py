@@ -1,10 +1,12 @@
 import matplotlib.colors as mcolors
 import numpy as np
 from plan_lib.utilities import path_gen, lbp_gen, save_config
+
+## SEE LPV CONFIG##
+
 # gains
 Qs = 10000000 * np.eye(3)
 Q = np.diag([10.0, 0.0, 0.0, 25.0, 10.0, 0.0, 0.0, 0, 0])
-# self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
 R = 0 * np.diag([1, 1])
 dR = 50 * np.diag([1, 1])
 wq = 5.0
@@ -16,23 +18,19 @@ settings = {
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 3,
     "max_it" : 10,
-    "min_dist": 0.25,
-    # "N" : 125,
-    # "dt" : 0.025,
+    "min_dist": 0.25, # maximum distance to the neigh
     "N" : 50,
     "dt" : 0.025,
     "vx_ref": 3.0,
 
     "map_type" : "Highway",
-    # "map_type" : "oval",
-    # "map_type" : "SL",
 
     #OCD specific
-    "it_conv" : 2,
-    "max_it_OCD" : 1000,
-    "min_it_OCD": 2,
-    "verb_OCD" : True,
-    "LPV": False,
+    "it_conv" : 2, # iterations that need to happen without changes on x
+    "max_it_OCD" : 1000, # maximum OCD iterations
+    "min_it_OCD": 2, # minimum OCD iterations
+    "verb_OCD" : True, # verbosity of the OCD algorithm
+    "LPV": False, # using LPV model or NL model inside Casadi
 
     # Gains
     "Q": Q,
@@ -46,5 +44,5 @@ settings = {
 }
 
 path_gen(settings, "NLR_test")
-lbp_gen(settings, "lambdas")
+lbp_gen(settings, "lambdas") # generate lambdas path
 save_config(settings)

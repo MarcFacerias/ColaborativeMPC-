@@ -27,7 +27,6 @@ TODO setmana que ve
 
     Acabar el codi de ROS Casadi
     Escriure documentacio
-    mirar remarkable 
-    mirar PC 
+    Mirar on esta el limit de distancia en el cas LPV
     mirar gym 
     Escriure experiments 
