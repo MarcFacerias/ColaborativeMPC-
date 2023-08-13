@@ -14,8 +14,6 @@ TODO Experiments
 
         Cas 2 Bottleneck
             Comparison with both cases (best performing for in the previous experiment)
-        
-
 
 TODO Paper 
 
@@ -27,6 +25,5 @@ TODO setmana que ve
 
     Acabar el codi de ROS Casadi
     Escriure documentacio
-    Mirar on esta el limit de distancia en el cas LPV
     mirar gym 
     Escriure experiments 
