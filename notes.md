@@ -21,9 +21,47 @@ TODO Paper
         Revisio final post experiments
         Afegir lo de ROS
 
-TODO setmana que ve 
+TODO semanal 
 
-    Acabar el codi de ROS Casadi
+    Dilluns 
+        Acabar el codi de ROS Casadi Eu 
+        Acabar el codi de Casadi Hp
+        Set up pc nou
+
+    Dimarts - Dimecres 
+        Test codis Casadi 
+        Test codis LPV 
+        Estructura dels tests a fer Highway 
+            Decidir metriques LPV per a bona performance 
+            Intentar mantenir les metriques amb Casadi 
+            Baixar performance per a tenir un bon computing time 
+
+        Estructura dels tests a fer Hiperplanes 
+            Fer un test per veure si es feasible a nivell de computational times
+
+    Dijous 
+        Escriure experiments 
+
+    Divendres
+        Fer test escañaments
+
+TODO setmana del 21
+    
+    Repasar el paper 
+    Planejar primeres fases de la seguent recerca (deixar la teoria escrita)
+    Migrar el projecte a ROS2 i ubuntu 22
+    Anar a esmatges i al metge de bcn 
+
+TODO setmana del 28
+    
     Escriure documentacio
-    mirar gym 
-    Escriure experiments 
+    Ordenar i netejar el git del primer paper
+    Preparar classe Jan de matlab
+
+TODO esta setmana 
+
+    Testeos 
+    Anar a apuntarme al gym 
+    Anar al game 
+    Preparar visita juanjo  
+    
