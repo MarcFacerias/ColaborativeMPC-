@@ -6,13 +6,13 @@ import sys
 import numpy as np
 import time
 
-from utilities_ROS.utilities_ros import serialise_np, deserialise_np
+from utilities_ROS.utilities_ros import serialise_np, deserialise_np, get_lambdasROS
 from planner_experiments.msg import agent_info
 from IOmodule_ROS.IOmodule import io_class_ROS
 
 from plan_lib.nonLinDistribPlanner import PlannerEu
 from plan_lib.mapManager import Map
-from plan_lib.utilities import checkEnd, initialise_agents, get_lambdas
+from plan_lib.utilities import checkEnd, initialise_agents
 from plan_lib.config.NL import initialiserNL, eval_constraintEU, get_alpha
 from plan_lib.config import x0_database
 from config_files.config_NL import settings
@@ -126,7 +126,7 @@ def main(id):
     x_pred = x_old[id]
     lambdas_hist = []
     it = 0
-    lambdas = get_lambdas(settings)[id, ns + [id], :].reshape(-1,N)
+    lambdas = get_lambdasROS(settings,id)
     error = False
     raws = None
 
@@ -165,8 +165,6 @@ def main(id):
             agents = rs.build_agents()
 
             if n_agents == 1:
-                print("done ")
-                print("*******")
                 break
 
             for k in range(1,N+1):
@@ -201,7 +199,6 @@ def main(id):
             if it_OCD > max_it_OCD:
                 print("max it reached")
                 finished = True
-            print("end_it")
             io.updateOCD(x_test, it_OCD, it)
             it_OCD += 1
             x_test_old = x_test
@@ -209,6 +206,9 @@ def main(id):
 
         rs.save(x_pred, u_pred)
         rs.x0 = x_pred[1:, :]
+
+        if it == 0:
+            rs.save_var_pickle([lambdas], [str(id) + "/ini_lambdas"])
 
         io.toc()
         u_old = u_pred

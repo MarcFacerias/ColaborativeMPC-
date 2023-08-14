@@ -107,7 +107,11 @@ class experiment_utilities():
         for i, var in enumerate(vars):
 
             try:
-                with open(path + '/' + tags[i] + '.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
+                cp = path + '/' + tags[i] + '.pkl'
+                if not os.path.exists(os.path.split(cp)[0]):
+                    os.makedirs(os.path.split(cp)[0], exist_ok=True)
+
+                with open(cp, 'wb') as f1:  # Python 3: open(..., 'wb')
                     pickle.dump(var, f1)
 
             except:

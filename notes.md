@@ -34,6 +34,7 @@ TODO semanal
         Set up pc nou
 
     Dimarts - Dimecres 
+        Afegir lambdas a ROS 
         Test codis Casadi 
         Test codis LPV 
         Estructura dels tests a fer Highway 

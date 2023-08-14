@@ -17,7 +17,7 @@ settings = {
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 2,
-    "max_it" : 1000,
+    "max_it" : 3,
     "min_dist": 0.25, # maximum distance to the neigh
     "N" : 50,
     "dt" : 0.025,
@@ -42,6 +42,5 @@ settings = {
     "log_agent": -1,
 }
 
-path_gen(settings, "NLR_test")
-lbp_gen(settings, "lambdas") # generate lambdas path
+path_gen(settings, "NLR_test", ros=True)
 save_config(settings)

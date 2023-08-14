@@ -15,7 +15,7 @@ settings = {
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 3,
-    "max_it" : 10,
+    "max_it" : 2,
     "min_dist": 0.25,
     # "N" : 125,
     # "dt" : 0.025,

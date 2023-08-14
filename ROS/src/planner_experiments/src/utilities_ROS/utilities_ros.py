@@ -43,3 +43,19 @@ def deserialise_np(msg):
         data[i] = np.asarray(field.data).reshape(tuple(size))
 
     return data
+
+def get_lambdasROS(settings, id):
+    n_agents = settings["n_agents"]
+    N = settings["N"]
+    path = settings["lb_path"] + "pck/" + str(id) + "/" + "ini_lambdas.pkl"
+    print(path)
+    lambdas = np.zeros((n_agents, N))
+
+    try:
+        lambdas[:, :] = load_var(path)
+    except Exception as e:
+        print(e)
+        msg = "unable to load lambdas, defaulting to 0s"
+        warnings.warn((msg))
+
+    return lambdas

@@ -231,13 +231,15 @@ def get_lambdas(settings):
     return lambdas
 
 
-def path_gen(settings, target, base=None):
+def path_gen(settings, target, base=None, ros = False):
     if (base is not None):
         #  global path
         path = os.path.normpath(base + "/data/" + target)
         settings["path_csv"] = path + "/"
         settings["path_img"] = path + "/"
         settings["path_pck"] = path + "/"
+        if ros:
+            settings["lb_path"] = path + "/"
 
     else:
         #  relative path (prefered)
@@ -245,7 +247,8 @@ def path_gen(settings, target, base=None):
         settings["path_csv"] = path + "/"
         settings["path_img"] = path + "/"
         settings["path_pck"] = path + "/"
-
+        if ros:
+            settings["lb_path"] = path + "/"
 
 def lbp_gen(settings, target, base=None):
     if (base is not None):
