@@ -27,7 +27,7 @@ class agentROS_OCD(initialiserNL):
         self.dt = settings["dt"]
         self.N =  settings["N"]
         self.x0 = x0
-        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.dR, self.N, self.dt, self.map, id, self.model_param, self.sys_lim)
+        self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.dR, self.N, self.dt, self.map, id)
         self.states = []
         self.u = []
         self.time_op = []
@@ -49,9 +49,13 @@ class agentROS_OCD(initialiserNL):
 
     def one_step(self, lambdas, uPred = None, raws = None):
         tic = time.time()
-        agents = self.build_agents()
-        feas, Solution, self.data_opti = self.Controller.solve(self.x0, raws, uPred, lambdas,agents , self.agents_id, self.agents_data[self.agents_id][1::])
+        agents = self.build_agents()[:,self.agents_id,:]
+        shared_data = [self.agents_data[i] for i in self.agents_id]
+
+        feas, Solution, self.data_opti = self.Controller.solve(self.x0, raws, uPred, lambdas, agents, self.agents_id, shared_data)
         self.time_op.append(time.time() - tic)
+
+        self.agents_data[self.id] = self.data_opti
         self.send_states()
         return feas, self.Controller.uPred, self.Controller.xPred, Solution
 
@@ -60,17 +64,19 @@ class agentROS_OCD(initialiserNL):
         self.updated[id] = True
 
     def send_states(self):
-        msg = serialise_np([self.Controller.xPred] + self.data_opti)
+        msg = serialise_np(self.agents_data[self.id])
         self.pub.publish(msg)
 
     def wait_update(self):
         self.waiting = True
-        self.updated = [not elem for elem in self.updated]
+        for idx in self.agents_id:
+            self.updated[idx] = False
 
     def build_agents(self):
-        placeholder = np.empty((self.N, len(self.agents_id)+1,2))
-        aux = np.asarray(self.agents_data[:][0])
-        return np.swapaxes(np.asarray(aux)[:, :, -2:], 0, 1)
+        placeholder = np.empty((self.N+1, len(self.agents_id)+1,2))
+        for i,agent in enumerate(self.agents_data):
+            placeholder[:,i,:] = agent[0][:,[7,8]]
+        return placeholder
 
 def main(id):
 # TODO Note we only use Neigbours!! not all robots from the fleet
@@ -78,13 +84,13 @@ def main(id):
 #########################################################
 
     id = int(id)
-    # Map settings
+
     try:
         settings["n_agents"] = int(rospy.get_param("n_robots"))
     except:
         pass
-
     n_agents = settings["n_agents"]
+
     map_type = settings["map_type"]
     N = settings["N"]
     dt = settings["dt"]
@@ -109,25 +115,26 @@ def main(id):
 
     data = []
     for i in range(0,n_agents):
-        data.append([x_old[id], u_old[id], np.zeros((N, 2)), np.zeros((N, 2)), np.zeros((N, n_agents)),
+        data.append([x_old[i], u_old[i], np.zeros((N, 2)), np.zeros((N, 2)), np.zeros((N, n_agents)),
                 np.zeros((N, n_agents))])
 
-    rs = agentROS_OCD(settings, x_old[id][0,:],id, ns)
+    rs = agentROS_OCD(settings, x_old[id],id, ns)
     rs.data_collec = [data[j] for j in ns]
-    rs.agents_data = [[x_old[i]] + data[i] for i in range(0,n_agents)]
+    rs.agents_data = [data[i] for i in range(0,n_agents)]
     u_old = u_old[id]
+    x_test_old = x_old
     x_pred = x_old[id]
     lambdas_hist = []
     it = 0
-    lambdas = get_lambdas(settings)[id, ns, :].squeeze()
+    lambdas = get_lambdas(settings)[id, ns + [id], :].reshape(-1,N)
     error = False
     raws = None
 
     io = io_class_ROS(settings, rs)
     rospy.init_node("car" + str(id))
-    rate = rospy.Rate(1000)
+    rate = rospy.Rate(2)
 
-    while(it<max_it and not checkEnd(x_pred, maps)):
+    while(it<max_it and not checkEnd(x_pred, maps) and not rospy.is_shutdown()):
 
         it_OCD = 0
         itc = 0
@@ -143,23 +150,24 @@ def main(id):
             elif rs.waiting:
                 rs.waiting = False
 
-            feas, u_pred, x_pred, raws = rs.one_step( lambdas, u_old, raws)
+            feas, u_pred, x_pred, raws = rs.one_step( lambdas[ns,:], u_old, raws)
 
             if not feas:
                 error = True
+                print("error found in agent " + str(id) )
                 break
 
             io.toc()
 
             cost = np.zeros((n_agents,N))
             # update the values of x,y for the obstacle avoidance constraits
+            rs.wait_update()
+            agents = rs.build_agents()
 
             if n_agents == 1:
+                print("done ")
+                print("*******")
                 break
-
-            rs.wait_update()
-
-            agents = rs.build_agents()
 
             for k in range(1,N+1):
                     for j in range(0,n_agents):
@@ -172,11 +180,14 @@ def main(id):
 
             # check if the values of x changed, if they are close enough for two iterations the algorithm has converged
             metric = ['']*(n_agents+1)
+
+            x_test = [agent[0] for agent in rs.agents_data]
+
             if it_OCD != 0:
                 finished_ph = 1
                 for i in range(0,n_agents):
-                    finished_ph &= np.allclose(x_old[i], x_pred[i], atol=0.01)
-                    metric[i] = x_old[i] - x_pred[i]
+                    finished_ph &= np.allclose(x_test_old[i], x_test[i], atol=0.01)
+                    metric[i] = x_test_old[i] - x_test[i]
 
                 itc += 1
 
@@ -190,10 +201,11 @@ def main(id):
             if it_OCD > max_it_OCD:
                 print("max it reached")
                 finished = True
-
-
-            io.updateOCD(x_pred, it_OCD, it)
+            print("end_it")
+            io.updateOCD(x_test, it_OCD, it)
             it_OCD += 1
+            x_test_old = x_test
+            rate.sleep()
 
         rs.save(x_pred, u_pred)
         rs.x0 = x_pred[1:, :]
@@ -206,7 +218,7 @@ def main(id):
 
         if error:
             break
-        rate.sleep()
+
 
     io.update(x_pred, u_pred, agents, it, end=True,error = error)
 

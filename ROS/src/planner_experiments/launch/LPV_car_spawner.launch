@@ -10,7 +10,7 @@
   <arg name = "log_agent" default = "-1"/>
 
 
-  <node name="$(eval str(arg('name_robot')))" output="screen" pkg="planner_experiments" type="LPV_ROS_main.py" args="$(eval str(arg('robots')))"/>
+  <node name="$(eval str(arg('name_robot')))" output="$(arg output)" pkg="planner_experiments" type="LPV_ROS_main.py" args="$(eval str(arg('robots')))"/>
 
   <!-- Node for interval dead reckoning -->
   <!-- <node name="$(eval str(arg('name_robot')) + '_i_dr')" output="$(arg output)" pkg="mrs_localisation" type="mrs_localisation_node" args="$(eval str(arg('name_robot')) + '/')"/> -->

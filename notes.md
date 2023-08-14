@@ -1,3 +1,8 @@
+TODO Codi future 
+
+    Fix NL model in CASADI 
+    Revisar formating llibreria
+    Revisar variables q sobren 
 
 TODO Experiments 
 
@@ -55,7 +60,7 @@ TODO setmana del 21
 TODO setmana del 28
     
     Escriure documentacio
-    Ordenar i netejar el git del primer paper
+    Ordenar i netejar el git del primer paper (TODO Codi future )
     Preparar classe Jan de matlab
 
 TODO esta setmana 

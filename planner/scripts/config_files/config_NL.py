@@ -32,7 +32,6 @@ settings = {
     "max_it_OCD" : 1000,
     "min_it_OCD": 2,
     "verb_OCD" : True,
-    "LPV": False,
 
     # Gains
     "Q": Q,
@@ -42,6 +41,6 @@ settings = {
     "wq": wq
 }
 
-path_gen(settings, "NL3_agent_sht")
+path_gen(settings, "test_for_ros")
 lbp_gen(settings, "lambdas")
 save_config(settings)

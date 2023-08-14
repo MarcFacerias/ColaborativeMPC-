@@ -121,6 +121,7 @@ class base_nl_constr:
         self.initial_states = self.opti.parameter(self.n_s)
         self.initial_u = self.opti.parameter(self.n_u)
 
+
         if self.LPV_flag:
             self.A12 = self.opti.parameter(self.N)
             self.A13 = self.opti.parameter(self.N)
@@ -158,7 +159,8 @@ class base_nl_constr:
         
         else:
             self.low_vel = self.opti.parameter()
-            
+            self.cur = self.opti.parameter(self.N)
+
     def LPV_model(self):
         # add the model
         for j in range(1, self.N + 1):
@@ -402,6 +404,10 @@ class base_nl_constr:
                 self.opti.set_value(self.B31[j], (self.lf * self.Cf * np.cos(delta)) / self.I)
             
             else:
+
+                for j in range(0,self.N):
+                    cur = curvature(states[j, 6], self.map)
+                    self.opti.set_value(self.cur[i], cur)
                 if vx < 0.2:
 
                     # low vel model: straight line .

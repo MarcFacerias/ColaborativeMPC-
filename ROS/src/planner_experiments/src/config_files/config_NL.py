@@ -16,8 +16,8 @@ settings = {
     "save_data" : True,
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 3,
-    "max_it" : 10,
+    "n_agents" : 2,
+    "max_it" : 1000,
     "min_dist": 0.25, # maximum distance to the neigh
     "N" : 50,
     "dt" : 0.025,
@@ -30,7 +30,6 @@ settings = {
     "max_it_OCD" : 1000, # maximum OCD iterations
     "min_it_OCD": 2, # minimum OCD iterations
     "verb_OCD" : True, # verbosity of the OCD algorithm
-    "LPV": False, # using LPV model or NL model inside Casadi
 
     # Gains
     "Q": Q,
@@ -40,7 +39,7 @@ settings = {
     "wq": wq,
 
     # ROS
-    "log_agent": 0,
+    "log_agent": -1,
 }
 
 path_gen(settings, "NLR_test")

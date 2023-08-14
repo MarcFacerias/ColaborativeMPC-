@@ -2,8 +2,8 @@ plot,-1
 save_data,True
 verb,2
 color_list,"['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']"
-n_agents,2
-max_it,1000
+n_agents,3
+max_it,10
 min_dist,0.25
 N,50
 dt,0.025
@@ -13,6 +13,7 @@ it_conv,2
 max_it_OCD,1000
 min_it_OCD,2
 verb_OCD,True
+LPV,False
 Q,"[[10.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
  [0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
  [0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
@@ -30,8 +31,7 @@ R,"[[0 0]
 dR,"[[50  0]
  [ 0 50]]"
 wq,5.0
-log_agent,-1
-path_csv,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/ROS/src/planner_experiments/src/data/NLR_test/
-path_img,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/ROS/src/planner_experiments/src/data/NLR_test/
-path_pck,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/ROS/src/planner_experiments/src/data/NLR_test/
-lb_path,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/ROS/src/planner_experiments/src/data/lambdas/ini_lambdas.pkl
+path_csv,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/planner/scripts/data/NL3_agent_sht/
+path_img,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/planner/scripts/data/NL3_agent_sht/
+path_pck,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/planner/scripts/data/NL3_agent_sht/
+lb_path,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/planner/scripts/data/lambdas/ini_lambdas.pkl
