@@ -5,11 +5,11 @@ import rospy
 import sys
 import numpy as np
 import time
+from standard_msgs.msg import Bool
 
 from utilities_ROS.utilities_ros import serialise_np, deserialise_np, get_lambdasROS
 from planner_experiments.msg import agent_info
 from IOmodule_ROS.IOmodule import io_class_ROS
-
 from plan_lib.nonLinDistribPlanner import PlannerEu
 from plan_lib.mapManager import Map
 from plan_lib.utilities import checkEnd, initialise_agents
@@ -38,13 +38,18 @@ class agentROS_OCD(initialiserNL):
 
         # ROS CONNECTIONS
         self.pub = rospy.Publisher('car' + str(id) + "_data", agent_info, queue_size=10)
+        self.pub_end = rospy.Publisher('car' + str(id) + "_end", Bool, queue_size=10)
         self.subs = [''] * (len(connections)+1)
+        self.subs_it = [''] * (len(connections)+1)
+
         self.agents_id = connections
         self.updated = [True] * (len(connections)+1)
+        self.finished = [False] * (len(connections)+1)
         self.waiting = False
         self.agents_data = []
         for i,n in enumerate(connections):
             self.subs[i] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback, (n))
+            self.subs_it[i] = rospy.Subscriber('car' + str(n) + "_end", Bool, self.callback_it, (n))
 
 
     def one_step(self, lambdas, uPred = None, raws = None):
@@ -63,9 +68,17 @@ class agentROS_OCD(initialiserNL):
         self.agents_data[id] = deserialise_np(msg)
         self.updated[id] = True
 
+    def callback_it(self,msg,id):
+        self.finished[id] = msg.data
+
     def send_states(self):
         msg = serialise_np(self.agents_data[self.id])
         self.pub.publish(msg)
+
+    def send_status(self, finished):
+        msg = Bool()
+        msg.data = finished
+        self.pub_end.publish(msg)
 
     def wait_update(self):
         self.waiting = True
@@ -101,7 +114,6 @@ def main(id):
     it_conv = settings["it_conv"]
 
     # controller constants
-    finished = False
     finished_ph = False
 
     # set constants
@@ -132,7 +144,7 @@ def main(id):
 
     io = io_class_ROS(settings, rs)
     rospy.init_node("car" + str(id))
-    rate = rospy.Rate(2)
+    rate = rospy.Rate(1000)
 
     while(it<max_it and not checkEnd(x_pred, maps) and not rospy.is_shutdown()):
 
@@ -140,68 +152,73 @@ def main(id):
         itc = 0
         io.tic()
 
-        while(not (it_OCD > min_it_OCD and finished)) :
+        while(not (it_OCD > min_it_OCD and all(rs.finished))) :
             # OCD loop, we want to force at least 2 iterations + it_conv iterations without significant changes
             # run an instance of the optimisation problems
 
-            if not all(rs.updated):
+            if rs.finished[id] and not all(rs.finished):
                 continue
 
-            elif rs.waiting:
+            if all(rs.updated) and not rs.waiting:
+                feas, u_pred, x_pred, raws = rs.one_step( lambdas[ns,:], u_old, raws)
+
+                if not feas:
+                    error = True
+                    print("error found in agent " + str(id) )
+                    break
+
+                io.toc()
+
+                cost = np.zeros((n_agents,N))
+                rs.wait_update()
+
+            if rs.waiting and all(rs.updated):
+
+                # update the values of x,y for the obstacle avoidance constraits
+
+                agents = rs.build_agents()
+
+                if n_agents == 1:
+                    break
+
+                for k in range(1,N+1):
+                        for j in range(0,n_agents):
+                            if (id != j) and id<j:
+                                cost[j,k-1] = eval_constraintEU(agents[k,id,:],agents[k,j,:],dth)
+
+                alpha = get_alpha()
+                lambdas += alpha*cost
+                lambdas_hist.append(lambdas)
+
+                # check if the values of x changed, if they are close enough for two iterations the algorithm has converged
+                metric = ['']*(n_agents+1)
+
+                x_test = [agent[0] for agent in rs.agents_data]
+
+                if it_OCD != 0:
+                    finished_ph = 1
+                    for i in range(0,n_agents):
+                        finished_ph &= np.allclose(x_test_old[i], x_test[i], atol=0.01)
+                        metric[i] = x_test_old[i] - x_test[i]
+
+                    itc += 1
+
+                if not finished_ph :
+                    itc = 0
+
+                elif itc > it_conv:
+                    print("Agent " + str(id) + ": Iteration finished with " + str(it_OCD) + " steps")
+                    rs.pub_end(True)
+
+                if it_OCD > max_it_OCD:
+                    print("max it reached")
+                    rs.pub_end(True)
+
+                io.updateOCD(x_test, it_OCD, it)
+                it_OCD += 1
+                x_test_old = x_test
                 rs.waiting = False
 
-            feas, u_pred, x_pred, raws = rs.one_step( lambdas[ns,:], u_old, raws)
-
-            if not feas:
-                error = True
-                print("error found in agent " + str(id) )
-                break
-
-            io.toc()
-
-            cost = np.zeros((n_agents,N))
-            # update the values of x,y for the obstacle avoidance constraits
-            rs.wait_update()
-            agents = rs.build_agents()
-
-            if n_agents == 1:
-                break
-
-            for k in range(1,N+1):
-                    for j in range(0,n_agents):
-                        if (id != j) and id<j:
-                            cost[j,k-1] = eval_constraintEU(agents[k,id,:],agents[k,j,:],dth)
-
-            alpha = get_alpha()
-            lambdas += alpha*cost
-            lambdas_hist.append(lambdas)
-
-            # check if the values of x changed, if they are close enough for two iterations the algorithm has converged
-            metric = ['']*(n_agents+1)
-
-            x_test = [agent[0] for agent in rs.agents_data]
-
-            if it_OCD != 0:
-                finished_ph = 1
-                for i in range(0,n_agents):
-                    finished_ph &= np.allclose(x_test_old[i], x_test[i], atol=0.01)
-                    metric[i] = x_test_old[i] - x_test[i]
-
-                itc += 1
-
-            if not finished_ph :
-                itc = 0
-
-            elif itc > it_conv:
-                finished = True
-                print("Iteration finished with " + str(it_OCD) + " steps")
-
-            if it_OCD > max_it_OCD:
-                print("max it reached")
-                finished = True
-            io.updateOCD(x_test, it_OCD, it)
-            it_OCD += 1
-            x_test_old = x_test
             rate.sleep()
 
         rs.save(x_pred, u_pred)
@@ -212,7 +229,6 @@ def main(id):
 
         io.toc()
         u_old = u_pred
-        finished = False
         io.update( x_pred, u_pred ,agents, it, error = error, OCD_ct=it_OCD)
         it += 1
 

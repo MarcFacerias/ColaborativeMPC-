@@ -16,7 +16,7 @@ settings = {
     "save_data" : True, # save data at the end of the experiment
     "verb" : 2, # levels of verbosity, 0 to 1
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 1, # number of agents
+    "n_agents" : 3, # number of agents
     "max_it" : 5000, # max duration of the experiment
     "min_dist": 0.25,
     "N" : 75, #planning horizon

@@ -2,7 +2,7 @@ plot,-1
 save_data,True
 verb,2
 color_list,"['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']"
-n_agents,1
+n_agents,3
 max_it,5000
 min_dist,0.25
 N,75
