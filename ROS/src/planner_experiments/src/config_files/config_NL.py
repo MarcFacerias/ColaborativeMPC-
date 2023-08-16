@@ -17,7 +17,7 @@ settings = {
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 2,
-    "max_it" : 350,
+    "max_it" : 5,
     "min_dist": 0.25, # maximum distance to the neigh
     "N" : 50,
     "dt" : 0.025,

@@ -2,18 +2,20 @@
 <launch>
 
 <arg name="n_robots" default="2"/>
+<arg name="mode" default="NL"/>
 <param name="n_robots" value="$(eval arg ('n_robots'))" />
-<node pkg="planner_experiments" type="main_plotter.py" name="plotter" output="screen"/>
 
-<!-- <include file="$(find planner_experiments)/launch/LPV_car_spawner.launch"> -->
-<!--     <arg name="robots" value="$(eval arg ('n_robots') - 1 )"/> -->
-<!--     <arg name="log_agent" value="0"/> -->
-<!-- </include> -->
+<node pkg="planner_experiments" type="main_plotter.py" name="plotter" output="screen" args="$(eval arg('mode'))"/>
 
-  <include file="$(find planner_experiments)/launch/NL_car_spawner.launch">
+<include file="$(find planner_experiments)/launch/LPV_car_spawner.launch" if="$(eval arg('mode') == 'LPV')">
     <arg name="robots" value="$(eval arg ('n_robots') - 1 )"/>
     <arg name="log_agent" value="0"/>
-  </include>
+</include>
+
+<include file="$(find planner_experiments)/launch/NL_car_spawner.launch" if="$(eval arg('mode') == 'NL')">
+    <arg name="robots" value="$(eval arg ('n_robots') - 1 )"/>
+    <arg name="log_agent" value="0"/>
+</include>
 
 
 </launch>

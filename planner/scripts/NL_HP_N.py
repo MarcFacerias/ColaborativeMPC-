@@ -84,14 +84,13 @@ def main():
 
     # initialise controllers and data holders
     for i in range (0,n_agents):
-        rs[i] = agent(N, maps[i], dt, x_old[i], i, dth)
+        rs[i] = agent(settings, maps[i], x_old[i], i,)
         rs[i].data_collec = [data[j] for j in ns[i]]
 
     io = io_class(settings, rs)
 
     lambdas = get_lambdas(settings)
     lambdas_hist = []
-    cost_hist = []
     it = 0
 
     while(it<max_it and not checkEnd(x_pred, maps)):

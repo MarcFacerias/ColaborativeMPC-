@@ -8,7 +8,7 @@ import sys
 
 # ROS
 from planner_experiments.msg import agent_info
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Bool
 from utilities_ROS.utilities_ros import deserialise_np
 from plan_lib.mapManager import Map
 from plan_lib.plotter import plotter_offline,plotter
@@ -31,11 +31,12 @@ class plotter_ROS():
         else:
             from config_files.config_NL import settings
 
-        self.nh = rospy.init_node("plotter")
+        self.nh = rospy.init_node("plotter", disable_signals = True)
         self.rate = rospy.Rate(1000)
 
         self.map = Map(settings["map_type"])
         self.plot = settings["plot"]
+
         try:
             self.n_agent = int(rospy.get_param("n_robots"))
         except:
@@ -44,7 +45,7 @@ class plotter_ROS():
         self.color = settings["color_list"]
         self.path = settings["path_img"]
         self.agents = []
-
+        self.end = False
         self.subs = [''] * self.n_agent
 
         for i in range(0,self.n_agent):
@@ -61,12 +62,16 @@ class plotter_ROS():
         self.it_count = 0
 
         self.sub_pp = rospy.Subscriber("set_pplot",Int32 , self.set_pplot_callback)
+        self.sub_ros_kill = rospy.Subscriber("end_signal", Bool, self.callback_end, queue_size=10)
 
         for n in range(0,self.n_agent):
             self.subs[n] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback, (n))
 
     def callback(self,msg,id):
         self.agents[id].states.append(deserialise_np(msg)[0][1,:])
+
+    def callback_end(self,msg):
+        self.end = msg.data
 
     def set_pplot_callback(self, msg):
         self.it_plot = msg.data
@@ -75,7 +80,7 @@ class plotter_ROS():
             self.disp = plotter_offline(self.map)
 
     def run(self):
-        while not rospy.is_shutdown():
+        while not rospy.is_shutdown() and not self.end:
 
             if self.plot == 1 :
 
@@ -99,9 +104,11 @@ class plotter_ROS():
         if (self.plot == -1 ):
 
             for j,r in enumerate(self.agents):
+                print(self.path)
                 self.disp.plot_offline_experiment(r, self.path, self.color[j])
 
         self.it_count +=1
+        rospy.signal_shutdown("end of the experiment")
 
 
 if __name__ == "__main__":

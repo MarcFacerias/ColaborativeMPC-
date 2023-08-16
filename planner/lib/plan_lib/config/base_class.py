@@ -132,16 +132,16 @@ class experiment_utilities():
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
 
-            with open(path + '/states.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
-                pickle.dump(self.data.sPred_hist, f2)
+        with open(path + '/states.pkl', 'wb') as f2:  # Python 3: open(..., 'wb')
+            pickle.dump(self.data.sPred_hist, f2)
 
-            with open(path + '/u.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
-                pickle.dump(self.data.uPred_hist, f1)
+        with open(path + '/u.pkl', 'wb') as f1:  # Python 3: open(..., 'wb')
+            pickle.dump(self.data.uPred_hist, f1)
 
 
     def time_OCD(self,OCD_it):
 
-        if all(it != 0 for it in OCD_it):
+        if all(it == 0 for it in OCD_it):
             return self.data.time_op
 
         lim = np.max(np.array(OCD_it))

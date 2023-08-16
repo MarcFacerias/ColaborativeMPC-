@@ -23,30 +23,41 @@ class agentROS_OCD(initialiserNL):
 
     def __init__(self, settings, x0, id, connections):
         super().__init__(self, settings) # initialise the initialiser
+        # mapping into class variables
         self.map = Map(settings["map_type"])
         self.dt = settings["dt"]
         self.N =  settings["N"]
         self.x0 = x0
+        self.id = id
+        self.agents_id = connections
+
+        # Controller initialisation
         self.Controller = PlannerEu(self.Q,self.Qs, self.R, self.dR, self.N, self.dt, self.map, id)
+
+        # Container initialisation
         self.states = []
         self.u = []
         self.time_op = []
         self.status = []
         self.data_opti = []
         self.data_collec = []
-        self.id = id
+        self.agents_data = []
+
+        # Syncronosation variables
+        self.updated = [True] * (len(connections)+1)
+        self.finished = [False] * (len(connections)+1)
+        self.waiting = False
+        self.end = False
 
         # ROS CONNECTIONS
         self.pub = rospy.Publisher('car' + str(id) + "_data", agent_info, queue_size=10)
         self.pub_end = rospy.Publisher('car' + str(id) + "_end", Bool, queue_size=10)
+        self.pub_ros_kill = rospy.Publisher("end_signal", Bool, queue_size=10)
         self.subs = [''] * (len(connections)+1)
         self.subs_it = [''] * (len(connections)+1)
 
-        self.agents_id = connections
-        self.updated = [True] * (len(connections)+1)
-        self.finished = [False] * (len(connections)+1)
-        self.waiting = False
-        self.agents_data = []
+        # Ros subscribers
+        self.sub_ros_kill = rospy.Subscriber("end_signal", Bool, self.callback_end, queue_size=10)
         for i,n in enumerate(connections):
             self.subs[i] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback, (n))
             self.subs_it[i] = rospy.Subscriber('car' + str(n) + "_end", Bool, self.callback_it, (n))
@@ -72,6 +83,9 @@ class agentROS_OCD(initialiserNL):
         self.finished[id] = msg.data
         self.updated[id] = True
 
+    def callback_end(self,msg):
+        self.end = msg.data
+
     def send_states(self):
         msg = serialise_np(self.agents_data[self.id])
         self.pub.publish(msg)
@@ -81,6 +95,12 @@ class agentROS_OCD(initialiserNL):
         msg.data = finished
         self.finished[self.id] = finished
         self.pub_end.publish(msg)
+
+    def send_end(self):
+        msg = Bool()
+        msg.data = True
+        self.end = True
+        self.pub_ros_kill.publish(msg)
 
     def wait_update(self):
         self.waiting = True
@@ -149,13 +169,13 @@ def main(id):
     rospy.init_node("car" + str(id), disable_signals = True)
     rate = rospy.Rate(1000)
 
-    while(it<max_it and not checkEnd(x_pred, maps) and not rospy.is_shutdown()):
+    while((it<max_it and not checkEnd(x_pred, maps) and not rospy.is_shutdown()) and not rs.end):
 
         it_OCD = 0
         itc = 0
         io.tic()
 
-        while(not (it_OCD > min_it_OCD and all(rs.finished))) :
+        while(not (it_OCD > min_it_OCD and all(rs.finished)) and not rs.end) :
             # OCD loop, we want to force at least 2 iterations + it_conv iterations without significant changes
             # run an instance of the optimisation problems
 
@@ -169,7 +189,7 @@ def main(id):
 
                 if not feas:
                     error = True
-                    rospy.logwarn("solver error found in agent " + str(id) + str(id))
+                    rospy.logwarn("solver error found in agent " + str(id))
                     # break
 
                 io.toc()
@@ -241,6 +261,8 @@ def main(id):
         #     rospy.signal_shutdown("error encountered in solver of Agent " + str(id))
         #     break
 
+    rs.send_end()
+    rospy.sleep(1)
     total_toc = time.time() - total_tic
     print("Total time:" + str(total_toc))
     io.update(x_pred, u_pred, agents, it, end=True,error = error)
