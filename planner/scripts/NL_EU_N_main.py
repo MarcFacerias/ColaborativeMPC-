@@ -1,6 +1,8 @@
+# General
 import time
-
 import numpy as np
+
+# My modules
 from plan_lib.IOmodule import io_class
 from plan_lib.config.NL import initialiserNL, eval_constraintEU, get_alpha
 from plan_lib.mapManager import Map
@@ -32,8 +34,6 @@ class agent(initialiserNL):
         tic = time.time()
         feas, Solution, self.data_opti = self.Controller.solve(self.x0, xPred, uPred, lambdas, agents, agents_id, self.data_collec)
         self.time_op.append(time.time() - tic)
-        # self.save(self.Controller.xPred, self.Controller.uPred, feas)
-
 
         return feas, self.Controller.uPred, self.Controller.xPred, Solution
 
@@ -116,6 +116,7 @@ def main():
                 r.data_collec = [rs[i].data_opti for i in ns[j]]
 
             cost = np.zeros((n_agents,n_agents,N))
+
             # update the values of x,y for the obstacle avoidance constraints
             agents = np.swapaxes(np.asarray(x_pred)[:, :, -2:], 0, 1)
 

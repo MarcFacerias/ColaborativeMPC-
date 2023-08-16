@@ -24,19 +24,19 @@ TODO Paper
 
         Expandir una mica la biblio 
         Revisio final post experiments
+        
+
+TODO semanal
+    
+    Objectiu d'avui: 
+
+        Tenir una versio LPV i una amb CASADI que funcionin be i treure figures
         Afegir lo de ROS
 
-TODO semanal 
-
-    Dilluns 
-        Acabar el codi de ROS Casadi Eu 
-        Acabar el codi de Casadi Hp
-        Set up pc nou
-
-    Dimarts - Dimecres 
-        Afegir lambdas a ROS 
+    Dimarts - Dimecres
         Test codis Casadi 
         Test codis LPV 
+    
         Estructura dels tests a fer Highway 
             Decidir metriques LPV per a bona performance 
             Intentar mantenir les metriques amb Casadi 
@@ -47,6 +47,8 @@ TODO semanal
 
     Dijous 
         Escriure experiments 
+        Trobar una equivalencia de horitzo entre casadi i LPV per veure la diferencia temporal
+
 
     Divendres
         Fer test escañaments

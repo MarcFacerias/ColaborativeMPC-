@@ -146,7 +146,7 @@ def main(id):
     raws = None
 
     io = io_class_ROS(settings, rs)
-    rospy.init_node("car" + str(id))
+    rospy.init_node("car" + str(id), disable_signals = True)
     rate = rospy.Rate(1000)
 
     while(it<max_it and not checkEnd(x_pred, maps) and not rospy.is_shutdown()):
@@ -212,11 +212,11 @@ def main(id):
                     itc = 0
 
                 elif itc > it_conv:
-                    print("Agent " + str(id) + ": Iteration finished with " + str(it_OCD) + " steps")
+                    # print("Agent " + str(id) + ": Iteration finished with " + str(it_OCD) + " steps")
                     rs.send_status(True)
 
                 if it_OCD > max_it_OCD:
-                    print("max it reached")
+                    rospy.logwarn("max it reached in agent " + str(id))
                     rs.send_status(True)
 
                 io.updateOCD(x_test, it_OCD, it)
@@ -238,9 +238,10 @@ def main(id):
         it += 1
 
         if error:
+            rospy.signal_shutdown("error encountered in solver of Agent " + str(id))
             break
 
-    total_toc = total_tic - time.time()
+    total_toc = time.time() - total_tic
     print("Total time:" + str(total_toc))
     io.update(x_pred, u_pred, agents, it, end=True,error = error)
 

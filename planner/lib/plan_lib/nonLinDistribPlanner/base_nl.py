@@ -39,7 +39,7 @@ class base_nl_constr:
             self.mu = model_param["mu"]
 
         if sys_lim is None:
-            self.vx_ref = 4.5
+            self.vx_ref = 3.0
             self.max_vel = 5
             self.min_vel = 0.2
             self.max_rs = 0.45
@@ -405,17 +405,15 @@ class base_nl_constr:
             
             else:
 
-                for j in range(0,self.N):
-                    cur = curvature(states[j, 6], self.map)
-                    self.opti.set_value(self.cur[i], cur)
-                if vx < 0.2:
+                cur = curvature(states[j, 6], self.map)
+                self.opti.set_value(self.cur[j], cur)
 
+                if np.any( states[j, 0] < 0.2):
                     # low vel model: straight line .
-                    self.opti.set_value(self.low_vel, 0) 
+                    self.opti.set_value(self.low_vel, 0)
 
                 else:
                     self.opti.set_value(self.low_vel, 1)
-
 
             for i, el in enumerate(self.agent_list):
 

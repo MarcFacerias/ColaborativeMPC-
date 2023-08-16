@@ -21,3 +21,9 @@ def eval_constraintEU(x1, x2, D):
     cost1 = D - np.sqrt(sum((x1-x2)**2)) # the OCD update depends on on the diference between the minimum D and the euclidean dist
 
     return np.array(cost1)
+
+def eval_constraintHp(x2, planes, D):
+
+    cost1 = -planes[0] * x2[0] - planes[1] * x2[1] - planes[2] + D/2
+
+    return np.array(cost1)

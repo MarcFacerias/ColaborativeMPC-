@@ -14,8 +14,8 @@ settings = {
     "save_data" : True,
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 3,
-    "max_it" : 2,
+    "n_agents" : 2,
+    "max_it" : 3,
     "min_dist": 0.25,
     # "N" : 125,
     # "dt" : 0.025,
@@ -31,7 +31,7 @@ settings = {
     "it_conv" : 2,
     "max_it_OCD" : 1000,
     "min_it_OCD": 2,
-    "verb_OCD" : True,
+    "verb_OCD" : False,
 
     # Gains
     "Q": Q,
@@ -41,6 +41,6 @@ settings = {
     "wq": wq
 }
 
-path_gen(settings, "test_for_ros")
+path_gen(settings, "sa_test")
 lbp_gen(settings, "lambdas")
 save_config(settings)
