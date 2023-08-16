@@ -169,8 +169,8 @@ def main(id):
 
                 if not feas:
                     error = True
-                    print("error found in agent " + str(id) )
-                    break
+                    rospy.logwarn("solver error found in agent " + str(id) + str(id))
+                    # break
 
                 io.toc()
 
@@ -237,13 +237,14 @@ def main(id):
         io.update( x_pred, u_pred ,agents, it, error = error, OCD_ct=it_OCD)
         it += 1
 
-        if error:
-            rospy.signal_shutdown("error encountered in solver of Agent " + str(id))
-            break
+        # if error:
+        #     rospy.signal_shutdown("error encountered in solver of Agent " + str(id))
+        #     break
 
     total_toc = time.time() - total_tic
     print("Total time:" + str(total_toc))
     io.update(x_pred, u_pred, agents, it, end=True,error = error)
+    rospy.signal_shutdown("end of the experiment")
 
 if __name__ == "__main__":
     myargv = rospy.myargv(argv=sys.argv)

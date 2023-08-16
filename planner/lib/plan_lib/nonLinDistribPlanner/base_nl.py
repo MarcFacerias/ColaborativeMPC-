@@ -415,6 +415,8 @@ class base_nl_constr:
                 else:
                     self.opti.set_value(self.low_vel, 1)
 
+                # self.opti.set_value(self.low_vel, 1)
+
             for i, el in enumerate(self.agent_list):
 
                 self.opti.set_value(self.pose_param[i][j,0], self.states_fixed[j,i,0])

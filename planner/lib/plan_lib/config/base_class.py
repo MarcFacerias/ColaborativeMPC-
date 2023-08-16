@@ -37,7 +37,7 @@ class experiment_utilities():
                 "max_ac" : 5.0,
                 "max_dc" : 10.0,
                 "sm"     :0.9,
-                "LPV": True
+                "LPV": False
             }
 
         else:

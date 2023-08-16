@@ -126,6 +126,9 @@ class PlannerEu(base_nl_constr):
         # set initial statse
         if not Last_xPredicted is None:
             self.opti.set_initial(self.x,Last_xPredicted)
+        else:
+            self.opti.set_initial(self.x,np.ones((self.N+1,self.n_s)))
+
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
