@@ -5,7 +5,7 @@ import rospy
 import sys
 import numpy as np
 import time
-from standard_msgs.msg import Bool
+from std_msgs.msg import Bool
 
 from utilities_ROS.utilities_ros import serialise_np, deserialise_np, get_lambdasROS
 from planner_experiments.msg import agent_info
@@ -70,6 +70,7 @@ class agentROS_OCD(initialiserNL):
 
     def callback_it(self,msg,id):
         self.finished[id] = msg.data
+        self.updated[id] = True
 
     def send_states(self):
         msg = serialise_np(self.agents_data[self.id])
@@ -78,6 +79,7 @@ class agentROS_OCD(initialiserNL):
     def send_status(self, finished):
         msg = Bool()
         msg.data = finished
+        self.finished[self.id] = finished
         self.pub_end.publish(msg)
 
     def wait_update(self):
@@ -96,6 +98,7 @@ def main(id):
 #########################################################
 #########################################################
 
+    total_tic = time.time()
     id = int(id)
 
     try:
@@ -157,6 +160,8 @@ def main(id):
             # run an instance of the optimisation problems
 
             if rs.finished[id] and not all(rs.finished):
+                # print("Agent " + str(id) + ": waiting")
+                rate.sleep()
                 continue
 
             if all(rs.updated) and not rs.waiting:
@@ -208,11 +213,11 @@ def main(id):
 
                 elif itc > it_conv:
                     print("Agent " + str(id) + ": Iteration finished with " + str(it_OCD) + " steps")
-                    rs.pub_end(True)
+                    rs.send_status(True)
 
                 if it_OCD > max_it_OCD:
                     print("max it reached")
-                    rs.pub_end(True)
+                    rs.send_status(True)
 
                 io.updateOCD(x_test, it_OCD, it)
                 it_OCD += 1
@@ -235,7 +240,8 @@ def main(id):
         if error:
             break
 
-
+    total_toc = total_tic - time.time()
+    print("Total time:" + str(total_toc))
     io.update(x_pred, u_pred, agents, it, end=True,error = error)
 
 if __name__ == "__main__":

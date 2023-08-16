@@ -14,10 +14,10 @@ wq = 5.0
 settings = {
     "plot" : -1, # 0: none, 1: online, 2: offline, -1: only save picture
     "save_data" : True,
-    "verb" : -2,
+    "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 2,
-    "max_it" : 1000,
+    "max_it" : 350,
     "min_dist": 0.25, # maximum distance to the neigh
     "N" : 50,
     "dt" : 0.025,
