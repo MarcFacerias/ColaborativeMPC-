@@ -1,0 +1,68 @@
+
+import numpy as np
+
+class hyperplane_separator():
+    """
+    Solve a Quadratic Program defined as:
+        minimize
+            (1/2) * x.T * P * x + q.T * x
+        subject to
+            G * x <= h
+            A * x == b
+    using OSQP <https://github.com/oxfordcontrol/osqp>.
+    Parameters
+    ----------
+    P : scipy.sparse.csc_matrix Symmetric quadratic-cost matrix.
+    q : numpy.array Quadratic cost vector.
+    G : scipy.sparse.csc_matrix Linear inequality constraint matrix.
+    h : numpy.array Linear inequality constraint vector.
+    A : scipy.sparse.csc_matrix, optional Linear equality constraint matrix.
+    b : numpy.array, optional Linear equality constraint vector.
+    initvals : numpy.array, optional Warm-start guess vector.
+    Returns
+    -------
+    x : array, shape=(n,)
+        Solution to the QP, if found, otherwise ``None``.
+    Note
+    ----
+    OSQP requires `P` to be symmetric, and won't check for errors otherwise.
+    Check out for this point if you e.g. `get nan values
+    <https://github.com/oxfordcontrol/osqp/issues/10>`_ in your solutions.
+    """
+
+    def __init__(self, n_agents, horizon):
+
+        self.n_agents = n_agents
+        self.horizon = horizon
+        self.plane_states = 3
+        self.slack_vars = 1
+        self.planer_states = self.plane_states+self.slack_vars * (n_agents-1)
+
+    def compute_hyperplane(self, agents, pose, ego_id, agents_id, keep_sign = False):
+        # Case with only 1 neighbour
+        placeholder = np.zeros(((self.horizon, 3, self.n_agents)))
+
+        for h in range(0,self.horizon):
+
+            for n in range(0, self.n_agents):
+
+                x_ego = pose[h,:]
+                x_neg = agents[h,n,:]
+
+                a =  x_neg - x_ego
+                a = a / np.sqrt(a[0] ** 2 + a[1] ** 2) #normalise
+                b = - 0.5 * a@(x_ego + x_neg).T
+
+                if ego_id < agents_id[n] or keep_sign:
+                    sign = 1
+                else:
+                    sign = -1
+
+                placeholder[h,0,n] = sign*a[0]
+                placeholder[h,1,n] = sign*a[1]
+                placeholder[h,2,n] = sign*b
+
+
+
+
+        return placeholder

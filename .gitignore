@@ -2,7 +2,6 @@ devel/
 logs/
 build/
 bin/
-lib/
 msg_gen/
 srv_gen/
 msg/*Action.msg
@@ -29,6 +28,11 @@ devel_isolated/
 .project
 .cproject
 
+# pycharm
+.idea
+.pytest_cache
+.DS_Store
+
 # qcreator stuff
 CMakeLists.txt.user
 
@@ -47,6 +51,6 @@ qtcreator-*
 
 # Emacs
 .#*
-
+~$*
 # Catkin custom files
 CATKIN_IGNORE

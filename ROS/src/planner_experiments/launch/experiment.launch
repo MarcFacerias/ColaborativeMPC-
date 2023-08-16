@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+<arg name="n_robots" default="2"/>
+<param name="n_robots" value="$(eval arg ('n_robots'))" />
+<node pkg="planner_experiments" type="main_plotter.py" name="plotter" output="screen"/>
+
+<!-- <include file="$(find planner_experiments)/launch/LPV_car_spawner.launch"> -->
+<!--     <arg name="robots" value="$(eval arg ('n_robots') - 1 )"/> -->
+<!--     <arg name="log_agent" value="0"/> -->
+<!-- </include> -->
+
+  <include file="$(find planner_experiments)/launch/NL_car_spawner.launch">
+    <arg name="robots" value="$(eval arg ('n_robots') - 1 )"/>
+    <arg name="log_agent" value="0"/>
+  </include>
+
+
+</launch>
