@@ -9,12 +9,8 @@
     <orderEntry type="library" name="workspace" level="project" />
     <orderEntry type="library" name="ROS" level="project" />
   </component>
-  <component name="PackageRequirementsSettings">
-    <option name="removeUnused" value="true" />
-    <option name="keepMatchingSpecifier" value="false" />
-  </component>
   <component name="PyDocumentationSettings">
-    <option name="format" value="PLAIN" />
-    <option name="myDocStringFormat" value="Plain" />
+    <option name="format" value="NUMPY" />
+    <option name="myDocStringFormat" value="NumPy" />
   </component>
 </module>
