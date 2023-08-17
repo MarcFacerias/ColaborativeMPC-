@@ -14,13 +14,13 @@ settings = {
     "save_data" : True,
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 3,
-    "max_it" : 10000,
+    "n_agents" : 2,
+    "max_it" : 1000,
     "min_dist": 0.25,
     # "N" : 125,
     # "dt" : 0.025,
-    "N" : 10,
-    "dt" : 0.01,
+    "N" : 20,
+    "dt" : 0.025,
     "vx_ref": 3.0,
 
     "map_type" : "Highway",
@@ -41,6 +41,6 @@ settings = {
     "wq": wq
 }
 
-path_gen(settings, "baseline3_agents")
+path_gen(settings, "NL_2agents_mh")
 lbp_gen(settings, "lambdas")
 save_config(settings)
