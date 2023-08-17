@@ -3,7 +3,7 @@ import numpy as np
 from plan_lib.utilities import path_gen, lbp_gen, save_config
 # gains
 Qs = 10000000 * np.eye(3)
-Q = np.diag([10.0, 0.0, 0.0, 25.0, 10.0, 0.0, 0.0, 0, 0])
+Q = np.diag([10.0, 0.0, 0.0, 12.0, 10.0, 0.0, 0.0, 0, 0])
 # self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
 R = 0 * np.diag([1, 1])
 dR = 50 * np.diag([1, 1])
@@ -14,13 +14,13 @@ settings = {
     "save_data" : True,
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 2,
-    "max_it" : 3,
+    "n_agents" : 3,
+    "max_it" : 10000,
     "min_dist": 0.25,
     # "N" : 125,
     # "dt" : 0.025,
-    "N" : 50,
-    "dt" : 0.025,
+    "N" : 10,
+    "dt" : 0.01,
     "vx_ref": 3.0,
 
     "map_type" : "Highway",
@@ -41,6 +41,6 @@ settings = {
     "wq": wq
 }
 
-path_gen(settings, "sa_test")
+path_gen(settings, "baseline3_agents")
 lbp_gen(settings, "lambdas")
 save_config(settings)

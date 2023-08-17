@@ -128,16 +128,16 @@ class PlannerHp(base_nl_constr):
                 placeholder_states = self.opti.parameter(self.n_s * (self.N + 1))
                 self.states_param.append(placeholder_states)
 
-                placeholder_u = self.opti.parameter(2 * (self.N))
+                placeholder_u = self.opti.parameter(self.N, 2)
                 self.du_param.append(placeholder_u)
 
                 placeholder_sa = self.opti.parameter(self.N,4) #we have 4 slack variables
                 self.s_agent_param.append(placeholder_sa)
 
-                placeholder_spm = self.opti.parameter((self.N), (self.n_neighbours+1))
+                placeholder_spm = self.opti.parameter(self.N, self.n_neighbours+1)
                 self.slack_params_master.append(placeholder_spm)
 
-                placeholder_sps = self.opti.parameter((self.N), (self.n_neighbours+1))
+                placeholder_sps = self.opti.parameter(self.N, self.n_neighbours+1)
                 self.slack_params_slave.append(placeholder_sps)
 
             if self.aux != 0:

@@ -1,6 +1,5 @@
 TODO Codi future 
 
-    Fix NL model in CASADI 
     Revisar formating llibreria
     Revisar variables q sobren 
 
@@ -24,7 +23,6 @@ TODO Paper
 
         Expandir una mica la biblio 
         Revisio final post experiments
-        
 
 TODO semanal
     
@@ -66,10 +64,6 @@ TODO setmana del 28
     Ordenar i netejar el git del primer paper (TODO Codi future )
     Preparar classe Jan de matlab
 
-TODO esta setmana 
-
-    Testeos 
-    Anar a apuntarme al gym 
-    Anar al game 
-    Preparar visita juanjo  
-    
+TODO Fantasia: 
+    Afegir plan phd al remarkable 
+    habilitar la edicio de pdf 

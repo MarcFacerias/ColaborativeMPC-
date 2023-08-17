@@ -185,6 +185,7 @@ def main(id):
                 continue
 
             if all(rs.updated) and not rs.waiting:
+                rospy.loginfo("solving agent " + str(id))
                 feas, u_pred, x_pred, raws = rs.one_step( lambdas[ns,:], u_old, raws)
 
                 if not feas:

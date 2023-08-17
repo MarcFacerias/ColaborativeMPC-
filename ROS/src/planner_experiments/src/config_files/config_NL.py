@@ -1,12 +1,12 @@
 import matplotlib.colors as mcolors
 import numpy as np
-from plan_lib.utilities import path_gen, lbp_gen, save_config
+from plan_lib.utilities import path_gen, save_config
 
 ## SEE LPV CONFIG##
 
 # gains
 Qs = 10000000 * np.eye(3)
-Q = np.diag([10.0, 0.0, 0.0, 25.0, 10.0, 0.0, 0.0, 0, 0])
+Q = np.diag([10.0, 0.0, 0.0, 15.0, 10.0, 0.0, 0.0, 0, 0])
 R = 0 * np.diag([1, 1])
 dR = 50 * np.diag([1, 1])
 wq = 5.0
@@ -16,10 +16,10 @@ settings = {
     "save_data" : True,
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 2,
-    "max_it" : 5,
+    "n_agents" : 3,
+    "max_it" : 4000,
     "min_dist": 0.25, # maximum distance to the neigh
-    "N" : 50,
+    "N" : 75,
     "dt" : 0.025,
     "vx_ref": 3.0,
 
@@ -29,7 +29,7 @@ settings = {
     "it_conv" : 2, # iterations that need to happen without changes on x
     "max_it_OCD" : 50, # maximum OCD iterations
     "min_it_OCD": 2, # minimum OCD iterations
-    "verb_OCD" : False, # verbosity of the OCD algorithm
+    "verb_OCD" : True, # verbosity of the OCD algorithm
 
     # Gains
     "Q": Q,
@@ -42,5 +42,5 @@ settings = {
     "log_agent": 0,
 }
 
-path_gen(settings, "NLR_test", ros=True)
+path_gen(settings, "NLR_test_sh3", ros=True)
 save_config(settings)

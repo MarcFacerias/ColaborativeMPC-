@@ -10,7 +10,6 @@ class base_nl_constr:
         solve: given ini_xPredicted computes the control action
     """
     def __init__(self, Q, Qs, R, dR, N, dt, map, id, model_param = None, sys_lim = None):
-
         # system parameters:
         self.n_s = 9
         self.n_u = 2
