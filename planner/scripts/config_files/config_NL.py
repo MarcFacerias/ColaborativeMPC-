@@ -3,7 +3,7 @@ import numpy as np
 from plan_lib.utilities import path_gen, lbp_gen, save_config
 # gains
 Qs = 10000000 * np.eye(3)
-Q = np.diag([10.0, 0.0, 0.0, 18.0, 10.0, 0.0, 0.0, 0, 0])
+Q = np.diag([10.0, 0.0, 0.0, 45.0, 25.0, 0.0, 0.0, 0, 0])
 # self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
 R = 0 * np.diag([1, 1])
 dR = 50 * np.diag([1, 1])
@@ -18,8 +18,7 @@ settings = {
     "max_it" : 1000,
     "min_dist": 0.25,
     # "N" : 125,
-    # "dt" : 0.025,
-    "N" : 50,
+    "N" : 30,
     "dt" : 0.025,
     "vx_ref": 3.0,
 
@@ -41,6 +40,6 @@ settings = {
     "wq": wq
 }
 
-path_gen(settings, "NL_3agents_lh")
+path_gen(settings, "NL_3agents_mh_no_limit")
 lbp_gen(settings, "lambdas")
 save_config(settings)

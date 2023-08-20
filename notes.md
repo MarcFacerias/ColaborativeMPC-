@@ -22,19 +22,11 @@ TODO Paper
         Expandir una mica la biblio 
         Revisio final post experiments
 
-Resumen setmana 14/08-20/08
-
-        Acabats tests CASADI, tenim una versio q mes o menys
-        Escrit el paper
-        Encara pasaen algunes coses rares amb ROS CASASI pero de moment ho ignorare
-        Estructura dels tests a fer Hiperplanes -> nomes si me la demanen 
-            Fer un test per veure si es feasible a nivell de computational times
-
-        Test del botleneck -> nomes si mel demanen
 
 TODO setmana del 21
     
     Repasar el paper 
+    Fer alguna constraint pel tema de que dos vehicles tinguin el mateix pose
     Planejar primeres fases de la seguent recerca (deixar la teoria escrita)
     Migrar el projecte a ROS2 i ubuntu 22
     Preparar classe Jan de matlab

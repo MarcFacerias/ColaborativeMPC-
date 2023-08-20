@@ -15,9 +15,9 @@ settings = {
     "save_data" : True,
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
-    "n_agents" : 2,
+    "n_agents" : 3,
     "max_it" : 1000,
-    "N" : 75,
+    "N" : 125,
     "min_dist": 0.25,
     "dt" : 0.025,
     "vx_ref" : 3.0,
@@ -31,5 +31,5 @@ settings = {
     "dR" : dR,
     "wq" : wq}
 
-path_gen(settings, "LPVtr_agent")
+path_gen(settings, "LPV3r_agent_laptop")
 save_config(settings)
