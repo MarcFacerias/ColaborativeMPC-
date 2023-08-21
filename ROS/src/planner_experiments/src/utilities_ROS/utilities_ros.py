@@ -48,7 +48,6 @@ def get_lambdasROS(settings, id):
     n_agents = settings["n_agents"]
     N = settings["N"]
     path = settings["lb_path"] + "pck/" + str(id) + "/" + "ini_lambdas.pkl"
-    print(path)
     lambdas = np.zeros((n_agents, N))
 
     try:

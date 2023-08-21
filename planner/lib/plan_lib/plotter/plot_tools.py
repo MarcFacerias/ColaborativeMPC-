@@ -27,10 +27,10 @@ class plotter_offline():
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def plot_offline_experiment(self, agent, path = None, style_agent = ".b", show = False ):
+    def plot_offline_experiment(self, agent, path = None, style_agent = ".b", show = False, legend = None ):
         states = np.concatenate( agent.states, axis=0 ).reshape((-1,9))
-        plt.plot(states[:, 7],states[:, 8], style_agent)
-
+        plt.plot(states[:, 7],states[:, 8], style_agent, label = legend)
+        plt.legend(fontsize="20")
         if path is not None:
             n = ceil(states.shape[0]/15)
             # colors = get_color_gradient(n) # TODO fix this!

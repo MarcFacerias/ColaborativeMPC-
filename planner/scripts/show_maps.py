@@ -5,6 +5,8 @@ import numpy as np
 from plan_lib.mapManager import Map
 from plan_lib.plotter import plotter_offline
 
+# USED TO PLOT A MAP WITH MATPLOTLIB
+
 plot = False
 plot_end = True
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})

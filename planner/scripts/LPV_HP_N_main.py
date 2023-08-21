@@ -15,6 +15,7 @@ from config_files.config_LPV import settings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
+# USED TO RUN THE LPV EXPERIMENTS, as it is worked for the paper
 
 class agent(initialiserLPV):
     # Agents class, interfaces with the planner, saves data etc

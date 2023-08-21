@@ -113,7 +113,7 @@ def main(id):
     agents,x_old,u_old = initialise_agents(x0,N,dt,maps)
 
     rospy.init_node("car" + str(id))
-    rate = rospy.Rate(1000)  # 10hz
+    rate = rospy.Rate(1000)
     x_old = x_old[id]
     u_old = u_old[id]
 

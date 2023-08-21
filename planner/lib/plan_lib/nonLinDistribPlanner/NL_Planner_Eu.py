@@ -69,7 +69,6 @@ class PlannerEu(base_nl_constr):
                 if self.id > el:
                     #If ego vehicle add euclidean distance constraint, otherwise this will be part of the slave cost function
                     self.opti.subject_to( sqrt((self.x[j,7] - self.pose_param[i][j-1,0])**2 + (self.x[j,8] - self.pose_param[i][j-1,1])**2) + self.slack_dis[j-1,i] > self.dth )
-                    self.opti.subject_to((self.x[j,7] - self.pose_param[i][j-1,0])**2 + (self.x[j,8] - self.pose_param[i][j-1,1])**2 > 0.01 )
 
     def solve(self, ini_xPredicted = None, Last_xPredicted = None, uPred = None, lambdas = None, x_agents = None, agents_id = None, data = None):
         """Computes control action

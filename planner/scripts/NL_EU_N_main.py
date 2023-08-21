@@ -13,6 +13,8 @@ from config_files.config_NL import settings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
+# USED TO RUN Euclidean EXPERIMENTS, as it is worked for the paper
+
 class agent(initialiserNL):
 
     def __init__(self, settings, maps, x0, id ):

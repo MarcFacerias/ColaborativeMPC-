@@ -5,3 +5,4 @@ Folder with the planner utilities
     scripts: standalone scripts 
         config_files -> folders with the configuration used in the experiments 
         data -> files saved from the standalone experiments 
+        *.py -> scripts to either test the algorithms o do some specific task 

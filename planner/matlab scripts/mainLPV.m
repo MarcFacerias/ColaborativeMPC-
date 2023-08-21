@@ -172,9 +172,9 @@ max_placeholder = zeros(k,1);
 avg_placeholder = zeros(k,1);
 
 for it = 1:k 
-    min_placeholder(it) = min(plan_dist(:,it));
-    max_placeholder(it) = max(plan_dist(:,it));
-    avg_placeholder(it) = mean(plan_dist(:,it));
+    min_placeholder(it) = abs(min(plan_dist(:,it)));
+    max_placeholder(it) = abs(max(plan_dist(:,it)));
+    avg_placeholder(it) = abs(mean(plan_dist(:,it)));
 end
 
 

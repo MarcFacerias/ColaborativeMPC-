@@ -191,7 +191,6 @@ def main(id):
                 if not feas:
                     error = True
                     rospy.logwarn("solver error found in agent " + str(id))
-                    # break
 
                 io.toc()
 
@@ -201,7 +200,6 @@ def main(id):
             if rs.waiting and all(rs.updated):
 
                 # update the values of x,y for the obstacle avoidance constraits
-
                 agents = rs.build_agents()
 
                 if n_agents == 1:
@@ -216,16 +214,12 @@ def main(id):
                 lambdas += alpha*cost
                 lambdas_hist.append(lambdas)
 
-                # check if the values of x changed, if they are close enough for two iterations the algorithm has converged
-                metric = ['']*(n_agents+1)
-
                 x_test = [agent[0] for agent in rs.agents_data]
 
                 if it_OCD != 0:
                     finished_ph = 1
                     for i in range(0,n_agents):
                         finished_ph &= np.allclose(x_test_old[i], x_test[i], atol=0.01)
-                        metric[i] = x_test_old[i] - x_test[i]
 
                     itc += 1
 
@@ -233,7 +227,6 @@ def main(id):
                     itc = 0
 
                 elif itc > it_conv:
-                    # print("Agent " + str(id) + ": Iteration finished with " + str(it_OCD) + " steps")
                     rs.send_status(True)
 
                 if it_OCD > max_it_OCD:
@@ -257,10 +250,6 @@ def main(id):
         u_old = u_pred
         io.update( x_pred, u_pred ,agents, it, error = error, OCD_ct=it_OCD)
         it += 1
-
-        # if error:
-        #     rospy.signal_shutdown("error encountered in solver of Agent " + str(id))
-        #     break
 
     rs.send_end()
     rospy.sleep(1)

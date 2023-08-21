@@ -10,6 +10,8 @@ from plan_lib.nonLinDistribPlanner import PlannerHp
 from plan_lib.config import x0_database
 from config_files.config_NL import settings
 
+# USED TO RUN HP EXPERIMENTS; NEEDS TO BE RECHECKED
+
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 class agent(initialiserNL):

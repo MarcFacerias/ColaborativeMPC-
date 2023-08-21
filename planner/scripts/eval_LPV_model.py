@@ -12,6 +12,7 @@ from config_files.config_LPV import settings
 from plan_lib.plotter import plotter_offline
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
+# USED TO CHECK IF THE LPV MODEL WORKS AS EXPECTED
 
 class agent(initialiserLPV):
     # Agents class, interfaces with the planner, saves data etc

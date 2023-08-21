@@ -6,7 +6,9 @@ from plan_lib.mapManager import Map
 import numpy as np
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
- # TODO expand to multiple agents
+
+# USED TO REPRODUCE OLD EXPERIMETNS; NEEDS TO BE UPDATED
+
 def load_s(id = 0):
     # Load states of agent id
     path = settings["path_pck"] + "pck/" + str(id) + "/"

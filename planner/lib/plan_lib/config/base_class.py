@@ -79,7 +79,8 @@ class experiment_utilities():
 
         if OCD_it is not None:
             try:
-                np.savetxt(path + '/time.dat', self.time_OCD(OCD_it), fmt='%.5e', delimiter=' ')
+                np.savetxt(path + '/time.dat', self.time(OCD_it), fmt='%.5e', delimiter=' ')
+                np.savetxt(path + '/time_OCD.dat', self.time_OCD(OCD_it), fmt='%.5e', delimiter=' ')
                 np.savetxt(path + '/OCD_it.dat', OCD_it, fmt='%.5e', delimiter=' ')
             except Exception as e:
                 print("Exception saving data")
@@ -152,4 +153,14 @@ class experiment_utilities():
 
         return placeholder
 
+    def time(self,OCD_it):
 
+        if all(it == 0 for it in OCD_it):
+            return self.data.time_op
+
+        placeholder = np.zeros((len(OCD_it)))
+        for i in range(0,len(OCD_it)):
+
+            placeholder[i] = sum(self.data.time_op[i*OCD_it[i]:(i+1)*OCD_it[i]])
+
+        return placeholder

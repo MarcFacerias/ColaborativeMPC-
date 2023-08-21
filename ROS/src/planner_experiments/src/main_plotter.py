@@ -25,6 +25,7 @@ class plotter_ROS():
 
     def __init__(self, mode = "LPV"):
 
+        #  Load settings
         if mode == "LPV":
             from config_files.config_LPV import settings
 

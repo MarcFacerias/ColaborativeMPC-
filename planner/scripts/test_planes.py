@@ -6,6 +6,8 @@ import numpy as np
 plot = True
 it = True
 
+# USED TO TEST IF THE PLANES ARE BEING COMPTUED NICELY (THEY DO )
+
 def plot_hyperplanes(planes, pointX, pointY):
     plt.ion()
     plt.clf()

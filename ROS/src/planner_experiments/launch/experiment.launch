@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
 
+<!--  Set this constants to run the experiment-->
 <arg name="n_robots" default="2"/>
 <arg name="mode" default="NL"/>
 <param name="n_robots" value="$(eval arg ('n_robots'))" />
