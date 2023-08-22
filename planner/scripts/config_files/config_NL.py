@@ -5,8 +5,8 @@ from plan_lib.utilities import path_gen, lbp_gen, save_config
 Qs = 10000000 * np.eye(3)
 Q = np.diag([10.0, 0.0, 0.0, 35.0, 20.0, 0.0, 0.0, 0, 0])
 # self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
-R = 25 * np.diag([1, 1])
-dR = 10 * np.diag([1, 1])
+R = 0.5 * np.diag([1, 1])
+dR = 0.5 * np.diag([1, 1])
 wq = 5.0
 
 settings = {
