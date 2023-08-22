@@ -3,10 +3,10 @@ import numpy as np
 from plan_lib.utilities import path_gen, lbp_gen, save_config
 # gains
 Qs = 10000000 * np.eye(3)
-Q = np.diag([25.0, 0.0, 0.0, 20.0, 10.0, 0.0, 0.0, 0, 0])
+Q = np.diag([10.0, 0.0, 0.0, 35.0, 20.0, 0.0, 0.0, 0, 0])
 # self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
-R = 0 * np.diag([1, 1])
-dR = 50 * np.diag([1, 1])
+R = 25 * np.diag([1, 1])
+dR = 10 * np.diag([1, 1])
 wq = 5.0
 
 settings = {
@@ -15,10 +15,10 @@ settings = {
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 3,
-    "max_it" : 100000,
+    "max_it" : 500,
     "min_dist": 0.25,
     # "N" : 125,
-    "N" : 35,
+    "N" : 30,
     "dt" : 0.02,
     "vx_ref": 3.0,
 
