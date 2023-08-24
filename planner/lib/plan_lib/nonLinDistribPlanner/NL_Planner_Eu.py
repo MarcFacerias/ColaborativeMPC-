@@ -26,7 +26,7 @@ class PlannerEu(base_nl_constr):
                   self.Q[6,6]*self.x[j,6]**2 + self.Q[7,7]*self.x[j,7]**2 +\
                   self.Q[8,8]*self.x[j,8]**2 +
                  self.dR[0,0]*self.du[j-1,0]**2 + self.dR[1,1]*self.du[j-1,1]**2 +
-                 self.R[0,0] * self.u[j-1,0] ** 2 + self.R[1,1] * self.u[j-1,1] ** 2 +
+                 self.R[0,0] * self.u[j-1,0] ** 2 + self.R[1,1] * self.u[j-1,1]** 2 +
                  self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2 ))
 
             for i, el in enumerate(self.agent_list):

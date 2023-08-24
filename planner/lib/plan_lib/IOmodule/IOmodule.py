@@ -98,7 +98,7 @@ class io_class():
             print("avg computational time: " + str((self._toc - self._tic)/self.n_agent))
             print("--------------------------------------------------------------")
 
-        else:
+        elif not self.verb == 0:
 
             print("--------------------------------------------------------------")
             print("it: " + str(it))
@@ -107,7 +107,7 @@ class io_class():
 
         if (self.plot == -1 and end ) or error:
 
-            input("Press enter to save track ...")
+            # input("Press enter to save track ...")
 
             for j,r in enumerate(self.sys):
                 self.disp.plot_offline_experiment(r, self.path, self.color[j])
@@ -122,7 +122,7 @@ class io_class():
 
         if (self.save and end) or (self.save and error ):
 
-            input("Press enter to save data ...")
+            # input("Press enter to save data ...")
 
             for r in self.sys:
 

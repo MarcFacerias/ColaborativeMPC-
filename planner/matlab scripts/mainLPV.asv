@@ -1,6 +1,6 @@
 clear
 
-files = "../scripts/experiments_paper/LPV3_agent_lh/csv";
+files = "../scripts/data/experiments_paper/LPV3_agent_lh/csv";
 addpath(genpath(files))
 
 tools = "tools";
@@ -32,6 +32,7 @@ total = length(subFolders);
 
 for n = 1 :total
     figure()
+    sgtitle("Linear velocity and S evolutions for agents in the fleet")
     for j = 1:9 
         subplot(3,3,j);
         hold on 

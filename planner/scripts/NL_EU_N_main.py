@@ -9,7 +9,6 @@ from plan_lib.mapManager import Map
 from plan_lib.utilities import checkEnd, initialise_agents, get_lambdas
 from plan_lib.nonLinDistribPlanner import PlannerEu
 from plan_lib.config import x0_database
-from config_files.config_NL import settings
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
@@ -40,12 +39,15 @@ class agent(initialiserNL):
         return feas, self.Controller.uPred, self.Controller.xPred, Solution
 
 
-def main():
+def main(settings = None):
 
 #########################################################
 #########################################################
 
     # Map settings
+    tic = time.time()
+    if settings is None:
+        from config_files.config_NL import settings
 
     n_agents = settings["n_agents"]
     map_type = settings["map_type"]
@@ -181,7 +183,6 @@ def main():
             break
 
     io.update(x_pred, u_pred, agents, it, end=True,error = error)
-
 if __name__ == "__main__":
 
     main()

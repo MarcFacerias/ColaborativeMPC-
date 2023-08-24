@@ -1,9 +1,4 @@
-clear
-close all 
-
 files = "../scripts/experiments_paper/NL_3agents_lh_erratic/csv";
-files = "../scripts/data/NL_3agents_20h_CapU/csv";
-
 addpath(genpath(files))
 
 tools = "tools";
@@ -35,21 +30,17 @@ total = length(subFolders);
 for n = 1 :total
     figure()
     sgtitle("Linear velocity and S evolutions for agents in the fleet")
+
     for j = 1:9 
-        subplot(3,3,j);
+    
+        subplot(5,4,j);
         hold on 
-        title("state: " + string(j))
-        plot(states(n,:,j))
-        ylabel("Value")
+        title("state: " + str(j))
+        plot(states(n/2 +1 ,:,1))
+        ylabel("Vel x (m/s)")
         xlabel("it")
         grid on 
         hold off 
-    end
-    
-    figure()
-    for i=1:2
-        subplot(2,1,i);
-        plot(u(n,:,i))
     end
 end
 
