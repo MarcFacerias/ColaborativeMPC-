@@ -1,8 +1,8 @@
 clear
 close all 
 
-files = "../scripts/experiments_paper/NL_3agents_lh_erratic/csv";
-files = "../scripts/data/NL_3agents_20h_CapU/csv";
+%files = "../scripts/experiments_paper/NL_3agents_lh_erratic/csv";
+files = "../scripts/data/NL_3agents_001110/csv";
 
 addpath(genpath(files))
 

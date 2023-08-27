@@ -11,7 +11,7 @@ dR = 50 * np.diag([1, 1])
 wq = 5.0
 
 settings = {
-    "plot" : -1, # 0: none, 1: online, 2: offline, -1: only save picture
+    "plot" : 0, # 0: none, 1: online, 2: offline, -1: only save picture
     "save_data" : True,
     "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
