@@ -12,11 +12,11 @@ settings["verb"]= 0
 settings["plot"]= -2
 active_threads = 3
 
-N = [30]
-qvxl = [15, 35]
-qeyl = [12,25]
-qewl = [10]
-qdUl = [100,150]
+N = [30,40]
+qvxl = [25, 35]
+qeyl = [40,60]
+qewl = [10,25]
+qdUl = [150,200]
 qUl  = [0]
 
 for i,n in enumerate(N):
