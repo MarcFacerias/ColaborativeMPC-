@@ -1,5 +1,5 @@
 import pickle
-
+import os
 from plan_lib.mapManager import Map
 from plan_lib.plotter import plotter_offline
 
@@ -13,7 +13,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 def load_s(path):
     # Load states of agent id
 
-    with open(path + 'states.pkl', 'rb') as f:  # Python 3: open(..., 'wb')
+    with open(path + '/states.pkl', 'rb') as f:  # Python 3: open(..., 'wb')
         return pickle.load(f)
 
 class proxy():
@@ -28,19 +28,23 @@ def main():
     #########################################################
     #########################################################
     # set constants
-    files_CS = "data/experiments_paper/NL_3agents_lh/pck/2/"
-    files_LPV = "data/experiments_paper/LPV3_agent_lh/pck/2/"
+    name = "NL_3agents_def"
+    files = "data/"+ name + "/pck/"
 
     maps = [Map(settings_NL["map_type"])] # load map
-    path = "data/experiments_paper/two_agents/"
-    agent_NL = proxy(load_s(files_CS))
-    agent_LPV = proxy(load_s(files_LPV))
+    path = "data/results/" + name + "_"
+    agents = []
+    for file_path in os.listdir(files):
+        # check if current file_path is a file
+        if os.path.isdir(os.path.join(files, file_path)):
+            # add filename to list
+            agents.append(proxy(load_s(os.path.join(files, file_path))))
+
     colors = list(mcolors.TABLEAU_COLORS)
 
     d = plotter_offline(maps[0]) # make an offline plotter
-
-    d.plot_offline_experiment( agent_LPV,path=path,style_agent = colors[0],legend="LPV")
-    d.plot_offline_experiment( agent_NL,path=path, style_agent = colors[1],legend="NL")
+    for i, agent in enumerate(agents):
+        d.plot_offline_experiment(agent,path=path,style_agent = colors[i],legend="LPV")
 
 
 if __name__ == "__main__":

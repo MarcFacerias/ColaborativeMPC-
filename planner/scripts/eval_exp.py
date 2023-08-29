@@ -1,9 +1,11 @@
-
-
 import pickle
 
 from plan_lib.mapManager import Map
+from plan_lib.plotter import plotter_offline
+
+from config_files.config_NL import settings as settings
 import numpy as np
+
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 

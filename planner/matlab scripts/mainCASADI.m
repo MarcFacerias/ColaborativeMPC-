@@ -2,8 +2,7 @@ clear
 close all 
 
 %files = "../scripts/experiments_paper/NL_3agents_lh_erratic/csv";
-files = "../scripts/data/NL_3agents_def/csv";
-
+files = "../scripts/data/NL_3agents_101100/csv";
 addpath(genpath(files))
 
 tools = "tools";
