@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
 
+# TODO: https://answers.ros.org/question/358343/rate-and-sleep-function-in-rclpy-library-for-ros2/?answer=358386#post-id-358386
 import numpy as np
 np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 import sys
@@ -13,7 +14,9 @@ from utilities_ROS.utilities_ros import deserialise_np
 from plan_lib.mapManager import Map
 from plan_lib.plotter import plotter_offline,plotter
 
-import rospy
+import rclpy
+from rclpy.node import Node
+import threading
 # proxy class used to match function calls
 class proxy_agent():
     def __init__(self):
@@ -21,7 +24,7 @@ class proxy_agent():
 
     # change this so that the proxy is updated thorough ROS topics
 
-class plotter_ROS():
+class plotter_ROS(Node):
 
     def __init__(self, mode = "LPV"):
 
@@ -32,14 +35,14 @@ class plotter_ROS():
         else:
             from config_files.config_NL import settings
 
-        self.nh = rospy.init_node("plotter", disable_signals = True)
-        self.rate = rospy.Rate(1000)
+        super().__init__("plotter")
+        self.rate = self.create_rate(1000, self.get_clock())
 
         self.map = Map(settings["map_type"])
         self.plot = settings["plot"]
 
         try:
-            self.n_agent = int(rospy.get_param("n_robots"))
+            self.n_agent = int(self.get_parameter("n_robots").get_parameter_value())
         except:
             self.n_agent = settings["n_agent"]
 
@@ -62,11 +65,11 @@ class plotter_ROS():
         self.it_plot = -1
         self.it_count = 0
 
-        self.sub_pp = rospy.Subscriber("set_pplot",Int32 , self.set_pplot_callback)
-        self.sub_ros_kill = rospy.Subscriber("end_signal", Bool, self.callback_end, queue_size=10)
+        self.sub_pp = self.create_subscriber("set_pplot",Int32 , self.set_pplot_callback)
+        self.sub_ros_kill = self.create_subscriber("end_signal", Bool, self.callback_end, queue_size=10)
 
         for n in range(0,self.n_agent):
-            self.subs[n] = rospy.Subscriber('car' + str(n) + "_data", agent_info, self.callback, (n))
+            self.subs[n] = self.create_subscriber('car' + str(n) + "_data", agent_info, self.callback, (n))
 
     def callback(self,msg,id):
         self.agents[id].states.append(deserialise_np(msg)[0][1,:])
@@ -81,7 +84,7 @@ class plotter_ROS():
             self.disp = plotter_offline(self.map)
 
     def run(self):
-        while not rospy.is_shutdown() and not self.end:
+        while not rclpy.ok() and not self.end:
 
             if self.plot == 1 :
 
@@ -109,18 +112,26 @@ class plotter_ROS():
                 print(self.path)
                 self.disp.plot_offline_experiment(r, self.path, self.color[j])
 
-        rospy.signal_shutdown("end of the experiment")
+        raise SystemExit
 
 
 if __name__ == "__main__":
-    myargv = rospy.myargv(argv=sys.argv)
+    rclpy.init()
     try:
-        mode = myargv[1]
-        plotter = plotter_ROS(mode)
+        plotter = plotter_ROS(sys.argv[1])
     except:
         plotter = plotter_ROS()
 
-    plotter.run()
+    thread = threading.Thread(target=rclpy.spin, args=(plotter,), daemon=True)
+    thread.start()
+
+    try:
+        plotter.run()
+    except:
+        rclpy.logging.get_logger("Quitting").info('Done')
+
+    plotter.destroy_node()
+    rclpy.shutdown()
 
 
 
