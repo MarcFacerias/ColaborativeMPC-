@@ -23,22 +23,22 @@ class PlannerEu(base_nl_constr):
             J += (self.Q[0,0]*(self.x[j,0] - self.vx_ref)**2 + self.Q[1,1]*self.x[j,1]**2 +
                   self.Q[2,2]*self.x[j,2]**2 + self.Q[3,3]*self.x[j,3]**2 +
                   self.Q[4,4]*self.x[j,4]**2 + self.Q[5,5]*self.x[j,5]**2 +
-                  self.Q[6,6]*self.x[j,6]**2 + self.Q[7,7]*self.x[j,7]**2 +\
+                  self.Q[6,6]*self.x[j,6]**2 + self.Q[7,7]*self.x[j,7]**2 +
                   self.Q[8,8]*self.x[j,8]**2 +
                  self.dR[0,0]*self.du[j-1,0]**2 + self.dR[1,1]*self.du[j-1,1]**2 +
-                 self.R[0,0] * self.u[j-1,0] ** 2 + self.R[1,1] * self.u[j-1,1]** 2 +
+                 self.R[0,0] * self.u[j-1,0]**2 + self.R[1,1] * self.u[j-1,1]**2 +
                  self.model_slack*(self.slack_agent[j-1,0]**2 + self.slack_agent[j-1,1]**2 ))
 
             for i, el in enumerate(self.agent_list):
 
                 # cost asociated to the neighbouring agents
-                J += (self.Q[0,0] * (self.states_param[i][j,0] - self.vx_ref)** 2+ self.Q[1,1] * self.states_param[i][j,1] ** 2 +
-                      self.Q[2,2] * self.states_param[i][j,2] ** 2 + self.Q[3,3] * self.states_param[i][j,3] ** 2 +
-                      self.Q[4,4] * self.states_param[i][j,4] ** 2 + self.Q[5,5] * self.states_param[i][j,5] ** 2 +
-                      self.Q[6,6] * self.states_param[i][j,6] ** 2 + self.Q[7,7] * self.states_param[i][j,7] ** 2 +
-                      self.Q[8,8] * self.states_param[i][j,8] ** 2 +
-                      self.R[0,0] * self.u_param[i][j-1,0] ** 2 + self.R[1,1] * self.u_param[i][j-1,1] ** 2 +
-                      self.dR[0,0]* self.du_param[i][j-1,0] ** 2 + self.dR[1,1]*self.du_param[i][j-1,1] ** 2  +
+                J += (self.Q[0,0] * (self.states_param[i][j,0] - self.vx_ref)** 2+ self.Q[1,1] * self.states_param[i][j,1]**2 +
+                      self.Q[2,2] * self.states_param[i][j,2]**2 + self.Q[3,3] * self.states_param[i][j,3]**2 +
+                      self.Q[4,4] * self.states_param[i][j,4]**2 + self.Q[5,5] * self.states_param[i][j,5]**2 +
+                      self.Q[6,6] * self.states_param[i][j,6]**2 + self.Q[7,7] * self.states_param[i][j,7]**2 +
+                      self.Q[8,8] * self.states_param[i][j,8]**2 +
+                      self.R[0,0] * self.u_param[i][j-1,0]**2 + self.R[1,1] * self.u_param[i][j-1,1]**2 +
+                      self.dR[0,0] * self.du_param[i][j-1,0]**2 + self.dR[1,1]*self.du_param[i][j-1,1]**2 +
                       self.model_slack * (self.s_agent_param[i][j-1,0] ** 2 + self.s_agent_param[i][j-1,1]**2))
 
 

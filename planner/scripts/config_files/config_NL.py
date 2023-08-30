@@ -3,9 +3,9 @@ import numpy as np
 from plan_lib.utilities import path_gen, lbp_gen, save_config
 # gains
 Qs = 10000000 * np.eye(3)
-Q = np.diag([15.0, 0.0, 0.0, 30.0, 10.0, 0.0, 0.0, 0, 0])
+Q = np.diag([25.0, 0.0, 0.0, 200.0, 10.0, 0.0, 0.0, 0, 0])
 # self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
-R = 10 * np.diag([1, 1])
+R = 15 * np.diag([1, 1])
 dR = np.diag([600, 200])
 wq = 5.0
 

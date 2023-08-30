@@ -13,10 +13,10 @@ it_conv,2
 max_it_OCD,1000
 min_it_OCD,2
 verb_OCD,False
-Q,"[[15.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
+Q,"[[25.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
  [0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
  [0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
- [0.000 0.000 0.000 30.000 0.000 0.000 0.000 0.000 0.000]
+ [0.000 0.000 0.000 200.000 0.000 0.000 0.000 0.000 0.000]
  [0.000 0.000 0.000 0.000 10.000 0.000 0.000 0.000 0.000]
  [0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
  [0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
@@ -25,12 +25,12 @@ Q,"[[15.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000]
 Qs,"[[10000000.000 0.000 0.000]
  [0.000 10000000.000 0.000]
  [0.000 0.000 10000000.000]]"
-R,"[[10  0]
- [ 0 10]]"
-dR,"[[300   0]
+R,"[[15  0]
+ [ 0 15]]"
+dR,"[[600   0]
  [  0 200]]"
 wq,5.0
-path_csv,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/planner/scripts/data/NL_3agents_def/
-path_img,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/planner/scripts/data/NL_3agents_def/
-path_pck,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/planner/scripts/data/NL_3agents_def/
-lb_path,/home/marc/git_personal/colab_mpc/ColaborativeMPC-/planner/scripts/data/lambdas/ini_lambdas.pkl
+path_csv,/home/lavnir/PhD/git/ColaborativeMPC-/planner/scripts/data/NL_3agents_def/
+path_img,/home/lavnir/PhD/git/ColaborativeMPC-/planner/scripts/data/NL_3agents_def/
+path_pck,/home/lavnir/PhD/git/ColaborativeMPC-/planner/scripts/data/NL_3agents_def/
+lb_path,/home/lavnir/PhD/git/ColaborativeMPC-/planner/scripts/data/lambdas/ini_lambdas.pkl
