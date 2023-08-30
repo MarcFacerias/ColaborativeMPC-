@@ -77,7 +77,7 @@ class io_class():
                 print("Agent " + str(i) + " track s: " + str(x_pred[i][1, -3]) + "/" + track_len)
 
             print("---------------------END Agents---------------------------------------")
-            print("avg computational time: " + str((self._toc - self._tic)/self.sys.n_agents))
+            print("avg computational time: " + str((self._toc - self._tic)/self.n_agent))
             print("--------------------------------------------------------------")
 
         elif self.verb == 2 :
