@@ -3,22 +3,22 @@ import numpy as np
 from plan_lib.utilities import path_gen, lbp_gen, save_config
 # gains
 Qs = 10000000 * np.eye(3)
-Q = np.diag([25.0, 0.0, 0.0, 40.0, 10.0, 0.0, 0.0, 0, 0])
+Q = np.diag([15.0, 0.0, 0.0, 30.0, 10.0, 0.0, 0.0, 0, 0])
 # self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
-R = 50 * np.diag([1, 1])
+R = 10 * np.diag([1, 1])
 dR = np.diag([600, 200])
 wq = 5.0
 
 settings = {
     "plot" : -1, # 0: none, 1: online, 2: offline, -1: only save picture
     "save_data" : True,
-    "verb" : 0,
+    "verb" : 2,
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 3,
     "max_it" : 1500,
     "min_dist": 0.25,
     # "N" : 125,
-    "N" : 30,
+    "N" : 20,
     "dt" : 0.02,
     "vx_ref": 3.0,
 
