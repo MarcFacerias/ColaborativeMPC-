@@ -28,8 +28,8 @@ def main():
     #########################################################
     #########################################################
     # set constants
-    files_CS = "data/experiments_paper/NL_3agents_lh/pck/2/"
-    files_LPV = "data/experiments_paper/LPV3_agent_lh/pck/2/"
+    files_CS = "experiments_paper/NL_3agents_def/pck/2/"
+    files_LPV = "experiments_paper/LPV3_agent_lh/pck/2/"
 
     maps = [Map(settings_NL["map_type"])] # load map
     path = "data/experiments_paper/two_agents/"

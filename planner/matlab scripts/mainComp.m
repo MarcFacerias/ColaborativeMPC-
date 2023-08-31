@@ -1,7 +1,7 @@
 clear
-files_CS = "../scripts/data/experiments_paper/NL_3agents_lh/csv";
+files_CS = "../scripts/experiments_paper/NL_3agents_def/csv";
 addpath(genpath(files_CS))
-files_LPV = "../scripts/data/experiments_paper/LPV3_agent_lh/csv";
+files_LPV = "../scripts/experiments_paper/LPV3r_agent_laptop/csv";
 addpath(genpath(files_LPV))
 
 tools = "tools";
@@ -138,12 +138,12 @@ for as = 1:2
 end
 
 figure();
-sgtitle("Linear velocity evolution of agents in the fleet")
+% sgtitle("Linear velocity evolution of agents in the fleet")
 hold on
 for as = 1:2 
 %     plot(time_y{as},min_pl_v{as})
 %     plot(time_y{as},max_pl_v{as})
-    plot(time_y{as},avg_pl_v{as})
+    plot(time_y{as},avg_pl_v{as}, '.-')
 end
 ylabel("Vel x (m/s)")
 xlabel("time (s)")
@@ -154,12 +154,12 @@ saveas(gcf, "figs/vel.eps", "epsc")
 savefig("figs/vel")
 
 figure();
-sgtitle("S evolution of agents in the fleet")
+% sgtitle("S evolution of agents in the fleet")
 hold on 
 for as = 1:2 
 %     plot(time_y{as},min_pl_s)
 %     plot(time_y{as},max_pl_s)
-    plot(time_y{as},avg_pl_s{as})
+    plot(time_y{as},avg_pl_s{as}, '.-')
 end
 ylabel("s (m)")
 xlabel("time (s)")
@@ -195,21 +195,46 @@ for as = 1:2
 end
 
 figure()
-sgtitle("Inter-vehicle distance analisis")
+% sgtitle("Inter-vehicle distance avg distance")
+hold on
+for as = 1:2 
+    plot(time_y{as},avg_ivd{as}, '.-')
+end
+ylabel("distance (m)")
+xlabel("time (s)")
+grid on 
+hold off 
+legend("LPV-MPC  avg","NL-DMPC avg")
+saveas(gcf, "figs/d_avg.eps", "epsc")
+savefig("figs/d_avg")
+
+figure()
+% sgtitle("Inter-vehicle max distance")
+hold on
+for as = 1:2 
+    plot(time_y{as},max_ivd{as}, '.-')
+end
+ylabel("distance (m)")
+xlabel("time (s)")
+grid on 
+hold off 
+legend("LPV-MPC  max", "NL-DMPC  max")
+saveas(gcf, "figs/d_ma.eps", "epsc")
+savefig("figs/d_max")
+
+figure()
+% sgtitle("Inter-vehicle min distance")
 hold on
 for as = 1:2 
     plot(time_y{as},min_ivd{as}, '.-')
-    plot(time_y{as},max_ivd{as}, '.-')
-    plot(time_y{as},avg_ivd{as})
 end
 ylabel("distance (m)")
 xlabel("time (s)")
 grid on 
 hold off 
 legend("LPV-MPC min", "LPV-MPC  max", "LPV-MPC  avg","NL-DMPC min", "NL-DMPC  max", "NL-DMPC avg" )
-saveas(gcf, "figs/d_avg.eps", "epsc")
-savefig("figs/d_avg")
-
+saveas(gcf, "figs/d_min.eps", "epsc")
+savefig("figs/d_min")
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % look ahead distance  
@@ -229,12 +254,12 @@ for as = 1:2
 end
 
 figure()
-sgtitle("Look ahead distance")
+% sgtitle("Look ahead distance")
 hold on
 for as = 1:2 
 %     plot(time_y{as},min_la{as})
 %     plot(time_y{as},max_la{as})
-    plot(time_y{as},avg_la{as})
+    plot(time_y{as},avg_la{as}, '.-')
 end
 ylabel("distance (m)")
 xlabel("time (s)")
@@ -262,12 +287,12 @@ for as = 1:2
 end
 
 figure()
-sgtitle("Computational time of the agorithms")
+% sgtitle("Computational time of the agorithms")
 hold on
 for as = 1:2 
 %     plot(time_y{as},min_la{as})
 %     plot(time_y{as},max_la{as})
-    plot(time_y{as},avg_t{as})
+    plot(time_y{as},avg_t{as}, '.-')
 end
 ylabel("comp. time (s)")
 xlabel("time (s)")
@@ -278,13 +303,13 @@ saveas(gcf, "figs/t_avg.eps", "epsc")
 savefig("figs/t_avg")
 
 figure()
-sgtitle("Computational time of the agorithms zoom in")
+% sgtitle("Computational time of the agorithms zoom in")
 hold on
 for as = 1:2 
 %     plot(time_y{as},min_la{as})
 %     plot(time_y{as},max_la{as})
     idx = (8/ts(as)):((14/ts(as)));
-    plot(time_y{as}(idx),avg_t{as}(idx))
+    plot(time_y{as}(idx),avg_t{as}(idx), '.-')
 end
 ylabel("comp. time (s)")
 xlabel("time (s)")
