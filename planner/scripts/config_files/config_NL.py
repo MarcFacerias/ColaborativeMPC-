@@ -18,7 +18,7 @@ settings = {
     "max_it" : 1500,
     "min_dist": 0.25,
     # "N" : 125,
-    "N" : 35,
+    "N" : 20,
     "dt" : 0.02,
     "vx_ref": 3.0,
 
@@ -40,6 +40,6 @@ settings = {
     "wq": wq
 }
 
-path_gen(settings, "NL_3agents_def")
+path_gen(settings, "NL_3agents_def_t2")
 lbp_gen(settings, "lambdas")
 save_config(settings)
