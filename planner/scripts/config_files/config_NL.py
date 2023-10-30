@@ -40,6 +40,6 @@ settings = {
     "wq": wq
 }
 
-path_gen(settings, "NL_3agents_def_t2")
+path_gen(settings, "NL_3agents_def")
 lbp_gen(settings, "lambdas")
 save_config(settings)

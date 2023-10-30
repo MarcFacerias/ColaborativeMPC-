@@ -1,7 +1,7 @@
 clear
-files_CS = "../scripts/experiments_paper/NL_3agents_def/csv";
+files_CS = "../scripts/data/experiments_paper/NL_3agents_def/csv";
 addpath(genpath(files_CS))
-files_LPV = "../scripts/experiments_paper/LPV3r_agent_laptop/csv";
+files_LPV = "../scripts/data/experiments_paper/LPV3r_agent_laptop/csv";
 addpath(genpath(files_LPV))
 
 tools = "tools";
