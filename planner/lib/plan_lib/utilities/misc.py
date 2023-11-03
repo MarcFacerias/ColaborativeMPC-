@@ -261,14 +261,14 @@ def lbp_gen(settings, target, base=None):
         path = os.path.normpath(sys.path[0] + "/data/" + target + "/ini_lambdas.pkl")
         settings["lb_path"] = path
 
-def save_config(settings):
+def save_config(settings, name = "settings"):
 
     # Define the fields/columns for the CSV file
     fields = settings.keys()
     if not os.path.exists(settings["path_csv"]):
         os.makedirs(settings["path_csv"], exist_ok=True)
     # Open the CSV file with write permission
-    with open(settings["path_csv"] + "settings.csv", "w", newline="") as csvfile:
+    with open(settings["path_csv"] + name + ".csv", "w", newline="") as csvfile:
         # Create a CSV writer using the field/column names
         writer = csv.writer(csvfile)
         for key in fields:
