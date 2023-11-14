@@ -58,34 +58,36 @@ end
 % % % Velocity
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % % 
-figure('visible','off')
+% figure('visible','off')
 total = length(subFolders);
 % for n = 0:2:(total-1)*2 
-for n = 1:total
-
-%     sgtitle("Linear velocity and S evolutions for Agents in the fleet")
-    subplot(total,1,n);
-    hold on 
-    title("Agent " + num2str(n))
-    plot(states(n ,:,1))
-    ylabel("Vel x (m/s)")
-    xlabel("it")
-    grid on 
-    hold off 
-
-end
-exportgraphics(gcf, "figsECC/Cstates.pdf")
-savefig("figsECC/Cstates")
+% for n = 1:total
+% 
+% %     sgtitle("Linear velocity and S evolutions for Agents in the fleet")
+%     subplot(total,1,n);
+%     hold on 
+%     title("Agent " + num2str(n))
+%     plot(states(n ,:,1))
+%     ylabel("Vel x (m/s)")
+%     xlabel("it")
+%     grid on 
+%     hold off 
+% 
+% end
+% exportgraphics(gcf, "figsECC/Cstates.pdf")
+% savefig("figsECC/Cstates")
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % % % distance  
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % % 
-figure('visible','off')
+figure('visible','on')
 % sgtitle("distance")
+tiledlayout(3,1,"TileSpacing","compact");
 for n = 1:total
 
-%     sgtitle("Distance between Agents along the track")
-    subplot(total,1,n);
+    % sgtitle("Distance between Agents along the track")
+    % subplot(total,1,n);
+    nexttile
     aux_title = "Agent " + num2str(n) + " vs neighbours";
     title(aux_title)
     hold on
@@ -106,40 +108,41 @@ for n = 1:total
     end
     legend(Legend)
     hold off 
-  
+    % annotation('rectangle',[0 0 1 1],'Color','w');
 end
-exportgraphics(gcf, "figsECC/dist.pdf")
+
+exportgraphics(gcf, "figsECC/dist.eps")
 savefig("figsECC/dist")
-
-figure('visible','off')
+% 
+% figure('visible','off')
 % sgtitle("Computational time of the agorithms")
-hold on
+% hold on
 % plot(max(time,1), '.-')
-plot(mean(time,1), '.-')
+% plot(mean(time,1), '.-')
 % plot(min(time,1), '.-')
-
-ylabel("comp. time (s)")
-xlabel("time (s)")
-grid on 
-hold off
-legend("mean")
-exportgraphics(gcf, "figsECC/time.pdf")
-savefig("figsECC/t_avg")
-
-figure('visible','off')
+% 
+% ylabel("comp. time (s)")
+% xlabel("time (s)")
+% grid on 
+% hold off
+% legend("mean")
+% exportgraphics(gcf, "figsECC/time.pdf")
+% savefig("figsECC/t_avg")
+% 
+% figure('visible','off')
 % sgtitle("Computational time of the agorithms zoom in")
-hold on
-
-idx = (8/0.025):((14/0.025));
+% hold on
+% 
+% idx = (8/0.025):((14/0.025));
 % plot(max(time(:,idx),1), '.-')
-plot(mean(time(:,idx),1), '.-')
+% plot(mean(time(:,idx),1), '.-')
 % plot(min(time(:,idx),1), '.-')
-ylabel("comp. time (s)")
-xlabel("time (s)")
-grid on 
-hold off
-legend("mean")
-exportgraphics(gcf, "figsECC/t_avg_zn.pdf")
-savefig("figsECC/t_avg_zn")
-
-close all 
+% ylabel("comp. time (s)")
+% xlabel("time (s)")
+% grid on 
+% hold off
+% legend("mean")
+% exportgraphics(gcf, "figsECC/t_avg_zn.pdf")
+% savefig("figsECC/t_avg_zn")
+% 
+% close all 
