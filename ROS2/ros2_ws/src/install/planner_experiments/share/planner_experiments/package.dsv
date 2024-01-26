@@ -1,6 +1,0 @@
-source;share/planner_experiments/hook/pythonpath.ps1
-source;share/planner_experiments/hook/pythonpath.dsv
-source;share/planner_experiments/hook/pythonpath.sh
-source;share/planner_experiments/hook/ament_prefix_path.ps1
-source;share/planner_experiments/hook/ament_prefix_path.dsv
-source;share/planner_experiments/hook/ament_prefix_path.sh
