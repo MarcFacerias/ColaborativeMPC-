@@ -3,4 +3,4 @@
 #pip3.6 install --force-reinstall dist/plan_lib-0.2-py3-none-any.whl
 
 #Devel
-pip3.6 install -e .
+python3 -m pip install -e .
