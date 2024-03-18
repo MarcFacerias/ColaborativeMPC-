@@ -6,7 +6,7 @@ import numpy as np
 Qs = 10000000 * np.eye(3)
 Q = np.diag([10.0, 0.0, 0.0, 25.0, 10.0, 0.0, 0.0, 0, 0])
 # self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
-R = 0 * np.diag([1, 1])
+R = 25 * np.diag([1, 1])
 dR = 50 * np.diag([1, 1])
 wq = 5.0
 
@@ -17,9 +17,9 @@ settings = {
     "color_list" : list(mcolors.TABLEAU_COLORS),
     "n_agents" : 3,
     "max_it" : 1000,
-    "N" : 125,
+    "N" : 30,
     "min_dist": 0.25,
-    "dt" : 0.025,
+    "dt" : 0.125,
     "vx_ref" : 3.0,
 
     "map_type" : "Highway",

@@ -166,8 +166,8 @@ xlabel("time (s)")
 grid on 
 hold off 
 legend("LPV-MPC", "NL-DMPC")
-saveas(gcf, "figs/s.eps", "epsc")
-savefig("figs/s")
+% saveas(gcf, "figs/s.eps", "epsc")
+% savefig("figs/s")
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Avg Distance 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -205,8 +205,8 @@ xlabel("time (s)")
 grid on 
 hold off 
 legend("LPV-MPC  avg","NL-DMPC avg")
-saveas(gcf, "figs/d_avg.eps", "epsc")
-savefig("figs/d_avg")
+% saveas(gcf, "figs/d_avg.eps", "epsc")
+% savefig("figs/d_avg")
 
 figure()
 % sgtitle("Inter-vehicle max distance")
@@ -219,8 +219,8 @@ xlabel("time (s)")
 grid on 
 hold off 
 legend("LPV-MPC  max", "NL-DMPC  max")
-saveas(gcf, "figs/d_ma.eps", "epsc")
-savefig("figs/d_max")
+% saveas(gcf, "figs/d_ma.eps", "epsc")
+% savefig("figs/d_max")
 
 figure()
 % sgtitle("Inter-vehicle min distance")
@@ -233,8 +233,8 @@ xlabel("time (s)")
 grid on 
 hold off 
 legend("LPV-MPC min", "LPV-MPC  max", "LPV-MPC  avg","NL-DMPC min", "NL-DMPC  max", "NL-DMPC avg" )
-saveas(gcf, "figs/d_min.eps", "epsc")
-savefig("figs/d_min")
+% saveas(gcf, "figs/d_min.eps", "epsc")
+% savefig("figs/d_min")
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % look ahead distance  
@@ -266,8 +266,8 @@ xlabel("time (s)")
 grid on 
 hold off
 legend("LPV-MPC", "NL-DMPC")
-saveas(gcf, "figs/la_avg.eps", "epsc")
-savefig("figs/la_avg")
+% saveas(gcf, "figs/la_avg.eps", "epsc")
+% savefig("figs/la_avg")
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Computational time  
@@ -299,8 +299,8 @@ xlabel("time (s)")
 grid on 
 hold off
 legend("LPV-MPC", "NL-DMPC")
-saveas(gcf, "figs/t_avg.eps", "epsc")
-savefig("figs/t_avg")
+% saveas(gcf, "figs/t_avg.eps", "epsc")
+% savefig("figs/t_avg")
 
 figure()
 % sgtitle("Computational time of the agorithms zoom in")
@@ -316,5 +316,5 @@ xlabel("time (s)")
 grid on 
 hold off
 legend("LPV-MPC", "NL-DMPC")
-saveas(gcf, "figs/t_avg_zn.eps", "epsc")
-savefig("figs/t_avg_zn")
+% saveas(gcf, "figs/t_avg_zn.eps", "epsc")
+% savefig("figs/t_avg_zn")

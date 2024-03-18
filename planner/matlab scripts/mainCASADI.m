@@ -111,8 +111,8 @@ for n = 1:total
     % annotation('rectangle',[0 0 1 1],'Color','w');
 end
 
-exportgraphics(gcf, "figsECC/dist.eps")
-savefig("figsECC/dist")
+% exportgraphics(gcf, "figsECC/dist.eps")
+% savefig("figsECC/dist")
 % 
 % figure('visible','off')
 % sgtitle("Computational time of the agorithms")

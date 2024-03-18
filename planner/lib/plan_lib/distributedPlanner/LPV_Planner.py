@@ -121,12 +121,16 @@ class PlannerLPV:
             uPred: set of last predicted control inputs used for updating matrix A LPV
         """
 
-        self.agent_list = agents_id # load the agent list
+        self.agent_list = []#agents_id # load the agent list
 
         if self.first_it:
             self.first_it = False
-            self.n_agents = len(agents_id) # set number fo neighbours
-            self.plane_comp = hyperplane_separator(self.n_agents, self.N) # load the hyperplane generation code
+
+            try:
+                self.n_agents = len(agents_id) # set number fo neighbours
+                self.plane_comp = hyperplane_separator(self.n_agents, self.N) # load the hyperplane generation code
+            except:
+                self.n_agents = 0
 
         # set the planes and compute them if necesary
         if x_agents is None:
