@@ -152,14 +152,21 @@ def wrap(angle):
     return w_angle
 
 
-def initialise_agents(data, Hp, dt, map, accel_rate=0):
+def initialise_agents(data, Hp, dt, map, accel_rate=0, scaler = 1):
     n_agents = len(data)
     agents = np.zeros((Hp + 1, n_agents, 2))
     u_pred = [None] * n_agents
     x_pred = [None] * n_agents
 
+    if scaler is None:
+        scaler = 1
+
     for id, el in enumerate(data):
-        x_pred[id], u_pred[id] = predicted_vectors_generation(Hp, el, dt, map[id], accel_rate)
+        x_pred[id], u_pred[id] = predicted_vectors_generation(int(Hp*scaler), el, dt/scaler, map[id], accel_rate)
+
+        x_pred[id] = x_pred[id][::scaler, :]
+        u_pred[id] = u_pred[id][::scaler, :]
+
         agents[:, id, :] = x_pred[id][:, -2:]
 
     return agents, x_pred, u_pred
@@ -172,7 +179,7 @@ def predicted_vectors_generation(Hp, x0, dt, map, accel_rate=0):
     Vx = np.zeros((Hp + 1, 1))
     Vx[0] = x0[0]
     S = np.zeros((Hp + 1, 1))
-    S[0] = 0
+    S[0] = x0[6]
     Vy = np.zeros((Hp + 1, 1))
     Vy[0] = x0[1]
     W = np.zeros((Hp + 1, 1))
@@ -190,7 +197,7 @@ def predicted_vectors_generation(Hp, x0, dt, map, accel_rate=0):
     Y = np.zeros((Hp + 1, 1))
     Y[0] = aux[1]
 
-    Accel = 1.0
+    Accel = 0.0
 
     for i in range(0, Hp):
         Vy[i + 1] = x0[1]

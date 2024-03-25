@@ -155,6 +155,23 @@ def _initializeFigure_xy(map, sm = 1):
     return fig, axtr
 
 
+def get_numeric_limtis(map):
+
+    for j in range(0, map.PointAndTangent.shape[-1]):
+        Points = int(np.floor(10 * (map.PointAndTangent[-1, 3, j] + map.PointAndTangent[-1, 4, j])))
+        Points1 = np.zeros((Points, 3))
+        Points2 = np.zeros((Points, 3))
+        Points0 = np.zeros((Points, 3))
+
+        for i in range(0, int(Points)):
+            Points1[i, :] = map.getGlobalPosition(i * 0.1, map.halfWidth, j, True)
+            Points2[i, :] = map.getGlobalPosition(i * 0.1, -map.halfWidth, j, True)
+            Points0[i, :] = map.getGlobalPosition(i * 0.1, 0, j, True)
+
+
+    return Points0, Points1, Points2
+
+
 def initialise_cars (axtr, n_agents, style_agents = default_color):
 
     v = np.array([[ 1.,  1.],

@@ -4,10 +4,10 @@ import numpy as np
 
 # gains
 Qs = 10000000 * np.eye(3)
-Q = np.diag([10.0, 0.0, 0.0, 25.0, 10.0, 0.0, 0.0, 0, 0])
+Q = np.diag([10.0, 2.5, 2.5, 10, 10.0, 0.0, 0.0, 0, 0])
 # self.Q  = np.diag([10.0, 0.0, 0.0, 100.0, 50.0, 0.0, 0.0, 0, 0])
-R = 25 * np.diag([1, 1])
-dR = 50 * np.diag([1, 1])
+R = 0.5 * np.diag([1, 1])
+dR = 25 * np.diag([1, 1])
 wq = 5.0
 
 settings = {

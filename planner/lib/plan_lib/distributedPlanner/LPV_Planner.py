@@ -14,7 +14,7 @@ np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 
 class PlannerLPV:
 
-    def __init__(self, Q, Qs,R, dR , N, dt, map, id, wq = 0, model_param = None, sys_lim = None):
+    def __init__(self, Q, Qs,R, dR , N, dt, map, id, wq = 0, model_param = None, sys_lim = None, scaler = None):
 
         self.dR = dR # derivative cost
         self.n_s = 9 # states
@@ -23,6 +23,7 @@ class PlannerLPV:
         self.n_exp = self.n_s + self.slack
         self.id = id
         self.dt = dt                # Sample time 33 ms
+        self.scaler = scaler # inner steps
         self.map = map              # Used for getting the road curvature
         self.N = N
         self.first_it = True
@@ -143,7 +144,7 @@ class PlannerLPV:
             self.weights, self.dist = compute_weights(pose,x_agents, self.min_dist)
 
         # update system matrices
-        self.A, self.B, self.C, ey = _EstimateABC(self, Last_xPredicted, uPred)
+        self.A, self.B, self.C, ey = _EstimateABC(self, Last_xPredicted, uPred, self.scaler)
 
         # generate ineq constraints
         self.F, self.b = _buildMatIneqConst(self,ey)
@@ -478,7 +479,7 @@ def _buildMatEqConst(Controller):
     G = np.vstack((G, Gdu))
     return G, E, L, Eu, Eoa
 
-def _EstimateABC(Controller,states, u):
+def _EstimateABC(Controller,states, u, scaler = None):
 
         lf = Controller.lf
         lr = Controller.lr
@@ -584,13 +585,29 @@ def _EstimateABC(Controller,states, u):
                            [0],
                            [0]])
 
-            Ai = np.eye(len(Ai)) + Controller.dt * Ai
-            Bi = Controller.dt * Bi
-            Ci = Controller.dt * Ci
+            if scaler is None:
 
-            Atv.append(Ai)
-            Btv.append(Bi)
-            Ctv.append(Ci)
+                Ad = np.eye(len(Ai)) + Controller.dt * Ai
+                Bd = Controller.dt * Bi
+                Cd = Controller.dt * Ci
+
+                Atv.append(Ad)
+                Btv.append(Bd)
+                Ctv.append(Cd)
+
+            else:
+                up_dt = Controller.dt/scaler
+                Abase = np.eye(len(Ai)) + up_dt * Ai
+                Astr = np.linalg.matrix_power(Abase, scaler)
+                Baux = Bi * up_dt
+
+                Bstr = Baux
+                for i in range(1, scaler):
+                    Bstr += np.linalg.matrix_power(Abase, i) @ Bstr
+
+                Atv.append(Astr)
+                Btv.append(Bstr)
+                Ctv.append(Ci) # unused
 
         return Atv, Btv, Ctv, ey_hor
 
